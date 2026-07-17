@@ -1,0 +1,117 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/date_utils.dart' as app_date_utils;
+import '../../domain/entities/module_entity.dart';
+import '../providers/dashboard_provider.dart';
+import 'module_card.dart';
+import 'section_label.dart';
+
+class RecentsRow extends ConsumerWidget {
+  const RecentsRow({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recentsAsync = ref.watch(recentModulesProvider);
+
+    return recentsAsync.when(
+      data: (recents) {
+        // Filter to only valid module paths
+        final validRecents = recents.where((recent) {
+          return Modules.findByPath(recent.path) != null;
+        }).take(8).toList();
+
+        // Always show section, even if empty (matching web behavior)
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionLabel(
+              icon: Icons.schedule,
+              title: 'RECENTLY VISITED',
+            ),
+            
+            if (validRecents.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context).dividerColor,
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'No recent activity yet',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            else
+              Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 3.5,
+                ),
+                itemCount: validRecents.length,
+                itemBuilder: (context, index) {
+                  final recent = validRecents[index];
+                  final module = Modules.findByPath(recent.path);
+                  
+                  if (module == null) return const SizedBox.shrink();
+                  
+                  return Stack(
+                    children: [
+                      ModuleCard(
+                        module: module,
+                        onTap: () {
+                          // TODO: Navigate to module page
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Navigate to: ${module.name}')),
+                          );
+                        },
+                      ),
+                      // Time badge
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                          ),
+                          child: Text(
+                            app_date_utils.DateUtils.getRelativeTime(recent.visitedAt),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (error, stack) => const SizedBox.shrink(),
+    );
+  }
+}
