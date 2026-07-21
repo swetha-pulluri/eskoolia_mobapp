@@ -43,7 +43,7 @@ class GlassPanel extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 24,
                 offset: const Offset(0, 4),
               ),
@@ -89,13 +89,13 @@ class GlassCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.glassCardBackground, // rgba(255,255,255,0.9)
             border: Border.all(
-              color: AppColors.white.withOpacity(0.8), // rgba(255,255,255,0.8)
+              color: AppColors.white.withValues(alpha: 0.8), // rgba(255,255,255,0.8)
               width: 1,
             ),
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
-                color: AppColors.atriumIndigo.withOpacity(0.12),
+                color: AppColors.atriumIndigo.withValues(alpha: 0.12),
                 blurRadius: 80,
                 offset: const Offset(0, 40),
                 spreadRadius: -15,

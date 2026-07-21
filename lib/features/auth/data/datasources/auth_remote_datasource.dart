@@ -38,9 +38,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         data: request.toJson(),
       );
 
-      return LoginResponseModel.fromJson(response.data);
+      // Debug: Print response data to diagnose parsing issues
+      print('Login Response Data: ${response.data}');
+      print('Response Data Type: ${response.data.runtimeType}');
+
+      final loginResponse = LoginResponseModel.fromJson(response.data);
+      print('Parsed Login Response: $loginResponse');
+
+      return loginResponse;
     } on DioException catch (e) {
+      print('DioException during login: ${e.type}, Message: ${e.message}');
+      print('DioException Error: ${e.error}');
       throw Exception(e.error ?? 'Login failed');
+    } catch (e, stackTrace) {
+      print('Unexpected error during login: $e');
+      print('Stack trace: $stackTrace');
+      throw Exception('Login failed: $e');
     }
   }
 

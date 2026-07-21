@@ -19,15 +19,15 @@ class GatewayBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.8), // rgba(255,255,255,0.8)
+        color: AppColors.white.withValues(alpha: 0.8), // rgba(255,255,255,0.8)
         border: Border.all(
-          color: AppColors.airaTeal.withOpacity(0.2), // rgba(13,148,136,0.2)
+          color: AppColors.airaTeal.withValues(alpha: 0.2), // rgba(13,148,136,0.2)
           width: 1,
         ),
         borderRadius: BorderRadius.circular(999), // pill shape
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 1),
           ),

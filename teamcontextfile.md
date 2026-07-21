@@ -148,6 +148,48 @@ Dev:
 
 ---
 
+## Date: 2026-07-17 (Friday)
+
+Developer: Swetha
+Git Branch: feature/login-screen
+
+Completed Work:
+- Set up Clean Architecture folders (data / domain / presentation) for the `auth` feature
+- Added core infrastructure: API constants, app constants, app colors/theme, Dio client, secure storage, preferences service
+- Built auth data layer: login/user models (with generated freezed & json files), remote & local data sources, repository implementation
+- Built auth domain layer: login/user entities, repository interface, login/logout/get-current-user/check-auth-status use cases
+- Built auth presentation layer: auth state, auth notifier, auth providers, full Login page UI, reusable widgets (buttons, input fields, glass panel, feature card, gateway badge, trust strip, security panel)
+- Wired up GoRouter (`app_router.dart`) and `main.dart` with ProviderScope
+- Added login feature documentation set (implementation summary, setup guide, verification doc, React-to-Flutter mapping, completion doc)
+- Added app logo asset and this team context file
+
+---
+
+## Date: 2026-07-20 (Monday)
+
+Developer: Swetha
+Git Branch: feature/login-screen
+
+Completed Work:
+- Built full Login Permission feature (models, repositories, providers, pages, widgets)
+- Completed Login Permission UI to match the frontend exactly (portal tabs, stats cards, users table)
+- Login Permission backend integration: meta/roles, users list, toggle login access, reset password, set initial password
+- Implemented bulk-selection checkboxes and floating bulk action bar (Enable All / Disable All / Reset Passwords) with confirmation dialog, matching frontend
+- Added hover/tap-reveal action icons on role cards: Assign Permissions, Edit, Deactivate/Activate, Delete
+- Wired Edit, Deactivate/Activate, and Delete actions to the backend, with confirmation dialogs and toasts
+- Rebuilt the Assign Permissions screen to match the frontend completely: header, Save Permissions button, summary stat cards, Active Role section with role switcher, Module Access list with switches, Operation Level cards, full Page-Level Access permissions table
+- Implemented all four frontend confirmation dialogs: Confirm Delete Permission, Full Control includes Delete, Review Permissions, Sensitive Module Access
+- Replaced the placeholder empty state with the full role-picker grid (matching frontend), including working role creation
+- Backend integration for Assign Permissions: permission tree, assign-permissions save, and role create/edit/delete/activate
+- Moved Assign Permissions from a separate placeholder route into a tab within the Roles & Permissions page, matching frontend navigation; removed the obsolete placeholder page
+- Fixed a SliverPersistentHeader geometry crash and a stats-card overflow on the Login Permission screen
+- Fixed a ListTile ink-splash rendering assertion by wrapping checkbox lists in a transparent Material
+- Fixed save-permission failures incorrectly hiding the module editor behind a retry screen
+- Added missing `mounted` checks around async dialog flows to prevent unmounted-widget crashes
+- Fixed an unmounted-widget crash on the Login page's auth-state listener
+
+---
+
 ## Project Structure
 
 ```

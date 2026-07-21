@@ -51,14 +51,14 @@ class _FeatureCardState extends State<FeatureCard> {
           border: Border.all(
             color: _isHovered
                 ? colors.borderColor
-                : AppColors.white.withOpacity(0.8),
+                : AppColors.white.withValues(alpha: 0.8),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
               color: _isHovered
-                  ? AppColors.atriumIndigo.withOpacity(0.12)
-                  : Colors.black.withOpacity(0.04),
+                  ? AppColors.atriumIndigo.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: _isHovered ? 18 : 1,
               offset: _isHovered ? const Offset(0, 18) : const Offset(0, 1),
             ),
@@ -83,11 +83,12 @@ class _FeatureCardState extends State<FeatureCard> {
               ),
             ),
             const SizedBox(width: 10),
-            // Feature Text
-            Expanded(
+            // Feature Text - Using Flexible instead of Expanded for better constraint handling
+            Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.title,
@@ -98,6 +99,8 @@ class _FeatureCardState extends State<FeatureCard> {
                       letterSpacing: 0.84, // 0.06em * 14px = 0.84px
                       height: 1.0,
                     ).copyWith(fontFamily: 'Plus Jakarta Sans'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -108,6 +111,8 @@ class _FeatureCardState extends State<FeatureCard> {
                       fontWeight: FontWeight.w500,
                       height: 1.0,
                     ).copyWith(fontFamily: 'Plus Jakarta Sans'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -124,25 +129,25 @@ class _FeatureCardState extends State<FeatureCard> {
         return _FeatureCardColors(
           iconBackground: AppColors.tealAccent,
           iconColor: AppColors.airaTeal,
-          borderColor: AppColors.airaTeal.withOpacity(0.3),
+          borderColor: AppColors.airaTeal.withValues(alpha: 0.3),
         );
       case FeatureCardTone.saffron:
         return _FeatureCardColors(
           iconBackground: AppColors.saffronAccent,
           iconColor: AppColors.saffron,
-          borderColor: AppColors.saffron.withOpacity(0.3),
+          borderColor: AppColors.saffron.withValues(alpha: 0.3),
         );
       case FeatureCardTone.marigold:
         return _FeatureCardColors(
           iconBackground: AppColors.marigoldAccent,
           iconColor: AppColors.marigold,
-          borderColor: AppColors.marigold.withOpacity(0.3),
+          borderColor: AppColors.marigold.withValues(alpha: 0.3),
         );
       case FeatureCardTone.indigo:
         return _FeatureCardColors(
           iconBackground: AppColors.indigoAccent,
           iconColor: AppColors.atriumIndigo,
-          borderColor: AppColors.atriumIndigo.withOpacity(0.3),
+          borderColor: AppColors.atriumIndigo.withValues(alpha: 0.3),
         );
     }
   }

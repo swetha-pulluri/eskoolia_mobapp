@@ -56,7 +56,7 @@ class _AtriumButtonState extends State<AtriumButton> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.airaTeal.withOpacity(_isHovered ? 0.4 : 0.5),
+              color: AppColors.airaTeal.withValues(alpha: _isHovered ? 0.4 : 0.5),
               blurRadius: _isHovered ? 32 : 48,
               offset: _isHovered ? const Offset(0, 16) : const Offset(0, 24),
               spreadRadius: -18,

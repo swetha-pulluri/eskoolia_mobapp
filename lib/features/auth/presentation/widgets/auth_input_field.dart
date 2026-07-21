@@ -94,7 +94,7 @@ class _AuthInputFieldState extends State<AuthInputField> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 5,
                   offset: const Offset(0, 1),
                 ),
@@ -134,7 +134,7 @@ class _AuthInputFieldState extends State<AuthInputField> {
                     decoration: InputDecoration(
                       hintText: widget.placeholder,
                       hintStyle: TextStyle(
-                        color: AppColors.outline.withOpacity(0.6),
+                        color: AppColors.outline.withValues(alpha: 0.6),
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ).copyWith(

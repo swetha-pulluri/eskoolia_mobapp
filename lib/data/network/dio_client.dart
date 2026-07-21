@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+// import 'package:pretty_dio_logger/pretty_dio_logger.dart'; // Temporarily disabled
 import '../../core/constants/api_constants.dart';
 import '../local/secure_storage_service.dart';
 
@@ -26,14 +26,15 @@ class DioClient {
     _dio.interceptors.addAll([
       _authInterceptor(),
       _errorInterceptor(),
-      PrettyDioLogger(
-        requestHeader: true,
-        requestBody: true,
-        responseBody: true,
-        responseHeader: false,
-        error: true,
-        compact: true,
-      ),
+      // Temporarily disabled - may interfere with response parsing
+      // PrettyDioLogger(
+      //   requestHeader: true,
+      //   requestBody: true,
+      //   responseBody: true,
+      //   responseHeader: false,
+      //   error: true,
+      //   compact: true,
+      // ),
     ]);
   }
 
@@ -127,8 +128,9 @@ class DioClient {
     if (data.containsKey('error')) {
       final error = data['error'];
       if (error is String) return error;
-      if (error is Map)
+      if (error is Map) {
         return error['message']?.toString() ?? 'An error occurred';
+      }
     }
     if (data.containsKey('non_field_errors')) {
       final errors = data['non_field_errors'];

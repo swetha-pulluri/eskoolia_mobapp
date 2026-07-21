@@ -112,4 +112,126 @@ class AppColors {
       Color(0xFFE67E22), // deep saffron
     ],
   );
+
+  // ═══ Dashboard KPI Card Colors (from frontend/app/(dashboard)/dashboard/page.tsx) ═══
+
+  // Total Students
+  static const Color kpiStudentsIcon = Color(0xFFB42318);
+  static const Color kpiStudentsBg = Color(0xFFFEF3F2);
+
+  // Today's Attendance
+  static const Color kpiAttendanceIcon = Color(0xFFB45309);
+  static const Color kpiAttendanceBg = Color(0xFFFFFBEB);
+
+  // Fees Collected MTD
+  static const Color kpiFeesIcon = Color(0xFF0E7490);
+  static const Color kpiFeesBg = Color(0xFFECFEFF);
+
+  // Open Admissions
+  static const Color kpiAdmissionsIcon = Color(0xFF047857);
+  static const Color kpiAdmissionsBg = Color(0xFFECFDF5);
+
+  // Total Staff
+  static const Color kpiStaffIcon = Color(0xFF7C3AED);
+  static const Color kpiStaffBg = Color(0xFFF5F3FF);
+
+  // Library Books
+  static const Color kpiLibraryIcon = Color(0xFFBE185D);
+  static const Color kpiLibraryBg = Color(0xFFFDF2F8);
+
+  // Pending Homework
+  static const Color kpiHomeworkIcon = Color(0xFFC2410C);
+  static const Color kpiHomeworkBg = Color(0xFFFFF7ED);
+
+  // Exams This Week
+  static const Color kpiExamsIcon = Color(0xFFA21CAF);
+  static const Color kpiExamsBg = Color(0xFFFDF4FF);
+
+  // Quick Action Button Colors
+  static const Color quickActionAttendance = Color(0xFFB45309);
+  static const Color quickActionAttendanceBg = Color(0xFFFFFBEB);
+  static const Color quickActionFees = Color(0xFF0E7490);
+  static const Color quickActionFeesBg = Color(0xFFECFEFF);
+  static const Color quickActionStudent = Color(0xFFB42318);
+  static const Color quickActionStudentBg = Color(0xFFFEF3F2);
+  static const Color quickActionExam = Color(0xFFA21CAF);
+  static const Color quickActionExamBg = Color(0xFFFDF4FF);
+  static const Color quickActionPayroll = Color(0xFFDC2626);
+  static const Color quickActionPayrollBg = Color(0xFFFEF2F2);
+  static const Color quickActionLibrary = Color(0xFFBE185D);
+  static const Color quickActionLibraryBg = Color(0xFFFDF2F8);
+
+  // Dashboard Colors
+  static const Color dashboardPurple = Color(0xFF6D4AFF);
+  static const Color dashboardPurpleLight = Color(0xFF8B5CF6);
+
+  // Text Colors for KPIs
+  static const Color deltaPositive = Color(0xFF15803D); // green-700
+  static const Color deltaNegative = Color(0xFFDC2626); // red-600
+
+  // Border and Surface for Cards
+  static const Color cardBorder = Color(0xFFECECF2);
+  static const Color cardBackground = Color(0xFFFFFFFF);
+  static const Color pageBg = Color(0xFFFAFAFC);
+
+  // ═══ Login Permission / Credential Manager tokens ═══
+  // 1:1 with frontend login-permission CSS vars (ink-2, ink-3, bg-0)
+  static const Color textSecondary = Color(0xFF475569); // --ink-2
+  static const Color textTertiary = Color(0xFF64748B); // --ink-3
+  static const Color dashboardBackground = Color(0xFFF8FAFC); // --bg-0
+
+  // ═══ Roles & Permissions Colors (from frontend/components/access-control/RoleManagementPanel.tsx) ═══
+
+  // Portal Badge Colors
+  static const Color portalAdminBg = Color(0xFFEEF2FF); // blue-50
+  static const Color portalAdminText = Color(0xFF4338CA); // indigo-700
+  static const Color portalTeacherBg = Color(0xFFEEEAFF); // purple-50
+  static const Color portalTeacherText = Color(0xFF6D4AFF); // purple
+  static const Color portalParentBg = Color(0xFFFFF1F2); // rose-50
+  static const Color portalParentText = Color(0xFFBE123C); // rose-700
+  static const Color portalStudentBg = Color(0xFFE0F2FE); // sky-100
+  static const Color portalStudentText = Color(0xFF0369A1); // sky-700
+  static const Color portalCustomBg = Color(0xFFF1F5F9); // slate-100
+  static const Color portalCustomText = Color(0xFF475569); // slate-600
+
+  // Role Card Deterministic Background Colors (10 colors rotating)
+  static const List<Color> roleCardBackgrounds = [
+    Color(0xFFF3E8FF), // purple-100
+    Color(0xFFEFF6FF), // blue-50
+    Color(0xFFDCFCE7), // green-100
+    Color(0xFFFEF9C3), // yellow-100
+    Color(0xFFEEEAFF), // purple-50
+    Color(0xFFFEF3C7), // amber-100
+    Color(0xFFE0F2FE), // sky-100
+    Color(0xFFFCE7F3), // pink-100
+    Color(0xFFFEF2F2), // red-50
+    Color(0xFFD1FAE5), // green-100
+  ];
+
+  // Inactive Badge
+  static const Color inactiveBadgeBg = Color(0xFFFEE2E2); // red-100
+  static const Color inactiveBadgeText = Color(0xFFDC2626); // red-600
+
+  // Role Card Border & Hover States
+  static const Color roleCardBorder = cardBorder;
+  static const Color roleCardSelected = Color(0xFFFAFAFF); // very light purple
+  static const Color roleCardSelectedBorder = dashboardPurple; // purple
+  static const Color roleCardHoverBorder = Color(0xFFC4B5FD); // purple-300
+
+  // System/Custom Labels
+  static const Color labelTextMuted = Color(0xFF9197AE); // ink-3
+  static const Color labelTextSecondary = Color(0xFF5A607A); // ink-2
+
+  // Role Card Hover Action Icons (RoleManagementPanel.tsx .role-hover-actions)
+  static const Color roleActionAssignBg = Color(0xFFEEEAFF); // --pu-soft
+  static const Color roleActionEditBg = Color(0xFFF0F0F0); // --bg-2
+  static const Color roleActionActivateBg = Color(0xFFDCFCE7); // green-100
+  static const Color roleActionActivateText = Color(0xFF166534); // green-800
+  static const Color roleActionDeactivateBg = Color(0xFFFEF3C7); // amber-100
+  static const Color roleActionDeactivateText = Color(0xFF92400E); // amber-800
+  static const Color roleActionDeleteBg = Color(0xFFFEF2F2); // red-50
+
+  // Add New Role Card
+  static const Color dashedBorder = cardBorder;
+  static const Color dashedBorderHover = dashboardPurple;
 }

@@ -70,6 +70,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     super.initState();
     // Listen to auth state changes for navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ref.listenManual(authNotifierProvider, (previous, next) {
         next.when(
           initial: () {},
@@ -684,7 +685,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
         final availableWidth = constraints.maxWidth;
         final itemWidth =
             (availableWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
-        final itemHeight = isVerySmall ? itemWidth * 0.5 : itemWidth * 0.45;
+        // Increased height ratios to prevent overflow: 0.58 for very small, 0.52 for normal
+        final itemHeight = isVerySmall ? itemWidth * 0.58 : itemWidth * 0.52;
 
         return GridView.count(
           crossAxisCount: crossAxisCount,

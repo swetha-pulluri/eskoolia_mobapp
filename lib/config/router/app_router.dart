@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/dashboard/presentation/pages/school_overview_page.dart';
+import '../../features/roles/presentation/pages/roles_permissions_page.dart';
+import '../../features/login_permission/presentation/pages/login_permission_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -45,6 +48,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'home',
         builder: (context, state) => const HomePage(),
       ),
+
+      // Dashboard Routes
+      GoRoute(
+        path: '/school-overview',
+        name: 'school-overview',
+        builder: (context, state) => const SchoolOverviewPage(),
+      ),
+
+      // Roles & Permissions Routes
+      GoRoute(
+        path: '/roles-permissions',
+        name: 'roles-permissions',
+        builder: (context, state) => const RolesPermissionsPage(),
+      ),
+
+      // Login Permission Route
+      GoRoute(
+        path: '/login-permission',
+        name: 'login-permission',
+        builder: (context, state) => const LoginPermissionPage(),
+      ),
+
+      // Note: Assign Permissions is not a separate route — it's a tab within
+      // RolesPermissionsPage (see _MainTab), matching the frontend's shared
+      // layout/breadcrumb across its Roles/Assign Permissions/Login
+      // Permission destinations.
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(child: Text('Page not found: ${state.uri.path}')),
@@ -81,6 +110,34 @@ class HomePage extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.go('/school-overview');
+              },
+              icon: const Icon(Icons.dashboard_rounded),
+              label: const Text('School Overview'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.go('/roles-permissions');
+              },
+              icon: const Icon(Icons.admin_panel_settings_rounded),
+              label: const Text('Roles & Permissions'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Consumer(
               builder: (context, ref, child) {
                 return ElevatedButton(
