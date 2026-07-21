@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/greeting_section.dart';
@@ -7,8 +8,12 @@ import '../widgets/quick_access_grid.dart';
 import '../widgets/recents_row.dart';
 import '../widgets/module_grid.dart';
 
-class DashboardPage extends ConsumerWidget {
-  const DashboardPage({super.key});
+/// Admin Home Screen
+/// This is the main landing page after login, equivalent to web frontend's /home route.
+/// Displays: Greeting, Quick Access (pinned modules), Recently Visited, All Modules.
+/// NOT the Dashboard module - that's a separate KPI page (/dashboard) not yet implemented.
+class AdminHomePage extends ConsumerWidget {
+  const AdminHomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,9 +97,13 @@ class DashboardPage extends ConsumerWidget {
                         final module = visibleModules[index];
                         return GestureDetector(
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Navigate to: ${module.name}')),
-                            );
+                            if (module.comingSoon) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('${module.name} - Coming Soon')),
+                              );
+                            } else {
+                              context.go(module.path);
+                            }
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

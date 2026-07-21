@@ -49,6 +49,7 @@ class Modules {
       icon: Icons.dashboard_outlined,
       bgColor: AppColors.dashboardBg,
       iconColor: AppColors.dashboardIc,
+      comingSoon: true, // KPI page not implemented yet in Flutter (exists in web)
     ),
     ModuleEntity(
       id: 'super_admin',

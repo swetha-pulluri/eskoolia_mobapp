@@ -10,16 +10,20 @@ class ApiInterceptor extends Interceptor {
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
-  ) async {
-    // Get access token
-    final token = await _secureStorage.getAccessToken();
-    
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-      AppLogger.debug('Added auth token to request: ${options.path}');
-    }
-
-    handler.next(options);
+  ) {
+    // Get access token asynchronously
+    _secureStorage.getAccessToken().then((token) {
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+        AppLogger.debug('Added auth token to request: ${options.path}');
+      } else {
+        AppLogger.warning('No auth token found for request: ${options.path}');
+      }
+      handler.next(options);
+    }).catchError((error) {
+      AppLogger.error('Error getting auth token', error);
+      handler.next(options);
+    });
   }
 
   @override

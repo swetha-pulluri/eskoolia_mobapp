@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/module_entity.dart';
 import '../providers/dashboard_provider.dart';
 import 'module_card.dart';
@@ -90,10 +91,13 @@ class QuickAccessGrid extends ConsumerWidget {
                             await ref.read(pinsProvider.notifier).removePin(pin.path);
                           },
                           onTap: () {
-                            // TODO: Navigate to module page
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Navigate to: ${module.name}')),
-                            );
+                            if (module.comingSoon) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('${module.name} - Coming Soon')),
+                              );
+                            } else {
+                              context.go(module.path);
+                            }
                           },
                         );
                       },

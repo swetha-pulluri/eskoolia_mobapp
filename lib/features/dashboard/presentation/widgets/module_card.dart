@@ -77,19 +77,17 @@ class ModuleCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (label != null) ...[
-                            const SizedBox(height: 1),
+                          if (label != null)
                             Text(
                               module.name,
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: AppColors.ink3,
-                                height: 1.1,
+                                height: 1.0,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ],
                         ],
                       ),
                     ),

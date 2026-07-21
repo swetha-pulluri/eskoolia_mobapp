@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/dashboard_provider.dart';
 import 'module_card.dart';
 import 'section_label.dart';
@@ -37,10 +38,13 @@ class ModuleGrid extends ConsumerWidget {
               return ModuleCardGrid(
                 module: module,
                 onTap: () {
-                  // TODO: Navigate to module page
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Navigate to: ${module.name}')),
-                  );
+                  if (module.comingSoon) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('${module.name} - Coming Soon')),
+                    );
+                  } else {
+                    context.go(module.path);
+                  }
                 },
               );
             },
