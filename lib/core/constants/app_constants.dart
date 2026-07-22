@@ -25,6 +25,20 @@ class AppConstants {
   static const double defaultBorderRadius = 12.0;
   static const double cardElevation = 4.0;
 
+  // Pins
+  static const int maxPins = 12;
+
+  // Recents
+  static const int maxRecents = 8;
+
+  // Default Values
+  static const String defaultAcademicYear = '2025–26';
+  static const String defaultSchoolName = 'Eskoolia Public';
+
+  // Time Formats
+  static const String dateFormat = 'EEEE, MMMM d, yyyy';
+  static const String timeFormat = 'HH:mm';
+
   // Animation Durations
   static const Duration shortAnimationDuration = Duration(milliseconds: 200);
   static const Duration mediumAnimationDuration = Duration(milliseconds: 300);

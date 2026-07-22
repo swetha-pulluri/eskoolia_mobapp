@@ -222,14 +222,14 @@ class _LoginPermissionCredentialDrawerState
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.inkPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   user.staffId,
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                  style: TextStyle(fontSize: 12, color: AppColors.inkTertiary),
                 ),
               ],
             ),
@@ -237,7 +237,7 @@ class _LoginPermissionCredentialDrawerState
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 18),
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -302,7 +302,7 @@ class _LoginPermissionCredentialDrawerState
             fontSize: 9,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 4),
@@ -324,7 +324,7 @@ class _LoginPermissionCredentialDrawerState
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: 'monospace',
-                    color: AppColors.textPrimary,
+                    color: AppColors.inkPrimary,
                   ),
                 ),
               ),
@@ -424,7 +424,7 @@ class _LoginPermissionCredentialDrawerState
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+          style: TextStyle(fontSize: 13, color: AppColors.inkTertiary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -434,7 +434,7 @@ class _LoginPermissionCredentialDrawerState
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: valueColor ?? AppColors.textPrimary,
+              color: valueColor ?? AppColors.inkPrimary,
             ),
           ),
         ),
@@ -452,7 +452,7 @@ class _LoginPermissionCredentialDrawerState
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 8),
@@ -522,7 +522,7 @@ class _LoginPermissionCredentialDrawerState
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: AppColors.inkPrimary,
                       ),
                     ),
                   ),
@@ -552,7 +552,7 @@ class _LoginPermissionCredentialDrawerState
                 description,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textTertiary,
+                  color: AppColors.inkTertiary,
                   height: 1.5,
                 ),
               ),
@@ -676,7 +676,7 @@ class _LoginPermissionCredentialDrawerState
         child: OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textSecondary,
+            foregroundColor: AppColors.inkSecondary,
             side: BorderSide(color: AppColors.cardBorder),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(

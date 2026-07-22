@@ -226,7 +226,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
           IconButton(
             onPressed: _saving ? null : () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 18),
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -268,7 +268,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 6),
@@ -276,7 +276,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
           controller: _nameController,
           onChanged: _handleNameChanged,
           maxLength: _maxNameLength,
-          style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 13, color: AppColors.inkPrimary),
           decoration: InputDecoration(
             hintText: 'e.g. Sports Coordinator',
             counterText: '',
@@ -312,13 +312,13 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
                   fontSize: 11,
                   color: _fieldError.isNotEmpty
                       ? AppColors.error
-                      : AppColors.textTertiary,
+                      : AppColors.inkTertiary,
                 ),
               ),
             ),
             Text(
               '${_nameController.text.length}/$_maxNameLength',
-              style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+              style: TextStyle(fontSize: 11, color: AppColors.inkTertiary),
             ),
           ],
         ),
@@ -331,7 +331,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
-              color: AppColors.textTertiary,
+              color: AppColors.inkTertiary,
             ),
             children: const [
               TextSpan(text: 'PORTAL '),
@@ -350,7 +350,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
                     value: type,
                     child: Text(
                       '${_portalDropdownLabels[type]} — ${type.description}',
-                      style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                      style: TextStyle(fontSize: 12, color: AppColors.inkPrimary),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ))
@@ -362,14 +362,14 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
                 },
           height: 48,
           fontSize: 12,
-          textColor: AppColors.textPrimary,
+          textColor: AppColors.inkPrimary,
           borderColor: AppColors.cardBorder,
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         const SizedBox(height: 4),
         Text(
           'Controls which portal users with this role are sent to after login.',
-          style: TextStyle(fontSize: 10, color: AppColors.textTertiary, height: 1.4),
+          style: TextStyle(fontSize: 10, color: AppColors.inkTertiary, height: 1.4),
         ),
         const SizedBox(height: 16),
 
@@ -380,7 +380,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 6),
@@ -441,7 +441,7 @@ class _RoleEditDialogState extends ConsumerState<RoleEditDialog> {
               child: OutlinedButton(
                 onPressed: _saving ? null : () => Navigator.of(context).pop(),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+                  foregroundColor: AppColors.inkSecondary,
                   side: BorderSide(color: AppColors.cardBorder),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(

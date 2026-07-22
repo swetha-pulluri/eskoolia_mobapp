@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/constants/app_constants.dart';
+import 'data/local/shared_prefs.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize SharedPreferences (used by the dashboard's pins/recents store)
+  await SharedPrefs().init();
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -30,9 +37,11 @@ class _MyAppState extends ConsumerState<MyApp> {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'eSkoolia Mobile',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light,
       routerConfig: router,
     );
   }

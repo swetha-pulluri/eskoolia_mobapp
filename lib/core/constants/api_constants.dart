@@ -1,13 +1,14 @@
+import '../config/env_config.dart';
+
 /// API Constants for Eskoolia Backend
 /// Reference: backend/apps/users/urls.py and views.py
 class ApiConstants {
   // Private constructor to prevent instantiation
   ApiConstants._();
 
-  // Base URL - Change based on environment
-  // For phone testing: Use your computer's local IP address
-  // For emulator: Use http://10.0.2.2:8000 (Android) or http://localhost:8000 (iOS)
-  static const String baseUrl = 'http://192.168.0.120:8000';
+  // Base URL - Configured based on platform and environment
+  // For Android physical devices, update the LAN IP in env_config.dart
+  static String get baseUrl => EnvConfig.apiBaseUrl;
 
   // API Version
   static const String apiVersion = 'v1';
@@ -18,6 +19,7 @@ class ApiConstants {
   // Timeout durations
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration sendTimeout = Duration(seconds: 30);
 
   // Auth Endpoints
   static const String login = '$apiBasePath/auth/login/';
@@ -78,4 +80,9 @@ class ApiConstants {
   static const String coreClasses = '$coreBasePath/classes/';
   static const String coreSections = '$coreBasePath/sections/';
   static const String coreAcademicYears = '$coreBasePath/academic-years/';
+
+  // Dashboard Endpoints
+  static const String attentionCountEndpoint =
+      '/api/dashboard/attention-count/';
+  // NOTE: Backend has NO /api/user/recents/ endpoint - use localStorage only
 }

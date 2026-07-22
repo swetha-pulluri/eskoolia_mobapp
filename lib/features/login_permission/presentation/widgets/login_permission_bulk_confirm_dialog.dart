@@ -121,7 +121,7 @@ class _BulkConfirmDialog extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: AppColors.inkPrimary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -129,7 +129,7 @@ class _BulkConfirmDialog extends StatelessWidget {
                 copy.description,
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondary,
+                  color: AppColors.inkSecondary,
                   height: 1.5,
                 ),
               ),
@@ -142,7 +142,7 @@ class _BulkConfirmDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
+                      foregroundColor: AppColors.inkSecondary,
                     ),
                     child: const Text('Cancel'),
                   ),

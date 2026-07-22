@@ -121,7 +121,7 @@ class LoginPermissionPage extends ConsumerWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: AppColors.inkPrimary,
           ),
         ),
         // Module breadcrumb/sub-nav — fixed below the app bar, mirrors the
@@ -377,14 +377,14 @@ class LoginPermissionPage extends ConsumerWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.inkPrimary,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
             message,
-            style: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+            style: TextStyle(fontSize: 13, color: AppColors.inkTertiary),
             textAlign: TextAlign.center,
           ),
           if (actionLabel != null && onAction != null) ...[

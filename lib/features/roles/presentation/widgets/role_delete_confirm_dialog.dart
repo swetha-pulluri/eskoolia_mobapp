@@ -53,7 +53,7 @@ class _RoleDeleteConfirmDialog extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: AppColors.inkPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -61,7 +61,7 @@ class _RoleDeleteConfirmDialog extends StatelessWidget {
                 'Are you sure you want to delete "$roleName"? This cannot be undone.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textSecondary,
+                  color: AppColors.inkSecondary,
                   height: 1.5,
                 ),
               ),
@@ -72,7 +72,7 @@ class _RoleDeleteConfirmDialog extends StatelessWidget {
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(false),
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
+                      foregroundColor: AppColors.inkPrimary,
                       side: BorderSide(color: AppColors.cardBorder),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,

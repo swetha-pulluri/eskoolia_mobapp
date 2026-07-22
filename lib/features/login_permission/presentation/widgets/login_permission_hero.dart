@@ -57,7 +57,7 @@ class LoginPermissionHero extends StatelessWidget {
               fontSize: 10,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.4,
-              color: AppColors.textTertiary,
+              color: AppColors.inkTertiary,
             ),
           ),
           const SizedBox(height: 8),
@@ -79,7 +79,7 @@ class LoginPermissionHero extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.inkPrimary,
                       height: 1.2,
                     ),
                   ),
@@ -125,7 +125,7 @@ class LoginPermissionHero extends StatelessWidget {
             activeTab.subtitle,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.textTertiary,
+              color: AppColors.inkTertiary,
               height: 1.5,
             ),
           ),

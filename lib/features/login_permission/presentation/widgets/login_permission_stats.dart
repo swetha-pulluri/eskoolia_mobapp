@@ -100,7 +100,7 @@ class LoginPermissionStats extends StatelessWidget {
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.8,
-                    color: AppColors.textTertiary,
+                    color: AppColors.inkTertiary,
                     height: 1.2,
                   ),
                   maxLines: 1,
@@ -116,7 +116,7 @@ class LoginPermissionStats extends StatelessWidget {
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: AppColors.inkPrimary,
               height: 1.0,
             ),
           ),
@@ -125,7 +125,7 @@ class LoginPermissionStats extends StatelessWidget {
             subtitle,
             style: TextStyle(
               fontSize: 11,
-              color: AppColors.textTertiary,
+              color: AppColors.inkTertiary,
               height: 1.2,
             ),
             maxLines: 1,

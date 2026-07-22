@@ -146,7 +146,7 @@ class _LoginPermissionBulkActionBarState
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.inkPrimary,
             ),
           ),
         ],
@@ -207,7 +207,7 @@ class _LoginPermissionBulkActionBarState
         child: Icon(
           Icons.close_rounded,
           size: 15,
-          color: AppColors.textTertiary,
+          color: AppColors.inkTertiary,
         ),
       ),
     );

@@ -84,7 +84,7 @@ class LoginPermissionTabs extends StatelessWidget {
                     Icon(
                       _getTabIcon(tab),
                       size: 16,
-                      color: isActive ? activeColor : AppColors.textTertiary,
+                      color: isActive ? activeColor : AppColors.inkTertiary,
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -94,7 +94,7 @@ class LoginPermissionTabs extends StatelessWidget {
                         fontWeight: isActive
                             ? FontWeight.w600
                             : FontWeight.w500,
-                        color: isActive ? activeColor : AppColors.textTertiary,
+                        color: isActive ? activeColor : AppColors.inkTertiary,
                       ),
                     ),
                     if (count > 0) ...[
@@ -117,7 +117,7 @@ class LoginPermissionTabs extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: isActive
                                 ? activeColor
-                                : AppColors.textSecondary,
+                                : AppColors.inkSecondary,
                           ),
                         ),
                       ),

@@ -88,7 +88,7 @@ class LoginPermissionModuleSubnav extends StatelessWidget
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: AppColors.inkSecondary,
             ),
           ),
         ],
@@ -123,7 +123,7 @@ class LoginPermissionModuleSubnav extends StatelessWidget
               size: 12,
               color: isActive
                   ? AppColors.dashboardPurple
-                  : AppColors.textSecondary,
+                  : AppColors.inkSecondary,
             ),
             const SizedBox(width: 4),
             Text(
@@ -133,7 +133,7 @@ class LoginPermissionModuleSubnav extends StatelessWidget
                 fontWeight: FontWeight.w600,
                 color: isActive
                     ? AppColors.dashboardPurple
-                    : AppColors.textSecondary,
+                    : AppColors.inkSecondary,
               ),
             ),
           ],

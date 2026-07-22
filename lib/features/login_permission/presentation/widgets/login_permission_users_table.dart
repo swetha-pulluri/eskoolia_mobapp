@@ -116,12 +116,12 @@ class LoginPermissionUsersTable extends StatelessWidget {
             Icon(
               Icons.search_off_rounded,
               size: 48,
-              color: AppColors.textTertiary,
+              color: AppColors.inkTertiary,
             ),
             const SizedBox(height: 12),
             Text(
               'No users match the current filters.',
-              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+              style: TextStyle(fontSize: 14, color: AppColors.inkTertiary),
             ),
           ],
         ),
@@ -222,7 +222,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+            color: AppColors.inkSecondary,
           ),
         ),
       ),
@@ -288,7 +288,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: AppColors.inkPrimary,
                       height: 1.3,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -297,7 +297,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
                     user.staffId,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textTertiary,
+                      color: AppColors.inkTertiary,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -341,7 +341,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
         ),
         child: Text(
           user.role,
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppColors.inkSecondary),
         ),
       ),
     );
@@ -357,7 +357,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
         ),
         child: Text(
           user.email,
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 13, color: AppColors.inkSecondary),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -411,7 +411,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
                   fontWeight: isNever ? FontWeight.w500 : FontWeight.normal,
                   color: isNever
                       ? const Color(0xFFD97706)
-                      : AppColors.textSecondary,
+                      : AppColors.inkSecondary,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),

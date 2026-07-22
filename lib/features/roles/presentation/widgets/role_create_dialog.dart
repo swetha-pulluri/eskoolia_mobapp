@@ -163,7 +163,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 17,
-                            color: AppColors.textPrimary,
+                            color: AppColors.inkPrimary,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -171,7 +171,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                           'Letters and spaces only — no numbers or special characters',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textTertiary,
+                            color: AppColors.inkTertiary,
                           ),
                         ),
                       ],
@@ -186,7 +186,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: AppColors.textTertiary,
+                  color: AppColors.inkTertiary,
                 ),
               ),
               const SizedBox(height: 6),
@@ -198,7 +198,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                 onSubmitted: (_) {
                   if (!disabled) _handleCreate();
                 },
-                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 13, color: AppColors.inkPrimary),
                 decoration: InputDecoration(
                   hintText: 'e.g. Class Teacher, Lab Assistant, Principal…',
                   counterText: '',
@@ -235,7 +235,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                   ),
                   Text(
                     '${_nameController.text.length}/$_maxNameLength',
-                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary),
+                    style: TextStyle(fontSize: 11, color: AppColors.inkTertiary),
                   ),
                 ],
               ),
@@ -246,7 +246,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: AppColors.textTertiary,
+                  color: AppColors.inkTertiary,
                 ),
               ),
               const SizedBox(height: 6),
@@ -257,7 +257,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                           value: type,
                           child: Text(
                             _portalDropdownLabels[type] ?? type.label,
-                            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            style: TextStyle(fontSize: 13, color: AppColors.inkPrimary),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ))
@@ -271,7 +271,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                       },
                 height: 48,
                 fontSize: 13,
-                textColor: AppColors.textPrimary,
+                textColor: AppColors.inkPrimary,
                 borderColor: const Color(0xFFD8D4FF),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
@@ -282,7 +282,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                     child: OutlinedButton(
                       onPressed: _saving ? null : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textSecondary,
+                        foregroundColor: AppColors.inkSecondary,
                         side: BorderSide(color: AppColors.cardBorder),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -301,7 +301,7 @@ class _RoleCreateDialogState extends ConsumerState<RoleCreateDialog> {
                         backgroundColor: const Color(0xFF5B4FCF),
                         foregroundColor: Colors.white,
                         disabledBackgroundColor: const Color(0xFFE8E8EE),
-                        disabledForegroundColor: AppColors.textTertiary,
+                        disabledForegroundColor: AppColors.inkTertiary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),

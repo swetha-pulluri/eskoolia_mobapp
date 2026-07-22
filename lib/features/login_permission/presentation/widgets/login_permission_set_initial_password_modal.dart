@@ -154,13 +154,13 @@ class _LoginPermissionSetInitialPasswordModalState
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.inkPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   widget.user.name,
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+                  style: TextStyle(fontSize: 12, color: AppColors.inkTertiary),
                 ),
               ],
             ),
@@ -168,7 +168,7 @@ class _LoginPermissionSetInitialPasswordModalState
           IconButton(
             onPressed: _loading ? null : () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 18),
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -182,14 +182,14 @@ class _LoginPermissionSetInitialPasswordModalState
       children: [
         RichText(
           text: TextSpan(
-            style: TextStyle(fontSize: 12, color: AppColors.textTertiary),
+            style: TextStyle(fontSize: 12, color: AppColors.inkTertiary),
             children: [
               const TextSpan(text: 'Choose how to set the password for '),
               TextSpan(
                 text: widget.user.name,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
+                  color: AppColors.inkPrimary,
                 ),
               ),
               const TextSpan(text: ':'),
@@ -243,7 +243,7 @@ class _LoginPermissionSetInitialPasswordModalState
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                color: AppColors.inkSecondary,
               ),
               children: const [
                 TextSpan(text: 'Password '),
@@ -266,11 +266,11 @@ class _LoginPermissionSetInitialPasswordModalState
             style: TextStyle(
               fontSize: 13,
               fontFamily: 'monospace',
-              color: AppColors.textPrimary,
+              color: AppColors.inkPrimary,
             ),
             decoration: InputDecoration(
               hintText: 'Min. 6 characters',
-              hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+              hintStyle: TextStyle(fontSize: 13, color: AppColors.inkTertiary),
               isDense: true,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
@@ -284,7 +284,7 @@ class _LoginPermissionSetInitialPasswordModalState
                       : Icons.visibility_outlined,
                   size: 16,
                 ),
-                color: AppColors.textTertiary,
+                color: AppColors.inkTertiary,
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -322,7 +322,7 @@ class _LoginPermissionSetInitialPasswordModalState
               child: OutlinedButton(
                 onPressed: _loading ? null : () => Navigator.of(context).pop(),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
+                  foregroundColor: AppColors.inkSecondary,
                   side: BorderSide(color: AppColors.cardBorder),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -412,7 +412,7 @@ class _LoginPermissionSetInitialPasswordModalState
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
+                      color: AppColors.inkPrimary,
                     ),
                   ),
                 ),
@@ -444,7 +444,7 @@ class _LoginPermissionSetInitialPasswordModalState
                 description,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textTertiary,
+                  color: AppColors.inkTertiary,
                   height: 1.4,
                 ),
               ),
@@ -529,7 +529,7 @@ class _LoginPermissionSetInitialPasswordModalState
         OutlinedButton(
           onPressed: () => Navigator.of(context).pop(),
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.textSecondary,
+            foregroundColor: AppColors.inkSecondary,
             side: BorderSide(color: AppColors.cardBorder),
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(

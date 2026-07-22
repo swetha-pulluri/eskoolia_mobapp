@@ -64,7 +64,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                      color: AppColors.inkSecondary,
                     ),
                     children: [
                       const TextSpan(text: 'Filter Users'),
@@ -74,7 +74,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
                             : ' — narrow by name, email, or status',
                         style: TextStyle(
                           fontWeight: FontWeight.w400,
-                          color: AppColors.textTertiary,
+                          color: AppColors.inkTertiary,
                         ),
                       ),
                     ],
@@ -140,7 +140,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Export'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
+                    foregroundColor: AppColors.inkSecondary,
                     side: BorderSide(color: AppColors.cardBorder),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -190,7 +190,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.6,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 6),
@@ -199,7 +199,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
           items: roleOptions
               .map((role) => DropdownMenuItem<String?>(
                     value: role,
-                    child: Text(role, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                    child: Text(role, style: TextStyle(fontSize: 13, color: AppColors.inkPrimary)),
                   ))
               .toList(),
           onChanged: (value) {
@@ -207,7 +207,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
           },
           height: 40,
           fontSize: 13,
-          textColor: AppColors.textPrimary,
+          textColor: AppColors.inkPrimary,
           borderColor: AppColors.cardBorder,
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
@@ -225,7 +225,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.6,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 6),
@@ -243,11 +243,11 @@ class LoginPermissionFilterBar extends StatelessWidget {
             onSubmitted: (_) => onSearch(),
             decoration: InputDecoration(
               hintText: 'Name, email, or ID…',
-              hintStyle: TextStyle(fontSize: 13, color: AppColors.textTertiary),
+              hintStyle: TextStyle(fontSize: 13, color: AppColors.inkTertiary),
               prefixIcon: Icon(
                 Icons.search_rounded,
                 size: 16,
-                color: AppColors.textTertiary,
+                color: AppColors.inkTertiary,
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
@@ -255,7 +255,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
                 vertical: 11,
               ),
             ),
-            style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+            style: TextStyle(fontSize: 13, color: AppColors.inkPrimary),
           ),
         ),
       ],
@@ -272,7 +272,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.6,
-            color: AppColors.textTertiary,
+            color: AppColors.inkTertiary,
           ),
         ),
         const SizedBox(height: 6),
@@ -283,7 +283,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
                     value: status,
                     child: Text(
                       status == StatusFilter.all ? 'All statuses' : status.label,
-                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                      style: TextStyle(fontSize: 13, color: AppColors.inkPrimary),
                     ),
                   ))
               .toList(),
@@ -292,7 +292,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
           },
           height: 40,
           fontSize: 13,
-          textColor: AppColors.textPrimary,
+          textColor: AppColors.inkPrimary,
           borderColor: AppColors.cardBorder,
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
@@ -350,7 +350,7 @@ class LoginPermissionFilterBar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isActive ? Colors.white : AppColors.textSecondary,
+                color: isActive ? Colors.white : AppColors.inkSecondary,
               ),
             ),
           ],

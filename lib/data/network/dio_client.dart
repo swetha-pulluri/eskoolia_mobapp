@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 // import 'package:pretty_dio_logger/pretty_dio_logger.dart'; // Temporarily disabled
 import '../../core/constants/api_constants.dart';
+import '../../core/utils/logger.dart';
 import '../local/secure_storage_service.dart';
 
 /// Dio HTTP Client Configuration
@@ -15,6 +16,7 @@ class DioClient {
         baseUrl: ApiConstants.baseUrl,
         connectTimeout: ApiConstants.connectTimeout,
         receiveTimeout: ApiConstants.receiveTimeout,
+        sendTimeout: ApiConstants.sendTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -184,6 +186,102 @@ class DioClient {
       return false;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Convenience HTTP methods used by feature datasources
+  // (dashboard, administration, school tenancy, etc.)
+
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      AppLogger.error('GET request error: $path', e);
+      rethrow;
+    }
+  }
+
+  Future<Response> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      AppLogger.error('POST request error: $path', e);
+      rethrow;
+    }
+  }
+
+  Future<Response> put(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      AppLogger.error('PUT request error: $path', e);
+      rethrow;
+    }
+  }
+
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.patch(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      AppLogger.error('PATCH request error: $path', e);
+      rethrow;
+    }
+  }
+
+  Future<Response> delete(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await _dio.delete(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } catch (e) {
+      AppLogger.error('DELETE request error: $path', e);
+      rethrow;
     }
   }
 }
