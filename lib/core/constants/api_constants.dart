@@ -55,4 +55,27 @@ class ApiConstants {
       '$accessControlBasePath/roles/$id/permission-tree/';
   static String roleAssignPermissions(int id) =>
       '$accessControlBasePath/roles/$id/assign-permissions/';
+
+  // Students
+  // Reference: backend/apps/students/urls.py + views.py::StudentViewSet
+  static const String studentsBasePath = '$apiBasePath/students';
+  static const String students = '$studentsBasePath/students/';
+  static String studentDetail(int id) => '$studentsBasePath/students/$id/';
+  static const String studentsSummary = '$studentsBasePath/students/summary/';
+  static const String studentNextAdmissionNo =
+      '$studentsBasePath/students/next-admission-no/';
+  static String studentSetStatus(int id) =>
+      '$studentsBasePath/students/$id/set-status/';
+  static String studentSoftDelete(int id) =>
+      '$studentsBasePath/students/$id/soft-delete/';
+  static const String studentCategories = '$studentsBasePath/categories/';
+  static const String guardians = '$studentsBasePath/guardians/';
+  static String guardianDetail(int id) => '$guardians$id/';
+
+  // Core — Classes / Sections / Academic Years
+  // Reference: backend/apps/core/urls.py + views.py
+  static const String coreBasePath = '$apiBasePath/core';
+  static const String coreClasses = '$coreBasePath/classes/';
+  static const String coreSections = '$coreBasePath/sections/';
+  static const String coreAcademicYears = '$coreBasePath/academic-years/';
 }

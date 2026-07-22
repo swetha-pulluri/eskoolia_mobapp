@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/kpi_data.dart';
 import '../widgets/kpi_card.dart';
@@ -401,10 +402,7 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
                   label: 'Add Student',
                   color: AppColors.quickActionStudent,
                   backgroundColor: AppColors.quickActionStudentBg,
-                  onTap: () {
-                    // TODO: Navigate to add student screen
-                    debugPrint('Navigate to Add Student');
-                  },
+                  onTap: () => context.push('/students/enroll'),
                 ),
                 QuickActionButton(
                   label: 'Exam Schedule',

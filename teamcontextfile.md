@@ -190,6 +190,23 @@ Completed Work:
 
 ---
 
+## Date: 2026-07-21 (Tuesday)
+
+Developer: Swetha
+Git Branch: feature/login-screen
+
+Completed Work:
+- Rebuilt the Student List screen's Smart Filters panel to match the frontend exactly: compact spacing, working Academic Year / Class / Section dropdowns, Status and Special & Medical chips, Saved Presets row
+- Created a reusable `AppDropdown` component (guaranteed white popup, consistent styling) after finding dropdown menus were rendering in the app's dark theme colors; rolled it out across Roles and Login Permission dropdowns too
+- Rebuilt "Browse & Edit by Class" cards to match the frontend exactly: student / active / special-needs / docs-pending / sections badges plus a progress bar per class
+- Found and fixed two real rendering crashes surfaced while testing the class cards (a `Border` with non-uniform colors combined with `borderRadius`, and a `Row` using `CrossAxisAlignment.stretch` under unbounded height)
+- Found and fixed a real bug where Status/Saved Presets pills were stretching full width instead of hugging their content (a `Container` + `alignment` sizing issue)
+- Completed backend integration for the Student Enroll & List screen: Dio-backed datasource/repository/providers replacing all mock data, loading/empty/error/success states, guardian create-then-link flow, admission number generation, and category/class/section/academic-year lookups
+- Fixed the student roster table: added the missing "Message parent" action icon (View → Edit → Message → Archive order), added hover tooltips/colors, and corrected the DOB/Age format to two separate lines (`DD/MM/YYYY` then `N yrs`)
+- Rebuilt the Student Profile page to match the frontend's detail drawer exactly: fetches real student + guardian detail on open, Identity/Contact sections, colored status pill, working Activate/Deactivate wired to the backend, and Message parent/Edit profile footer actions
+
+---
+
 ## Project Structure
 
 ```

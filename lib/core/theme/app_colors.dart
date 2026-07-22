@@ -234,4 +234,146 @@ class AppColors {
   // Add New Role Card
   static const Color dashedBorder = cardBorder;
   static const Color dashedBorderHover = dashboardPurple;
+
+  // ═══ Student List Colors (from frontend/components/students/StudentListPanel.tsx) ═══
+
+  static const Color studentListBrand = Color(0xFF4F39F6); // --brand
+  static const Color studentListBrandHover = Color(0xFF4A3FB8); // btn-primary hover
+  static const Color studentListCta = Color(0xFF5B4FCF); // .btn-primary / .enroll-btn
+  static const Color studentListInk = Color(0xFF0B0B14); // --ink
+  static const Color studentListMuted = Color(0xFF66677B); // --muted
+  static const Color studentListLine = Color(0xFFDFDFEA); // --line
+  static const Color studentListSoft = Color(0xFFF4F5FA); // --soft
+  static const Color studentListPageBg = Color(0xFFF8F8FC); // .page
+
+  static const Color studentStatAttentionBorder = Color(0xFFF2D6A6);
+  static const Color studentStatAttentionBg = Color(0xFFFFFDF8);
+
+  static const Color studentFlashSuccessBg = Color(0xFFEFF6FF);
+  static const Color studentFlashSuccessText = Color(0xFF1D4ED8);
+  static const Color studentFlashSuccessBorder = Color(0xFFBFDBFE);
+  static const Color studentFlashErrorBg = Color(0xFFFEF2F2);
+  static const Color studentFlashErrorText = Color(0xFFB91C1C);
+  static const Color studentFlashErrorBorder = Color(0xFFFECACA);
+
+  // Panel header ("01"/"02" numbered circle + active-filter tag pills)
+  static const Color studentPanelNumBg = Color(0xFFEEEDFE);
+  static const Color studentPanelNumText = Color(0xFF3C3489);
+  static const Color studentPanelTitle = Color(0xFF1A1D33);
+  static const Color studentPanelDesc = Color(0xFF8B8EA8);
+
+  static const Color studentTagPurpleBg = Color(0xFFF0EEFF);
+  static const Color studentTagPurpleBorder = Color(0xFFC8C1F8);
+  static const Color studentTagPurpleText = Color(0xFF3D33B2);
+  static const Color studentTagBlueBg = Color(0xFFEFF6FF);
+  static const Color studentTagBlueBorder = Color(0xFFBFDBFE);
+  static const Color studentTagBlueText = Color(0xFF1D4ED8);
+  static const Color studentTagAmberBg = Color(0xFFFFFBEB);
+  static const Color studentTagAmberBorder = Color(0xFFFDE68A);
+  static const Color studentTagAmberText = Color(0xFF92400E);
+  static const Color studentTagGrayBg = Color(0xFFF3F4F6);
+  static const Color studentTagGrayBorder = Color(0xFFD1D5DB);
+  static const Color studentTagGrayText = Color(0xFF374151);
+
+  // Filters
+  static const Color studentSearchBorder = Color(0xFFDFE0EB);
+  static const Color studentSearchText = Color(0xFF1A1D33);
+  static const Color studentSelectText = Color(0xFF42455D);
+  static const Color studentPillBg = Color(0xFFF7F7FB);
+  static const Color studentPillBorder = Color(0xFFE8E8F0);
+  static const Color studentPillText = Color(0xFF4B4D64);
+  static const Color studentPillCountBg = Color(0xFFECECF6);
+  static const Color studentPillOnAmberBg = Color(0xFFFAEEDA);
+  static const Color studentPillOnAmberBorder = Color(0xFFEF9F27);
+  static const Color studentPillOnAmberText = Color(0xFF633806);
+  static const Color studentFilterDividerColor = Color(0xFFECECF4);
+  static const Color studentFilterFootBg = Color(0xFFFAFBFF);
+
+  // Class accordion card (Browse & edit by class) — .sl-cls-*, .sl-badge.*
+  static const Color studentClsBorder = Color(0xFFE6E8EE);
+  static const Color studentClsHeaderBg = Color(0xFFFBFCFE);
+  static const Color studentClsHeaderOpenBgTop = Color(0xFFF1FAF5);
+  static const Color studentClsHeaderOpenBgBottom = Color(0xFFFBFEFC);
+  static const Color studentClsOpenBorder = Color(0xFFD6E8DD);
+  static const Color studentClsOpenAccent = Color(0xFF16A37B);
+  static const Color studentClsChevron = Color(0xFFB0B3CC);
+  static const Color studentClsProgressText = Color(0xFF747896);
+  static const Color studentBadgeGreenBg = Color(0xFFF0FDF4);
+  static const Color studentBadgeGreenBorder = Color(0xFFBBF7D0);
+  static const Color studentBadgeGreenText = Color(0xFF166534);
+  static const Color studentBadgeRedBg = Color(0xFFFEF2F2);
+  static const Color studentBadgeRedBorder = Color(0xFFFECACA);
+  static const Color studentBadgeRedText = Color(0xFF991B1B);
+
+  // Table
+  static const Color studentTableHeadBg = Color(0xFFFBFBFF);
+  static const Color studentTableHeadText = Color(0xFF6D7086);
+  static const Color studentTableBorder = Color(0xFFEBEBF3);
+  static const Color studentTableRowHover = Color(0xFFFAF9FF);
+  static const Color studentAvatarBg = Color(0xFFECE8FF);
+  static const Color studentAvatarText = Color(0xFF4738CA);
+  static const Color studentPrimaryText = Color(0xFF121529);
+  static const Color studentSecondaryText = Color(0xFF7A7D94);
+
+  static const Color studentStatusActiveBg = Color(0xFFECFDF3);
+  static const Color studentStatusActiveText = Color(0xFF047857);
+  static const Color studentStatusInactiveBg = Color(0xFFF3F4F6);
+  static const Color studentStatusInactiveText = Color(0xFF4B5563);
+  static const Color studentStatusPendingBg = Color(0xFFFFF7E8);
+  static const Color studentStatusPendingText = Color(0xFFA16207);
+  static const Color studentStatusArchivedBg = Color(0xFFFEE2E2);
+  static const Color studentStatusArchivedText = Color(0xFFB91C1C);
+
+  static const Color studentIconActionBorder = Color(0xFFE5E7F0);
+  static const Color studentIconActionText = Color(0xFF5B5F7A);
+  static const Color studentIconActionHoverBorder = Color(0xFFC8CBF2);
+  static const Color studentIconActionHoverBg = Color(0xFFF4F3FF);
+  static const Color studentIconArchiveHoverBorder = Color(0xFFFCA5A5);
+  static const Color studentIconArchiveHoverBg = Color(0xFFFFF1F1);
+  static const Color studentIconArchiveHoverText = Color(0xFFDC2626);
+  static const Color studentIconViewHoverBorder = Color(0xFFA5D8E8);
+  static const Color studentIconViewHoverBg = Color(0xFFF0F9FF);
+  static const Color studentIconViewHoverText = Color(0xFF0891B2);
+  static const Color studentIconMessageHoverBorder = Color(0xFF6EE7B7);
+  static const Color studentIconMessageHoverBg = Color(0xFFF0FDF4);
+  static const Color studentIconMessageHoverText = Color(0xFF059669);
+
+  static const Color studentPagerBorder = Color(0xFFE6E6EC);
+  static const Color studentPagerText = Color(0xFF3A3A4A);
+  static const Color studentPagerFootText = Color(0xFF9A9DB4);
+
+  // ═══ Student Enroll Colors (from frontend/components/students/StudentAddPanel.tsx) ═══
+
+  static const Color studentEnrollBrand = Color(0xFF6C3CE1); // --brand
+  static const Color studentEnrollInk = Color(0xFF111827); // --ink
+  static const Color studentEnrollMuted = Color(0xFF6B7280); // --muted
+  static const Color studentEnrollLine = Color(0xFFE5E7EB); // --line
+  static const Color studentEnrollBg = Color(0xFFFAFAFB); // --bg
+
+  static const Color studentScanBannerBg = Color(0xFF1A1A2E);
+  static const Color studentScanIconBg = Color(0xCC6C3CE1); // rgba(108,60,225,.8)
+  static const Color studentBadgeNewBg = Color(0xFF10B981);
+
+  static const Color studentNavBulletBg = Color(0xFFF3F4F6);
+  static const Color studentNavBulletText = Color(0xFF9CA3AF);
+  static const Color studentNavLabel = Color(0xFF1F2937);
+  static const Color studentNavCopy = Color(0xFF6B7280);
+  static const Color studentNavActiveBg = Color(0xFFF5F3FF);
+  static const Color studentNavLockedBg = Color(0xFFF9FAFB);
+  static const Color studentHeadsUpBg = Color(0xFFEDE9FE);
+
+  static const Color studentFieldBorder = Color(0xFFD1D5DB);
+  static const Color studentFieldErrorBorder = Color(0xFFDC2626);
+  static const Color studentFieldErrorBg = Color(0xFFFEF2F2);
+  static const Color studentFieldLabel = Color(0xFF374151);
+  static const Color studentHelpText = Color(0xFF6B7280);
+  static const Color studentRequiredMark = Color(0xFFDC2626);
+
+  static const Color studentRecommendedBg = Color(0xFFECFDF5);
+  static const Color studentRecommendedText = Color(0xFF065F46);
+  static const Color studentOptionalBg = Color(0xFFF3F4F6);
+  static const Color studentOptionalText = Color(0xFF6B7280);
+
+  static const Color studentNavPrevBorder = Color(0xFFD1D5DB);
+  static const Color studentNavPrevText = Color(0xFF374151);
 }

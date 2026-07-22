@@ -141,3 +141,21 @@ Do not move unrelated files.
 - Fix all errors
 - Verify responsiveness
 - Verify Flutter matches the frontend
+
+# Mobile UI Guidelines
+
+## Mobile-First Rules
+
+- This project is a Flutter mobile application.
+- Always optimize layouts for mobile while preserving frontend design and functionality.
+- Minimize unnecessary scrolling.
+- Keep as much important information visible in the first viewport as possible.
+- Reduce excessive padding, margins, and empty space.
+- Use compact layouts without sacrificing readability.
+- Place related cards side by side whenever screen width allows.
+- Prefer responsive grids/rows over long vertical stacks.
+- Use fixed-height scrollable sections for long lists.
+- Show visible scrollbars where appropriate.
+- Prevent one section from pushing the rest of the screen too far down.
+- Maintain responsive layouts for different mobile screen sizes.
+- Never redesign the UI; adapt it for the best mobile user experience while matching the frontend.

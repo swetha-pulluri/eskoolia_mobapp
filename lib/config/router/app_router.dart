@@ -6,6 +6,9 @@ import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/dashboard/presentation/pages/school_overview_page.dart';
 import '../../features/roles/presentation/pages/roles_permissions_page.dart';
 import '../../features/login_permission/presentation/pages/login_permission_page.dart';
+import '../../features/student/domain/models/student_data.dart';
+import '../../features/student/presentation/pages/student_enroll_page.dart';
+import '../../features/student/presentation/pages/student_list_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -70,6 +73,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const LoginPermissionPage(),
       ),
 
+      // Student List & Enroll Routes
+      GoRoute(
+        path: '/students',
+        name: 'students-list',
+        builder: (context, state) => const StudentListPage(),
+      ),
+      GoRoute(
+        path: '/students/enroll',
+        name: 'students-enroll',
+        builder: (context, state) =>
+            StudentEnrollPage(editingStudent: state.extra as StudentData?),
+      ),
+
       // Note: Assign Permissions is not a separate route — it's a tab within
       // RolesPermissionsPage (see _MainTab), matching the frontend's shared
       // layout/breadcrumb across its Roles/Assign Permissions/Login
@@ -130,6 +146,20 @@ class HomePage extends StatelessWidget {
               },
               icon: const Icon(Icons.admin_panel_settings_rounded),
               label: const Text('Roles & Permissions'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.go('/students');
+              },
+              icon: const Icon(Icons.groups_rounded),
+              label: const Text('Students'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

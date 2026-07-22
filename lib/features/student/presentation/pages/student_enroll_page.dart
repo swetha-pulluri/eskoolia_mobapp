@@ -1,0 +1,1640 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../domain/models/academic_year.dart';
+import '../../domain/models/guardian_draft.dart';
+import '../../domain/models/school_class.dart';
+import '../../domain/models/student_data.dart';
+import '../providers/student_providers.dart';
+import '../widgets/enroll_form_fields.dart';
+
+class _NavItem {
+  final String id;
+  final String label;
+  final String description;
+  final EnrollBadge? badge;
+  final bool startsGroup;
+  const _NavItem(this.id, this.label, this.description, {this.badge, this.startsGroup = false});
+}
+
+const List<_NavItem> _navItems = [
+  _NavItem('identity', 'Student identity', 'Basic profile, DOB, photo'),
+  _NavItem('academic', 'Academic placement', 'Class, section, year'),
+  _NavItem('contact', 'Contact & address', 'Phone, email, location'),
+  _NavItem('guardians', 'Family & guardians', 'Parent/guardian details'),
+  _NavItem('apaar', 'Government identity', 'Government identity', badge: EnrollBadge.goi),
+  _NavItem('documents', 'Documents', 'Consent and student records'),
+  _NavItem('medical', 'Medical & emergency', 'Health, vaccinations', startsGroup: true),
+  _NavItem('speciallyAbled', 'Specially abled', 'PwD accommodations'),
+  _NavItem('identityMarks', 'Identity marks', 'Physical identifiers', badge: EnrollBadge.sensitive),
+  _NavItem('fees', 'Fee plan', 'Assign fees & concessions'),
+  _NavItem('review', 'Review', 'Confirm & enroll'),
+];
+
+/// Student Enroll Page — mirrors frontend components/students/
+/// StudentAddPanel.tsx: hero header + KPI, scan-to-prefill banner, an
+/// 11-section form (left-nav on desktop), and a sticky footer with a
+/// progress bar and the primary "Enroll student →" action.
+///
+/// Mobile adaptation (disclosed): the frontend's 280px sticky left sidebar
+/// is desktop-only real estate. Its data/interactions (numbered steps,
+/// locked-until-reached, active highlight, descriptions, group badges) are
+/// preserved but reflowed into a horizontally-scrollable step strip at the
+/// top — the standard mobile equivalent of a step sidebar — rather than
+/// stacking 11 nav rows above the content on every section.
+///
+/// Scope note: OCR "Scan & fill", "AI Assist", and the consent PDF
+/// generator/print/share menu are visibly present (matching the frontend)
+/// but not functionally implemented in this UI-only, mock-data pass — each
+/// shows a "coming soon" notice, the same deferred-feature pattern already
+/// used elsewhere in this app.
+class StudentEnrollPage extends ConsumerStatefulWidget {
+  final StudentData? editingStudent;
+
+  const StudentEnrollPage({super.key, this.editingStudent});
+
+  @override
+  ConsumerState<StudentEnrollPage> createState() => _StudentEnrollPageState();
+}
+
+class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
+  int _activeIndex = 0;
+  int _maxReachedIndex = 0;
+  bool _saving = false;
+  String? _error;
+  bool _loadingLookups = true;
+  int? _currentEnrolledCount;
+  bool _scanBannerDismissed = false;
+
+  List<AcademicYear> _academicYears = [];
+  List<SchoolClass> _classes = [];
+  List<StudentCategory> _categories = [];
+
+  // Identity
+  final _admissionNoController = TextEditingController();
+  bool _admissionNoLocked = true;
+  bool _isActive = true;
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _dobController = TextEditingController();
+  StudentGender? _gender;
+  String? _bloodGroup;
+  final _motherTongueController = TextEditingController();
+  final _religionController = TextEditingController();
+  final _nationalityController = TextEditingController(text: 'Indian');
+
+  // Academic
+  int? _academicYearId;
+  int? _classId;
+  int? _sectionId;
+  int? _categoryId;
+  String _admissionType = 'New';
+
+  // Contact
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
+
+  // Guardians
+  final List<GuardianDraft> _guardians = [
+    GuardianDraft(clientId: '1', isPrimary: true),
+  ];
+
+  // Government identity
+  final _apaarIdController = TextEditingController();
+
+  // Documents (mock upload state)
+  final Map<String, bool> _documentsUploaded = {
+    'birth_certificate': false,
+    'aadhaar': false,
+    'caste_certificate': false,
+    'disability_certificate': false,
+    'medical_info': false,
+    'transfer_certificate': false,
+  };
+  bool _consentChecked = false;
+
+  // Medical
+  final _allergiesController = TextEditingController();
+  final _medicationsController = TextEditingController();
+  final _emergencyContactController = TextEditingController();
+
+  // Specially abled
+  bool _isPwD = false;
+  final _pwdNotesController = TextEditingController();
+
+  // Identity marks
+  final _identityMark1Controller = TextEditingController();
+  final _identityMark2Controller = TextEditingController();
+  final _birthmarkController = TextEditingController();
+
+  // Fees
+  String? _feeGroup;
+  String? _concession;
+
+  // Review
+  bool _reviewConfirmed = false;
+
+  bool get isEditMode => widget.editingStudent != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLookups();
+    final editing = widget.editingStudent;
+    if (editing != null) {
+      _admissionNoController.text = editing.admissionNo;
+      _firstNameController.text = editing.firstName;
+      _lastNameController.text = editing.lastName;
+      _gender = editing.gender;
+      _isActive = editing.isActive;
+      _phoneController.text = editing.phone ?? '';
+      _emailController.text = editing.email ?? '';
+      _classId = editing.classId;
+      _sectionId = editing.sectionId;
+      _maxReachedIndex = _navItems.length - 1;
+    }
+  }
+
+  Future<void> _loadLookups() async {
+    final repo = ref.read(studentRepositoryProvider);
+    try {
+      final results = await Future.wait([
+        repo.fetchAcademicYears(),
+        repo.fetchClasses(),
+        repo.fetchCategories(),
+        repo.fetchNextAdmissionNo(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _academicYears = results[0] as List<AcademicYear>;
+        _classes = results[1] as List<SchoolClass>;
+        _categories = results[2] as List<StudentCategory>;
+        if (!isEditMode) {
+          _admissionNoController.text = results[3] as String;
+        }
+        _academicYearId ??= _academicYears.where((y) => y.isCurrent).firstOrNull?.id;
+        _loadingLookups = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadingLookups = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+      return;
+    }
+    try {
+      final stats = await repo.fetchStats();
+      if (!mounted) return;
+      setState(() => _currentEnrolledCount = stats.totalCount);
+    } catch (_) {
+      // Non-critical KPI text — leave it at its "…"/default state rather
+      // than blocking the form with an error for a secondary display value.
+    }
+  }
+
+  @override
+  void dispose() {
+    _admissionNoController.dispose();
+    _firstNameController.dispose();
+    _middleNameController.dispose();
+    _lastNameController.dispose();
+    _dobController.dispose();
+    _motherTongueController.dispose();
+    _religionController.dispose();
+    _nationalityController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _districtController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
+    _apaarIdController.dispose();
+    _allergiesController.dispose();
+    _medicationsController.dispose();
+    _emergencyContactController.dispose();
+    _pwdNotesController.dispose();
+    _identityMark1Controller.dispose();
+    _identityMark2Controller.dispose();
+    _birthmarkController.dispose();
+    super.dispose();
+  }
+
+  double get _progress => (_maxReachedIndex + 1) / _navItems.length;
+
+  void _goToIndex(int index) {
+    if (index > _maxReachedIndex + 1) return; // locked
+    setState(() => _activeIndex = index);
+  }
+
+  void _next() {
+    setState(() {
+      if (_activeIndex < _navItems.length - 1) {
+        _activeIndex++;
+        if (_activeIndex > _maxReachedIndex) _maxReachedIndex = _activeIndex;
+      }
+    });
+  }
+
+  void _prev() {
+    setState(() {
+      if (_activeIndex > 0) _activeIndex--;
+    });
+  }
+
+  void _comingSoon(String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$feature is coming soon.')),
+    );
+  }
+
+  /// Parses the "Date of birth" field's `DD/MM/YYYY` hint format. Returns
+  /// null (rather than throwing) for empty/malformed input — DOB is
+  /// recommended in the UI but not hard-blocked by `_submit`'s own
+  /// validation, so a bad/empty value should just omit the field.
+  DateTime? _parseDob(String text) {
+    if (text.isEmpty) return null;
+    final parts = text.split('/');
+    if (parts.length != 3) return null;
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    try {
+      final date = DateTime(year, month, day);
+      if (date.year != year || date.month != month || date.day != day) return null;
+      return date;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_firstNameController.text.trim().isEmpty ||
+        _lastNameController.text.trim().isEmpty ||
+        _classId == null ||
+        _sectionId == null) {
+      setState(() => _error = 'First name, last name, class and section are required.');
+      setState(() => _activeIndex = _classId == null || _sectionId == null ? 1 : 0);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final schoolClass = _classes.where((c) => c.id == _classId).firstOrNull;
+    final section = schoolClass?.sections.where((s) => s.id == _sectionId).firstOrNull;
+    final primaryGuardian = _guardians.where((g) => g.fullName.trim().isNotEmpty).firstOrNull;
+    final draft = StudentData(
+      id: 0,
+      admissionNo: _admissionNoController.text.trim(),
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      dateOfBirth: _parseDob(_dobController.text.trim()),
+      gender: _gender,
+      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      classId: _classId!,
+      className: schoolClass?.name ?? '',
+      sectionId: _sectionId!,
+      sectionName: section?.name ?? '',
+      academicYearId: _academicYearId,
+      categoryId: _categoryId,
+      guardianName: primaryGuardian?.fullName.trim(),
+      guardianPhone: primaryGuardian?.phone.trim(),
+      guardianRelation: primaryGuardian?.relation,
+      status: _isActive ? StudentStatus.active : StudentStatus.inactive,
+      enrolledAt: DateTime.now(),
+    );
+    try {
+      await ref.read(studentRepositoryProvider).createStudent(draft);
+      if (!mounted) return;
+      setState(() => _saving = false);
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.studentEnrollBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildBreadcrumbRow(),
+                    const SizedBox(height: 14),
+                    _buildHero(),
+                    if (!_scanBannerDismissed) ...[
+                      const SizedBox(height: 12),
+                      _buildScanBanner(),
+                    ],
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      _buildErrorBanner(),
+                    ],
+                    const SizedBox(height: 14),
+                    _buildStepStrip(),
+                    const SizedBox(height: 14),
+                    _buildActiveSection(),
+                  ],
+                ),
+              ),
+            ),
+            _buildFooter(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBreadcrumbRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Dashboard / Students / ${isEditMode ? 'Edit' : 'Enroll'}',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+        ),
+        const Text('Draft saved', style: TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+      ],
+    );
+  }
+
+  Widget _buildHero() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 480;
+        final titleBlock = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.4,
+                  color: AppColors.studentEnrollInk,
+                  height: 1.1,
+                ),
+                children: [
+                  TextSpan(text: isEditMode ? 'Edit ' : 'Enroll a '),
+                  TextSpan(
+                    text: 'student',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.studentEnrollBrand,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "Admit a new student into the school records. We'll generate an admission number, place them in a class & section, and notify their guardian.",
+              style: TextStyle(fontSize: 13, color: AppColors.studentEnrollMuted, height: 1.5),
+            ),
+          ],
+        );
+        final kpiBlock = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.studentEnrollLine),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _loadingLookups ? '…' : '${_currentEnrolledCount ?? 0}',
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+              ),
+              const Text(
+                'CURRENTLY ENROLLED',
+                style: TextStyle(fontSize: 10, letterSpacing: 0.8, color: Color(0xFF6B7280), fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        );
+        final actionsRow = Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _heroActionButton('Drafts', badge: '0', onTap: () => _comingSoon('Drafts')),
+            _heroActionButton('AI Assist', dotColor: AppColors.studentEnrollBrand, onTap: () => _comingSoon('AI Assist')),
+            _heroActionButton('PDF', onTap: () => _comingSoon('Consent PDF preview')),
+            _heroActionButton("What I'll need", onTap: () => _comingSoon("Checklist")),
+          ],
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: AppColors.studentEnrollLine),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [titleBlock, const SizedBox(height: 12), kpiBlock],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: titleBlock),
+                        const SizedBox(width: 16),
+                        kpiBlock,
+                      ],
+                    ),
+              const SizedBox(height: 12),
+              actionsRow,
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _heroActionButton(String label, {String? badge, Color? dotColor, required VoidCallback onTap}) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.studentEnrollInk,
+        side: const BorderSide(color: AppColors.studentEnrollLine),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dotColor != null) ...[
+            Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+            const SizedBox(width: 6),
+          ],
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          if (badge != null) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(10)),
+              child: Text(badge, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScanBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.studentScanBannerBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: AppColors.studentScanIconBg, borderRadius: BorderRadius.circular(8)),
+            child: const Icon(Icons.document_scanner_outlined, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Flexible(
+                      child: Text(
+                        'Scan to pre-fill',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.studentBadgeNewBg, borderRadius: BorderRadius.circular(999)),
+                      child: const Text('NEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Scan a birth certificate or Aadhaar card to auto-fill this form.',
+                  style: TextStyle(color: Color(0xFFD1D5DB), fontSize: 12),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _comingSoon('Scan & fill'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.studentEnrollBrand,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Scan now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() => _scanBannerDismissed = true),
+                      style: TextButton.styleFrom(foregroundColor: const Color(0xFF9CA3AF)),
+                      child: const Text('Dismiss', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        border: Border.all(color: const Color(0xFFFECACA)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 13, fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _buildStepStrip() {
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _navItems.length,
+        separatorBuilder: (context, index) {
+          if (_navItems[index + 1].startsGroup) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: VerticalDivider(width: 1, thickness: 1, color: AppColors.studentEnrollLine),
+            );
+          }
+          return const SizedBox(width: 8);
+        },
+        itemBuilder: (context, index) {
+          final item = _navItems[index];
+          final isActive = index == _activeIndex;
+          final isLocked = index > _maxReachedIndex + 1;
+          final isDone = index <= _maxReachedIndex && index != _activeIndex;
+          return _StepChip(
+            index: index + 1,
+            label: item.label,
+            badge: item.badge,
+            isActive: isActive,
+            isLocked: isLocked,
+            isDone: isDone,
+            onTap: isLocked ? null : () => _goToIndex(index),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActiveSection() {
+    final item = _navItems[_activeIndex];
+    switch (item.id) {
+      case 'identity':
+        return _buildIdentitySection();
+      case 'academic':
+        return _buildAcademicSection();
+      case 'contact':
+        return _buildContactSection();
+      case 'guardians':
+        return _buildGuardiansSection();
+      case 'apaar':
+        return _buildApaarSection();
+      case 'documents':
+        return _buildDocumentsSection();
+      case 'medical':
+        return _buildMedicalSection();
+      case 'speciallyAbled':
+        return _buildSpeciallyAbledSection();
+      case 'identityMarks':
+        return _buildIdentityMarksSection();
+      case 'fees':
+        return _buildFeesSection();
+      default:
+        return _buildReviewSection();
+    }
+  }
+
+  Widget _navButtons({bool isFirst = false, bool isLast = false}) {
+    return Row(
+      children: [
+        if (!isFirst)
+          OutlinedButton(
+            onPressed: _prev,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.studentNavPrevText,
+              side: const BorderSide(color: AppColors.studentNavPrevBorder),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('← Back'),
+          ),
+        const Spacer(),
+        if (!isLast)
+          ElevatedButton(
+            onPressed: _next,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.studentEnrollBrand,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Next →', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 1 — IDENTITY
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildIdentitySection() {
+    return EnrollSectionCard(
+      title: 'Student identity',
+      subtitle: 'Basic profile, date of birth, and photo',
+      stepNumber: 1,
+      navButtons: _navButtons(isFirst: true),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              InkWell(
+                onTap: () => _comingSoon('Photo upload'),
+                borderRadius: BorderRadius.circular(50),
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.studentEnrollLine),
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined, color: Color(0xFF9CA3AF)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text('ADD PHOTO', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          EnrollFieldGrid(children: [
+            EnrollTextField(
+              label: 'Admission No',
+              controller: _admissionNoController,
+              badge: EnrollBadge.required,
+              enabled: !_admissionNoLocked,
+              helpText: _admissionNoLocked ? 'Auto-generated · tap edit to override' : 'Editable',
+              suffixIcon: IconButton(
+                icon: Icon(_admissionNoLocked ? Icons.lock_outline : Icons.edit_outlined, size: 18),
+                onPressed: () => setState(() => _admissionNoLocked = !_admissionNoLocked),
+              ),
+            ),
+            EnrollTextField(
+              label: 'Roll No',
+              controller: TextEditingController(text: 'Assigned later'),
+              readOnly: true,
+              enabled: false,
+            ),
+          ]),
+          const SizedBox(height: 16),
+          EnrollToggle(
+            label: 'Active',
+            description: 'Inactive students are hidden from most lists.',
+            value: _isActive,
+            onChanged: (v) => setState(() => _isActive = v),
+          ),
+          const SizedBox(height: 8),
+          EnrollFieldGrid(
+            maxColumns: 3,
+            children: [
+              EnrollTextField(label: 'First name', controller: _firstNameController, badge: EnrollBadge.required),
+              EnrollTextField(label: 'Middle name', controller: _middleNameController, badge: EnrollBadge.optional),
+              EnrollTextField(label: 'Last name', controller: _lastNameController, badge: EnrollBadge.required),
+            ],
+          ),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollTextField(
+              label: 'Date of birth',
+              controller: _dobController,
+              badge: EnrollBadge.required,
+              hint: 'DD/MM/YYYY',
+              keyboardType: TextInputType.datetime,
+            ),
+            EnrollDropdown<StudentGender>(
+              label: 'Gender',
+              badge: EnrollBadge.required,
+              value: _gender,
+              hint: 'Select gender',
+              items: StudentGender.values
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g.label)))
+                  .toList(),
+              onChanged: (v) => setState(() => _gender = v),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollDropdown<String>(
+              label: 'Blood group',
+              badge: EnrollBadge.optional,
+              value: _bloodGroup,
+              hint: 'Select blood group',
+              items: const ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
+                  .map((b) => DropdownMenuItem(value: b, child: Text(b)))
+                  .toList(),
+              onChanged: (v) => setState(() => _bloodGroup = v),
+            ),
+            EnrollTextField(label: 'Mother tongue', controller: _motherTongueController, badge: EnrollBadge.optional),
+          ]),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollTextField(label: 'Religion', controller: _religionController, badge: EnrollBadge.optional),
+            EnrollTextField(label: 'Nationality', controller: _nationalityController, badge: EnrollBadge.optional),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 2 — ACADEMIC PLACEMENT
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildAcademicSection() {
+    final selectedClass = _classes.where((c) => c.id == _classId).firstOrNull;
+    return EnrollSectionCard(
+      title: 'Academic placement',
+      subtitle: 'Class, section, and academic year',
+      stepNumber: 2,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollFieldGrid(children: [
+            EnrollDropdown<int>(
+              label: 'Academic year',
+              badge: EnrollBadge.required,
+              value: _academicYearId,
+              hint: 'Select year',
+              items: _academicYears
+                  .map((y) => DropdownMenuItem(value: y.id, child: Text(y.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _academicYearId = v),
+            ),
+            EnrollDropdown<String>(
+              label: 'Admission type',
+              badge: EnrollBadge.required,
+              value: _admissionType,
+              hint: 'Select type',
+              items: const ['New', 'Transfer', 'Readmission']
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _admissionType = v ?? 'New'),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollDropdown<int>(
+              label: 'Class',
+              badge: EnrollBadge.required,
+              value: _classId,
+              hint: 'Select class',
+              items: _classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+              onChanged: (v) => setState(() {
+                _classId = v;
+                _sectionId = null;
+              }),
+            ),
+            EnrollDropdown<int>(
+              label: 'Section',
+              badge: EnrollBadge.required,
+              value: _sectionId,
+              hint: selectedClass == null ? 'Select a class first' : 'Select section',
+              items: (selectedClass?.sections ?? const [])
+                  .map((s) => DropdownMenuItem(value: s.id, child: Text('Section ${s.name}')))
+                  .toList(),
+              onChanged: selectedClass == null ? null : (v) => setState(() => _sectionId = v),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          EnrollDropdown<int>(
+            label: 'Category',
+            badge: EnrollBadge.optional,
+            value: _categoryId,
+            hint: 'Select category',
+            items: _categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+            onChanged: (v) => setState(() => _categoryId = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 3 — CONTACT & ADDRESS
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildContactSection() {
+    return EnrollSectionCard(
+      title: 'Contact & address',
+      subtitle: 'Phone, email, and home address',
+      stepNumber: 3,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollFieldGrid(children: [
+            EnrollTextField(
+              label: 'Phone',
+              controller: _phoneController,
+              badge: EnrollBadge.recommended,
+              keyboardType: TextInputType.phone,
+            ),
+            EnrollTextField(
+              label: 'Email',
+              controller: _emailController,
+              badge: EnrollBadge.optional,
+              keyboardType: TextInputType.emailAddress,
+            ),
+          ]),
+          const SizedBox(height: 16),
+          EnrollTextField(label: 'Address line', controller: _addressController, badge: EnrollBadge.recommended),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollTextField(label: 'Pincode', controller: _pincodeController, badge: EnrollBadge.optional, keyboardType: TextInputType.number),
+            EnrollTextField(label: 'City', controller: _cityController, badge: EnrollBadge.optional),
+          ]),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollTextField(label: 'District', controller: _districtController, badge: EnrollBadge.optional),
+            EnrollTextField(label: 'State', controller: _stateController, badge: EnrollBadge.optional),
+          ]),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 4 — FAMILY & GUARDIANS
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildGuardiansSection() {
+    return EnrollSectionCard(
+      title: 'Family & guardians',
+      subtitle: 'Parent or guardian contact details',
+      stepNumber: 4,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < _guardians.length; i++) ...[
+            _buildGuardianCard(_guardians[i], i),
+            const SizedBox(height: 12),
+          ],
+          OutlinedButton.icon(
+            onPressed: () => setState(() {
+              _guardians.add(GuardianDraft(clientId: '${DateTime.now().microsecondsSinceEpoch}'));
+            }),
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('Add another guardian'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.studentEnrollBrand,
+              side: BorderSide(color: AppColors.studentEnrollBrand),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuardianCard(GuardianDraft guardian, int index) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFB),
+        border: Border.all(color: AppColors.studentEnrollLine),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  guardian.fullName.isEmpty ? 'Guardian ${index + 1}' : guardian.fullName,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Primary', style: TextStyle(fontSize: 12, color: AppColors.studentEnrollMuted)),
+                  Checkbox(
+                    value: guardian.isPrimary,
+                    onChanged: (v) => setState(() {
+                      for (final g in _guardians) {
+                        g.isPrimary = false;
+                      }
+                      guardian.isPrimary = v ?? false;
+                    }),
+                    activeColor: AppColors.studentEnrollBrand,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              if (_guardians.length > 1)
+                IconButton(
+                  onPressed: () => setState(() => _guardians.removeAt(index)),
+                  icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFDC2626)),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          EnrollFieldGrid(children: [
+            EnrollTextField(
+              label: 'Full name',
+              controller: TextEditingController(text: guardian.fullName)
+                ..selection = TextSelection.collapsed(offset: guardian.fullName.length),
+              badge: EnrollBadge.required,
+              onChanged: (v) => guardian.fullName = v,
+            ),
+            EnrollDropdown<String>(
+              label: 'Relation',
+              badge: EnrollBadge.required,
+              value: guardian.relation,
+              hint: 'Select relation',
+              items: guardianRelationOptions
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
+              onChanged: (v) => setState(() => guardian.relation = v ?? guardian.relation),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          EnrollFieldGrid(children: [
+            EnrollTextField(
+              label: 'Phone',
+              controller: TextEditingController(text: guardian.phone)
+                ..selection = TextSelection.collapsed(offset: guardian.phone.length),
+              badge: EnrollBadge.required,
+              keyboardType: TextInputType.phone,
+              onChanged: (v) => guardian.phone = v,
+            ),
+            EnrollTextField(
+              label: 'Email',
+              controller: TextEditingController(text: guardian.email)
+                ..selection = TextSelection.collapsed(offset: guardian.email.length),
+              badge: EnrollBadge.optional,
+              onChanged: (v) => guardian.email = v,
+            ),
+          ]),
+          const SizedBox(height: 12),
+          EnrollTextField(
+            label: 'Occupation',
+            controller: TextEditingController(text: guardian.occupation)
+              ..selection = TextSelection.collapsed(offset: guardian.occupation.length),
+            badge: EnrollBadge.optional,
+            onChanged: (v) => guardian.occupation = v,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 5 — GOVERNMENT IDENTITY (APAAR)
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildApaarSection() {
+    return EnrollSectionCard(
+      title: 'Government identity',
+      subtitle: 'APAAR ID for national student records',
+      stepNumber: 5,
+      navButtons: _navButtons(),
+      child: EnrollTextField(
+        label: 'APAAR ID',
+        controller: _apaarIdController,
+        badge: EnrollBadge.optional,
+        helpText: 'The 12-digit Automated Permanent Academic Account Registry ID, if already issued.',
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 6 — DOCUMENTS
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildDocumentsSection() {
+    final selectedCategoryName = _categories.where((c) => c.id == _categoryId).firstOrNull?.name;
+    final docs = <(String, String, EnrollBadge)>[
+      ('birth_certificate', 'Birth certificate', EnrollBadge.required),
+      ('aadhaar', 'Aadhaar card (masked)', EnrollBadge.recommended),
+      (
+        'caste_certificate',
+        'Caste certificate',
+        (selectedCategoryName != null && selectedCategoryName != 'General')
+            ? EnrollBadge.required
+            : EnrollBadge.optional,
+      ),
+      ('disability_certificate', 'UDID / disability certificate', _isPwD ? EnrollBadge.required : EnrollBadge.optional),
+      ('medical_info', 'Medical information', EnrollBadge.optional),
+      ('transfer_certificate', 'Transfer certificate', EnrollBadge.optional),
+    ];
+
+    return EnrollSectionCard(
+      title: 'Documents',
+      subtitle: 'Consent and student records',
+      stepNumber: 6,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollFieldGrid(
+            children: docs.map((doc) => _buildDocumentCard(doc.$1, doc.$2, doc.$3)).toList(),
+          ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () => setState(() => _consentChecked = !_consentChecked),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Checkbox(
+                  value: _consentChecked,
+                  onChanged: (v) => setState(() => _consentChecked = v ?? false),
+                  activeColor: AppColors.studentEnrollBrand,
+                ),
+                const Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 12),
+                    child: Text(
+                      "I confirm the guardian has consented to storing this student's documents.",
+                      style: TextStyle(fontSize: 13, color: AppColors.studentFieldLabel),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDocumentCard(String key, String label, EnrollBadge badge) {
+    final uploaded = _documentsUploaded[key] ?? false;
+    return InkWell(
+      onTap: () => setState(() => _documentsUploaded[key] = !uploaded),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: uploaded ? const Color(0xFFF0FDF4) : const Color(0xFFFAFAFB),
+          border: Border.all(color: uploaded ? const Color(0xFF86EFAC) : AppColors.studentEnrollLine),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  uploaded ? Icons.check_circle : Icons.upload_file_outlined,
+                  size: 18,
+                  color: uploaded ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            EnrollLabel('', badge: badge),
+            Text(
+              uploaded ? 'Uploaded' : 'Tap to mark as uploaded',
+              style: TextStyle(
+                fontSize: 11,
+                color: uploaded ? const Color(0xFF16A34A) : AppColors.studentHelpText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 7 — MEDICAL & EMERGENCY
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildMedicalSection() {
+    return EnrollSectionCard(
+      title: 'Medical & emergency',
+      subtitle: 'Health notes and emergency contact',
+      stepNumber: 7,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollTextField(
+            label: 'Allergies',
+            controller: _allergiesController,
+            badge: EnrollBadge.optional,
+            hint: 'e.g. Peanuts, penicillin',
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          EnrollTextField(
+            label: 'Current medications',
+            controller: _medicationsController,
+            badge: EnrollBadge.optional,
+            maxLines: 2,
+          ),
+          const SizedBox(height: 16),
+          EnrollTextField(
+            label: 'Emergency contact (name & phone)',
+            controller: _emergencyContactController,
+            badge: EnrollBadge.recommended,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 8 — SPECIALLY ABLED
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildSpeciallyAbledSection() {
+    return EnrollSectionCard(
+      title: 'Specially abled',
+      subtitle: 'PwD accommodations',
+      stepNumber: 8,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollToggle(
+            label: 'Specially abled (PwD)',
+            description: 'Enables accommodation notes and the UDID document requirement.',
+            value: _isPwD,
+            onChanged: (v) => setState(() => _isPwD = v),
+          ),
+          if (_isPwD) ...[
+            const SizedBox(height: 12),
+            EnrollTextField(
+              label: 'Accommodation notes',
+              controller: _pwdNotesController,
+              badge: EnrollBadge.recommended,
+              maxLines: 3,
+              hint: 'e.g. Wheelchair access, extra exam time',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 9 — IDENTITY MARKS
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildIdentityMarksSection() {
+    return EnrollSectionCard(
+      title: 'Identity marks',
+      subtitle: 'Physical identifiers',
+      stepNumber: 9,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollFieldGrid(children: [
+            EnrollTextField(label: 'Identity mark 1', controller: _identityMark1Controller, badge: EnrollBadge.optional),
+            EnrollTextField(label: 'Identity mark 2', controller: _identityMark2Controller, badge: EnrollBadge.optional),
+          ]),
+          const SizedBox(height: 16),
+          EnrollTextField(
+            label: 'Birthmark description',
+            controller: _birthmarkController,
+            badge: EnrollBadge.optional,
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 10 — FEE PLAN
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildFeesSection() {
+    return EnrollSectionCard(
+      title: 'Fee plan',
+      subtitle: 'Assign fees & concessions',
+      stepNumber: 10,
+      navButtons: _navButtons(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EnrollFieldGrid(children: [
+            EnrollDropdown<String>(
+              label: 'Fee group',
+              badge: EnrollBadge.recommended,
+              value: _feeGroup,
+              hint: 'Select fee group',
+              items: const ['Standard', 'Sibling discount', 'Staff ward']
+                  .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                  .toList(),
+              onChanged: (v) => setState(() => _feeGroup = v),
+            ),
+            EnrollDropdown<String>(
+              label: 'Concession',
+              badge: EnrollBadge.optional,
+              value: _concession,
+              hint: 'None',
+              items: const ['None', 'Merit scholarship', 'Financial aid']
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (v) => setState(() => _concession = v),
+            ),
+          ]),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFAFAFB),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.studentEnrollLine),
+            ),
+            child: const Text(
+              'The exact fee schedule is assigned once the student is enrolled and a fee plan is confirmed by the accounts team.',
+              style: TextStyle(fontSize: 12, color: AppColors.studentEnrollMuted),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // SECTION 11 — REVIEW
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildReviewSection() {
+    final schoolClass = _classes.where((c) => c.id == _classId).firstOrNull;
+    final section = schoolClass?.sections.where((s) => s.id == _sectionId).firstOrNull;
+    return EnrollSectionCard(
+      title: 'Review',
+      subtitle: 'Confirm details before enrolling',
+      stepNumber: 11,
+      navButtons: Row(
+        children: [
+          OutlinedButton(
+            onPressed: _prev,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.studentNavPrevText,
+              side: const BorderSide(color: AppColors.studentNavPrevBorder),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('← Back'),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _reviewRow('Student identity', '${_firstNameController.text} ${_lastNameController.text}'.trim(), 0),
+          _reviewRow('Academic placement', schoolClass != null ? '${schoolClass.name} · Section ${section?.name ?? '—'}' : 'Not set', 1),
+          _reviewRow('Contact & address', _phoneController.text.isEmpty ? 'Not provided' : _phoneController.text, 2),
+          _reviewRow('Family & guardians', '${_guardians.length} guardian${_guardians.length == 1 ? '' : 's'}', 3),
+          _reviewRow('Documents', '${_documentsUploaded.values.where((v) => v).length} of ${_documentsUploaded.length} uploaded', 5),
+          _reviewRow('Fee plan', _feeGroup ?? 'Not selected', 9),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () => setState(() => _reviewConfirmed = !_reviewConfirmed),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _reviewConfirmed,
+                  onChanged: (v) => setState(() => _reviewConfirmed = v ?? false),
+                  activeColor: AppColors.studentEnrollBrand,
+                ),
+                const Expanded(
+                  child: Text(
+                    "I've reviewed every section.",
+                    style: TextStyle(fontSize: 13, color: AppColors.studentFieldLabel),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reviewRow(String label, String value, int jumpIndex) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.studentEnrollLine),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.studentEnrollMuted)),
+                const SizedBox(height: 2),
+                Text(
+                  value.isEmpty ? 'Not set' : value,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _goToIndex(jumpIndex),
+            style: TextButton.styleFrom(foregroundColor: AppColors.studentEnrollBrand, padding: EdgeInsets.zero),
+            child: const Text('Edit →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // STICKY FOOTER
+  // ══════════════════════════════════════════════════════════════════════
+
+  Widget _buildFooter() {
+    final isReviewStep = _activeIndex == _navItems.length - 1;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFECECF2))),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 12, offset: const Offset(0, -4))],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _progress,
+                      minHeight: 6,
+                      backgroundColor: const Color(0xFFF3F4F6),
+                      color: AppColors.studentEnrollBrand,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${(_progress * 100).round()}%',
+                  style: const TextStyle(fontSize: 11, color: AppColors.studentEnrollMuted, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.studentEnrollMuted),
+                    child: const Text('Discard'),
+                  ),
+                  const SizedBox(width: 6),
+                  OutlinedButton(
+                    onPressed: () => _comingSoon('Save draft'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.studentEnrollInk,
+                      side: const BorderSide(color: AppColors.studentEnrollLine),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Save draft'),
+                  ),
+                  const SizedBox(width: 6),
+                  OutlinedButton(
+                    onPressed: () => _comingSoon('Print / PDF'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.studentEnrollInk,
+                      side: const BorderSide(color: AppColors.studentEnrollLine),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Print / PDF'),
+                  ),
+                  const SizedBox(width: 6),
+                  if (isReviewStep)
+                    ElevatedButton(
+                      onPressed: (_saving || !_reviewConfirmed) ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.studentEnrollBrand,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFE5E7EB),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: _saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(isEditMode ? 'Update student →' : 'Enroll student →'),
+                    )
+                  else
+                    ElevatedButton(
+                      onPressed: _next,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.studentEnrollBrand,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Next →'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepChip extends StatelessWidget {
+  final int index;
+  final String label;
+  final EnrollBadge? badge;
+  final bool isActive;
+  final bool isLocked;
+  final bool isDone;
+  final VoidCallback? onTap;
+
+  const _StepChip({
+    required this.index,
+    required this.label,
+    required this.badge,
+    required this.isActive,
+    required this.isLocked,
+    required this.isDone,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: isLocked ? 0.5 : 1,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 116,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.studentNavActiveBg : (isLocked ? AppColors.studentNavLockedBg : Colors.white),
+            border: Border.all(
+              color: isActive ? AppColors.studentEnrollBrand : AppColors.studentEnrollLine,
+              width: isActive ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? AppColors.studentEnrollBrand
+                          : (isDone ? const Color(0xFF10B981) : AppColors.studentNavBulletBg),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isActive || isDone ? Colors.transparent : AppColors.studentEnrollLine,
+                      ),
+                    ),
+                    child: isDone
+                        ? const Icon(Icons.check, size: 12, color: Colors.white)
+                        : Text(
+                            '$index',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isActive ? Colors.white : AppColors.studentNavBulletText,
+                            ),
+                          ),
+                  ),
+                  if (badge != null) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      badge == EnrollBadge.sensitive ? Icons.warning_amber_rounded : Icons.verified_outlined,
+                      size: 12,
+                      color: badge == EnrollBadge.sensitive ? const Color(0xFFDC2626) : AppColors.studentEnrollBrand,
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: isActive ? AppColors.studentEnrollBrand : AppColors.studentNavLabel,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+}

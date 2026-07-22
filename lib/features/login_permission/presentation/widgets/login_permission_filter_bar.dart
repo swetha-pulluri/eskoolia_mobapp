@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_dropdown.dart';
 import '../../../login_permission/domain/models/login_permission_user.dart';
 
 class LoginPermissionFilterBar extends StatelessWidget {
@@ -193,35 +194,22 @@ class LoginPermissionFilterBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Container(
+        AppDropdown<String>(
+          value: roleFilter,
+          items: roleOptions
+              .map((role) => DropdownMenuItem<String?>(
+                    value: role,
+                    child: Text(role, style: TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) onRoleChanged(value);
+          },
           height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            border: Border.all(color: AppColors.cardBorder),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: roleFilter,
-              isExpanded: true,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              items: roleOptions.map((role) {
-                return DropdownMenuItem(
-                  value: role,
-                  child: Text(
-                    role,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) onRoleChanged(value);
-              },
-            ),
-          ),
+          fontSize: 13,
+          textColor: AppColors.textPrimary,
+          borderColor: AppColors.cardBorder,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
       ],
     );
@@ -288,35 +276,25 @@ class LoginPermissionFilterBar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            border: Border.all(color: AppColors.cardBorder),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<StatusFilter>(
-              value: statusFilter,
-              isExpanded: true,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              items: StatusFilter.values.map((status) {
-                return DropdownMenuItem(
-                  value: status,
-                  child: Text(
-                    status == StatusFilter.all ? 'All statuses' : status.label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textPrimary,
+        AppDropdown<StatusFilter>(
+          value: statusFilter,
+          items: StatusFilter.values
+              .map((status) => DropdownMenuItem<StatusFilter?>(
+                    value: status,
+                    child: Text(
+                      status == StatusFilter.all ? 'All statuses' : status.label,
+                      style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
                     ),
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) onStatusChanged(value);
-              },
-            ),
-          ),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) onStatusChanged(value);
+          },
+          height: 40,
+          fontSize: 13,
+          textColor: AppColors.textPrimary,
+          borderColor: AppColors.cardBorder,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
       ],
     );

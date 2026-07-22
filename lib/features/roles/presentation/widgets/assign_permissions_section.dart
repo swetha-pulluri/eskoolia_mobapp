@@ -72,6 +72,17 @@ class _AssignPermissionsSectionState
   bool _showRoleSwitcher = false;
   Set<int> _togglingRoleIds = {};
 
+  // Owns the Module Access list's internal scroll — kept separate from the
+  // Scrollbar's own auto-attach so it can't accidentally latch onto the
+  // outer page scroll view instead (the module list is nested inside it).
+  final ScrollController _moduleListScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _moduleListScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -425,12 +436,12 @@ class _AssignPermissionsSectionState
             const SizedBox(height: 12),
             _buildErrorFlash(_saveError!),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           if (!hasRole)
             _buildRolePickerGrid()
           else ...[
             _buildStatsGrid(),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
@@ -452,7 +463,7 @@ class _AssignPermissionsSectionState
 
   Widget _buildPageHead(bool hasRole) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
@@ -607,7 +618,7 @@ class _AssignPermissionsSectionState
         const SizedBox(height: 16),
         if (_allRoles.isEmpty)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
+            padding: EdgeInsets.symmetric(vertical: 32),
             child: Center(
               child: Text(
                 'Loading roles…',
@@ -687,7 +698,7 @@ class _AssignPermissionsSectionState
   Widget _buildTreeErrorBlock(String message) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
@@ -740,32 +751,51 @@ class _AssignPermissionsSectionState
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width < 480 ? 1 : (width < 768 ? 2 : 3);
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
+        // Frontend's own breakpoints go to a single column below 480px, but
+        // that's a desktop-viewport threshold most phones never clear —
+        // per the Mobile UI Guidelines ("place related cards side by side
+        // whenever screen width allows"), phones use the frontend's own
+        // 2-column state (already how it renders at 480-768px) instead of
+        // stacking all three cards full-width. True 1-column only applies
+        // below the width a compact card can no longer fit two-up. A fixed
+        // mainAxisExtent (not an aspect ratio) keeps card height constant
+        // regardless of column width, and the card's own text is bounded to
+        // a fixed number of lines — together these guarantee no overflow at
+        // any of these widths, instead of depending on width-based math.
+        final crossAxisCount = width < 280 ? 1 : (width < 640 ? 2 : 3);
+        return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: crossAxisCount == 1 ? 2.6 : 1.3,
-          children: [
-            _buildStatCard(
-              label: 'MODULES ENABLED',
-              value: '$modulesEnabled',
-              valueSuffix: ' / $totalModules',
-              hint: 'modules active for this role',
-            ),
-            _buildStatCard(
-              label: 'PERMISSIONS ASSIGNED',
-              value: '${_selectedIds.length}',
-              hint: 'out of $totalPermissions total',
-            ),
-            _buildStatCard(
-              label: 'FULLY CONFIGURED',
-              value: '$modulesConfigured',
-              hint: 'modules with operation level set',
-            ),
-          ],
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            mainAxisExtent: 130,
+          ),
+          itemCount: 3,
+          itemBuilder: (context, index) {
+            switch (index) {
+              case 0:
+                return _buildStatCard(
+                  label: 'MODULES ENABLED',
+                  value: '$modulesEnabled',
+                  valueSuffix: ' / $totalModules',
+                  hint: 'modules active for this role',
+                );
+              case 1:
+                return _buildStatCard(
+                  label: 'PERMISSIONS ASSIGNED',
+                  value: '${_selectedIds.length}',
+                  hint: 'out of $totalPermissions total',
+                );
+              default:
+                return _buildStatCard(
+                  label: 'FULLY CONFIGURED',
+                  value: '$modulesConfigured',
+                  hint: 'modules with operation level set',
+                );
+            }
+          },
         );
       },
     );
@@ -778,7 +808,7 @@ class _AssignPermissionsSectionState
     required String hint,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
@@ -790,6 +820,8 @@ class _AssignPermissionsSectionState
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -797,8 +829,10 @@ class _AssignPermissionsSectionState
               color: Color(0xFF72758B),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           RichText(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             text: TextSpan(
               style: GoogleFonts.playfairDisplay(
                 fontSize: 34,
@@ -820,9 +854,11 @@ class _AssignPermissionsSectionState
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             hint,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 12, color: Color(0xFF72758B)),
           ),
         ],
@@ -839,7 +875,7 @@ class _AssignPermissionsSectionState
     return Column(
       children: [
         _buildModuleListCard(),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _buildModuleConfigCard(),
       ],
     );
@@ -860,7 +896,7 @@ class _AssignPermissionsSectionState
           if (_showRoleSwitcher) _buildRoleSwitcherList(),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: const BoxDecoration(
               color: Color(0xFFF5F5FB),
               border: Border(bottom: BorderSide(color: Color(0xFFE8E8EE))),
@@ -884,16 +920,45 @@ class _AssignPermissionsSectionState
               ],
             ),
           ),
-          for (final module in _tree?.modules ?? const <PermissionModule>[])
-            _buildModuleRow(module),
+          _buildModuleRowsList(),
         ],
+      ),
+    );
+  }
+
+  /// Bounded, internally-scrolling module list with a visible scrollbar —
+  /// mirrors the frontend's module-rows `div` (`overflowY: "auto", maxHeight:
+  /// "calc(100vh - 440px)"`), which caps the row list to a few visible rows
+  /// rather than letting it grow with the page. The 100vh-relative formula
+  /// is a desktop-only value (it assumes ModuleList and ModuleConfigPanel
+  /// sit side-by-side, so nothing else pushes it down) — on the stacked
+  /// mobile layout that same subtraction doesn't apply, so the height here
+  /// is instead proportional to the phone's own screen height, clamped so
+  /// small phones still get a couple of visible rows and large phones don't
+  /// get a panel that dominates the screen.
+  Widget _buildModuleRowsList() {
+    final modules = _tree?.modules ?? const <PermissionModule>[];
+    final screenHeight = MediaQuery.of(context).size.height;
+    final listHeight = (screenHeight * 0.28).clamp(200.0, 300.0);
+
+    return SizedBox(
+      height: listHeight,
+      child: Scrollbar(
+        controller: _moduleListScrollController,
+        thumbVisibility: true,
+        child: ListView.builder(
+          controller: _moduleListScrollController,
+          padding: EdgeInsets.zero,
+          itemCount: modules.length,
+          itemBuilder: (context, index) => _buildModuleRow(modules[index]),
+        ),
       ),
     );
   }
 
   Widget _buildRoleCardHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1062,7 +1127,7 @@ class _AssignPermissionsSectionState
     return InkWell(
       onTap: isEnabled ? () => _selectModule(module.module) : null,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           border: Border(
             bottom: const BorderSide(color: Color(0xFFE8E8EE)),
@@ -1188,7 +1253,7 @@ class _AssignPermissionsSectionState
     if (activeModule == null || !_enabledModules.contains(activeModule.module)) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 32),
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 32),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFE8E8EE)),
@@ -1197,15 +1262,15 @@ class _AssignPermissionsSectionState
         child: Column(
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: const Color(0xFFEEEAFF),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Center(child: Text('🔒', style: TextStyle(fontSize: 22))),
+              child: const Center(child: Text('🔒', style: TextStyle(fontSize: 20))),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             const Text(
               'Enable a module to configure it',
               textAlign: TextAlign.center,
@@ -1240,7 +1305,7 @@ class _AssignPermissionsSectionState
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
             decoration: const BoxDecoration(
               color: Color(0xFFF5F5FB),
               border: Border(bottom: BorderSide(color: Color(0xFFE8E8EE))),
@@ -1265,7 +1330,7 @@ class _AssignPermissionsSectionState
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 16),
+            padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1285,7 +1350,7 @@ class _AssignPermissionsSectionState
           ),
           Container(height: 1, color: const Color(0xFFE8E8EE)),
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 18),
+            padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
