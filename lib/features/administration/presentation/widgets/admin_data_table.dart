@@ -144,6 +144,10 @@ class AdminPaginationBar extends StatelessWidget {
   final bool showPageNumbers;
   final Color previousColor;
   final Color nextColor;
+  /// Appended to each page-size option's label — web shows plain numbers
+  /// ("10") on Visitor Book/Complaint/Admin Setup but "10 / page" on Phone
+  /// Call Log/Postal Receive/Postal Dispatch.
+  final String pageSizeSuffix;
 
   const AdminPaginationBar({
     super.key,
@@ -157,6 +161,7 @@ class AdminPaginationBar extends StatelessWidget {
     this.showPageNumbers = false,
     this.previousColor = const Color(0xFF64748B),
     this.nextColor = const Color(0xFF64748B),
+    this.pageSizeSuffix = '',
   });
 
   @override
@@ -185,7 +190,7 @@ class AdminPaginationBar extends StatelessWidget {
                 value: pageSize,
                 underline: const SizedBox(),
                 style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
-                items: pageSizeOptions.map((s) => DropdownMenuItem(value: s, child: Text('$s'))).toList(),
+                items: pageSizeOptions.map((s) => DropdownMenuItem(value: s, child: Text('$s$pageSizeSuffix'))).toList(),
                 onChanged: (v) {
                   if (v != null) onPageSizeChange(v);
                 },

@@ -10,6 +10,10 @@ import '../../features/administration/presentation/pages/communication_hub_tab.d
 import '../../features/administration/presentation/pages/postal_management_tab.dart';
 import '../../features/administration/presentation/pages/documents_studio_tab.dart';
 import '../../features/administration/presentation/pages/system_config_tab.dart';
+import '../../features/admissions/presentation/pages/admissions_command_center_page.dart';
+import '../../features/admissions/presentation/pages/admissions_analytics_page.dart';
+import '../../features/admissions/presentation/pages/admissions_marketing_page.dart';
+import '../../features/attendance/presentation/pages/attendance_student_page.dart';
 
 /// App Router Configuration
 /// Note: /home = Admin Home Screen (landing page with Quick Access, Recently Visited, All Modules)
@@ -82,6 +86,32 @@ class AppRouter {
         path: '/administration/system-config',
         name: 'administration-system-config',
         builder: (context, state) => const SystemConfigPage(),
+      ),
+
+      // Admissions Routes (matching web frontend structure)
+      GoRoute(
+        path: '/admissions/command-center',
+        name: 'admissions-command-center',
+        builder: (context, state) => const AdmissionsCommandCenterPage(),
+      ),
+
+      GoRoute(
+        path: '/admissions/analytics',
+        name: 'admissions-analytics',
+        builder: (context, state) => const AdmissionsAnalyticsPage(),
+      ),
+
+      GoRoute(
+        path: '/admissions/marketing',
+        name: 'admissions-marketing',
+        builder: (context, state) => const AdmissionsMarketingPage(),
+      ),
+
+      // Attendance Routes (matching web frontend structure)
+      GoRoute(
+        path: '/attendance/student',
+        name: 'attendance-student',
+        builder: (context, state) => const AttendanceStudentPage(),
       ),
 
       // TODO: Add other routes as needed

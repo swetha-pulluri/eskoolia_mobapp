@@ -9,18 +9,35 @@ class AdminSectionCard extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final Widget child;
+  /// Admin Setup's web panel overrides the shared `.white-box` style with
+  /// its own `border-radius: 14px`, `padding: 24px` and a drop shadow
+  /// (`0 1px 3px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06)`) — every
+  /// other panel uses the plain generic `boxStyle()` (10px radius, 16px
+  /// padding, no shadow) that this widget defaults to.
+  final double borderRadius;
+  final EdgeInsetsGeometry padding;
+  final List<BoxShadow>? boxShadow;
 
-  const AdminSectionCard({super.key, required this.title, required this.child, this.trailing});
+  const AdminSectionCard({
+    super.key,
+    required this.title,
+    required this.child,
+    this.trailing,
+    this.borderRadius = 10,
+    this.padding = const EdgeInsets.all(16),
+    this.boxShadow,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: padding,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: AppColors.borderPrimary),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: boxShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

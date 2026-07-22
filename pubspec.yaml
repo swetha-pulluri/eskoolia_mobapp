@@ -58,9 +58,6 @@ dependencies:
   logger: ^2.4.0
   google_fonts: ^6.1.0
 
-  # File attachment picker (Administration forms: Visitor Book, Complaints, Postal, ...)
-  file_picker: ^8.1.4
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

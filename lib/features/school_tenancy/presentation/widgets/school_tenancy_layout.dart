@@ -57,9 +57,9 @@ class SchoolTenancyLayout extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Horizontal navigation tabs (matches web ModuleSubNav)
+                  // Horizontal navigation tabs
                   Container(
-                    height: 46,
+                    height: 48,
                     decoration: const BoxDecoration(
                       border: Border(
                         bottom: BorderSide(color: AppColors.borderPrimary, width: 1),
@@ -67,32 +67,36 @@ class SchoolTenancyLayout extends StatelessWidget {
                     ),
                     child: ListView(
                       scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       children: [
                         _buildNavTab(
                           context,
-                          icon: Icons.grid_view_outlined,
+                          icon: Icons.dashboard_outlined,
                           label: 'Dashboard',
                           path: '/super-admin/dashboard',
                         ),
+                        const SizedBox(width: 8),
                         _buildNavTab(
                           context,
-                          icon: Icons.corporate_fare,
+                          icon: Icons.school_outlined,
                           label: 'Schools',
                           path: '/super-admin/schools',
                         ),
+                        const SizedBox(width: 8),
                         _buildNavTab(
                           context,
-                          icon: Icons.credit_card,
+                          icon: Icons.payment_outlined,
                           label: 'Billing',
                           path: '/super-admin/billing',
                         ),
+                        const SizedBox(width: 8),
                         _buildNavTab(
                           context,
-                          icon: Icons.description_outlined,
+                          icon: Icons.list_alt_outlined,
                           label: 'Audit Log',
                           path: '/super-admin/audit',
                         ),
+                        const SizedBox(width: 8),
                         _buildNavTab(
                           context,
                           icon: Icons.settings_outlined,
@@ -127,13 +131,13 @@ class SchoolTenancyLayout extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? AppColors.primaryPurple : Colors.transparent,
-              width: 2,
-            ),
+          color: isSelected ? AppColors.purpleTint : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryPurple : Colors.transparent,
+            width: 1,
           ),
         ),
         child: Row(
@@ -141,15 +145,15 @@ class SchoolTenancyLayout extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: 12,
+              size: 16,
               color: isSelected ? AppColors.primaryPurple : AppColors.textSecondary,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected ? AppColors.primaryPurple : AppColors.textSecondary,
               ),
             ),

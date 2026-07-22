@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Page-level breadcrumb header used by Complaints, Phone Call Log and
-/// the Postal panels on web: `<h1>{title}</h1>` + a
+/// Page-level breadcrumb header used by Complaints, Phone Call Log, the
+/// Postal panels, and Admin Setup on web: `<h1>{title}</h1>` + a
 /// `Dashboard / Admin Section / {title}` breadcrumb trail. Visitor Book
-/// and Admin Setup do NOT have this header on web — omit it there.
+/// does NOT have this header on web — omit it there.
 class AdminBreadcrumbHeader extends StatelessWidget {
   final String title;
 

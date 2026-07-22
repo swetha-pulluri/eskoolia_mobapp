@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/complaint_entity.dart';
+import '../../domain/entities/picked_attachment.dart';
 import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
 import '../widgets/admin_section_card.dart';
@@ -33,6 +35,29 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
   String? _complaintSourceId;
   DateTime? _date = DateTime.now();
   int? _editingId;
+  PickedAttachment? _attachment;
+  String? _attachmentError;
+
+  static const _allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+
+  Future<void> _pickAttachment() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _allowedExtensions,
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null || file.bytes == null) return;
+    setState(() {
+      if (file.size > 5 * 1024 * 1024) {
+        _attachmentError = 'File size exceeds 5MB limit.';
+        _attachment = null;
+      } else {
+        _attachmentError = null;
+        _attachment = PickedAttachment(name: file.name, bytes: file.bytes!, size: file.size);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -57,6 +82,8 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       _complaintSourceId = null;
       _date = DateTime.now();
       _editingId = null;
+      _attachment = null;
+      _attachmentError = null;
     });
   }
 
@@ -71,6 +98,8 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       _actionTakenCtrl.text = c.actionTaken ?? '';
       _assignedCtrl.text = c.assigned ?? '';
       _descriptionCtrl.text = c.description ?? '';
+      _attachment = null;
+      _attachmentError = null;
     });
   }
 
@@ -109,6 +138,10 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       _showFieldError('Please select a date.');
       return;
     }
+    if (_attachmentError != null) {
+      _showFieldError(_attachmentError!);
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     final complaint = ComplaintEntity(
@@ -120,6 +153,7 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       actionTaken: _actionTakenCtrl.text.trim().isEmpty ? null : _actionTakenCtrl.text.trim(),
       assigned: _assignedCtrl.text.trim().isEmpty ? null : _assignedCtrl.text.trim(),
       description: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
+      attachment: _attachment,
     );
 
     final notifier = ref.read(complaintListProvider.notifier);
@@ -253,6 +287,12 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
                       return null;
                     },
                   ),
+                  AdminFileField(
+                    fileName: _attachment?.name,
+                    errorText: _attachmentError,
+                    onTap: _pickAttachment,
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       WebButton(
@@ -272,7 +312,7 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
           AdminSectionCard(
             title: 'Complaint List',
             trailing: SizedBox(
-              width: 160,
+              width: 240,
               child: TextField(
                 controller: _searchCtrl,
                 decoration: const InputDecoration(hintText: 'Quick search', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),

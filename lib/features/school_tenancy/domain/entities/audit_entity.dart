@@ -9,8 +9,6 @@ class AuditEventEntity {
   final String severity;
   final String? tenantId;
   final String? schoolName;
-  final String status;
-  final String? errorMessage;
   final List<String>? affectedFields;
   final Map<String, dynamic>? beforeValues;
   final Map<String, dynamic>? afterValues;
@@ -25,8 +23,6 @@ class AuditEventEntity {
     required this.severity,
     this.tenantId,
     this.schoolName,
-    this.status = 'success',
-    this.errorMessage,
     this.affectedFields,
     this.beforeValues,
     this.afterValues,

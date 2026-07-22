@@ -234,7 +234,7 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
           AdminSectionCard(
             title: 'Phone Call List',
             trailing: SizedBox(
-              width: 160,
+              width: 250,
               child: TextField(
                 controller: _searchCtrl,
                 decoration: const InputDecoration(hintText: 'Quick search', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
@@ -267,6 +267,7 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
                   onPageChange: (p) => ref.read(phoneCallListProvider.notifier).setPage(p),
                   onPageSizeChange: (s) => ref.read(phoneCallListProvider.notifier).setPageSize(s),
                   pageSizeOptions: const [10, 25, 50],
+                  pageSizeSuffix: ' / page',
                   showPageNumbers: true,
                 ),
               ],

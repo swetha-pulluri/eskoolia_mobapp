@@ -1,3 +1,5 @@
+import 'picked_attachment.dart';
+
 /// Postal Received entry — mirrors backend `PostalReceiveEntry` /
 /// `/api/v1/admissions/postal-receive/`.
 class PostalReceiveEntity {
@@ -10,6 +12,9 @@ class PostalReceiveEntity {
   final String date;
   final String? fileUrl;
   final String? createdByName;
+  /// Transient — a newly-picked file pending upload on save (not part of
+  /// the API's JSON contract), matching Visitor Book's attachment field.
+  final PickedAttachment? attachment;
 
   const PostalReceiveEntity({
     this.id,
@@ -21,6 +26,7 @@ class PostalReceiveEntity {
     required this.date,
     this.fileUrl,
     this.createdByName,
+    this.attachment,
   });
 
   factory PostalReceiveEntity.fromJson(Map<String, dynamic> json) {
@@ -59,6 +65,9 @@ class PostalDispatchEntity {
   final String date;
   final String? fileUrl;
   final String? createdByName;
+  /// Transient — a newly-picked file pending upload on save (not part of
+  /// the API's JSON contract), matching Visitor Book's attachment field.
+  final PickedAttachment? attachment;
 
   const PostalDispatchEntity({
     this.id,
@@ -70,6 +79,7 @@ class PostalDispatchEntity {
     required this.date,
     this.fileUrl,
     this.createdByName,
+    this.attachment,
   });
 
   factory PostalDispatchEntity.fromJson(Map<String, dynamic> json) {

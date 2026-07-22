@@ -53,11 +53,6 @@ final policiesProvider = Provider<PoliciesStateEntity>((ref) {
   return SchoolTenancyLocalData.getPoliciesState();
 });
 
-/// Platform Settings Provider - read-only settings shown on the Policies page
-final platformSettingsProvider = Provider<Map<String, Map<String, dynamic>>>((ref) {
-  return SchoolTenancyLocalData.getPlatformSettings();
-});
-
 /// School Filters
 class SchoolFilters {
   final int? page;

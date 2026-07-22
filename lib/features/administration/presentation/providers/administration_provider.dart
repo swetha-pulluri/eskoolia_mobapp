@@ -5,6 +5,9 @@ import '../../domain/entities/phone_call_entity.dart';
 import '../../domain/entities/admin_setup_entity.dart';
 import '../../domain/entities/postal_entity.dart';
 import '../../domain/entities/student_category_entity.dart';
+import '../../domain/entities/role_entity.dart';
+import '../../domain/entities/id_card_entity.dart';
+import '../../domain/entities/certificate_entity.dart';
 import 'administration_list_state.dart';
 import 'administration_local_data.dart';
 
@@ -127,5 +130,42 @@ final studentCategoryListProvider = StateNotifierProvider.autoDispose<AdminListN
     updateItem: AdministrationLocalData.updateStudentCategory,
     deleteItem: AdministrationLocalData.deleteStudentCategory,
     idOf: (c) => c.id!,
+  );
+});
+
+/// Summary cards data for Student Categories — recomputed whenever the
+/// list changes (matches web re-fetching `/summary/` after every mutation).
+final studentCategorySummaryProvider = FutureProvider.autoDispose<StudentCategorySummary>((ref) {
+  ref.watch(studentCategoryListProvider);
+  return AdministrationLocalData.getStudentCategorySummary();
+});
+
+// ─── Roles / Classes / Sections / Recipients (ID Card & Certificate) ─────
+final rolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) => AdministrationLocalData.getRoles());
+final classesProvider = FutureProvider.autoDispose<List<ClassEntity>>((ref) => AdministrationLocalData.getClasses());
+final sectionsProvider = FutureProvider.autoDispose<List<SectionEntity>>((ref) => AdministrationLocalData.getSections());
+final recipientsProvider = FutureProvider.autoDispose<List<RecipientEntity>>((ref) => AdministrationLocalData.getRecipients());
+
+// ─── ID Card Templates ────────────────────────────────────────────────────
+final idCardTemplateListProvider = StateNotifierProvider.autoDispose<AdminListNotifier<IdCardTemplateEntity>,
+    AdminListState<IdCardTemplateEntity>>((ref) {
+  return AdminListNotifier<IdCardTemplateEntity>(
+    fetchPage: ({required page, required pageSize}) => AdministrationLocalData.getIdCardTemplates(page: page, pageSize: pageSize),
+    createItem: AdministrationLocalData.createIdCardTemplate,
+    updateItem: AdministrationLocalData.updateIdCardTemplate,
+    deleteItem: AdministrationLocalData.deleteIdCardTemplate,
+    idOf: (e) => e.id!,
+  );
+});
+
+// ─── Certificate Templates ────────────────────────────────────────────────
+final certificateTemplateListProvider = StateNotifierProvider.autoDispose<AdminListNotifier<CertificateTemplateEntity>,
+    AdminListState<CertificateTemplateEntity>>((ref) {
+  return AdminListNotifier<CertificateTemplateEntity>(
+    fetchPage: ({required page, required pageSize}) => AdministrationLocalData.getCertificateTemplates(page: page, pageSize: pageSize),
+    createItem: AdministrationLocalData.createCertificateTemplate,
+    updateItem: AdministrationLocalData.updateCertificateTemplate,
+    deleteItem: AdministrationLocalData.deleteCertificateTemplate,
+    idOf: (e) => e.id!,
   );
 });

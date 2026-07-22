@@ -2,15 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
-import '../../domain/entities/policy_entity.dart' show PolicyEntity;
 import '../providers/school_tenancy_provider.dart';
 import '../widgets/school_tenancy_layout.dart';
 
-/// Super Admin Policies & Settings page.
-/// Converts the web `/super-admin/policies` page (eyebrow header, category
-/// tabs, policy rows with locked/unsaved badges, read-only Platform Settings
-/// panel, Quick Actions panel) into a single scrollable mobile column —
-/// the desktop's side-by-side layout is stacked vertically.
+/// Super Admin Policies Page
+/// Exact conversion of web frontend policies structure
 class SuperAdminPoliciesPage extends ConsumerStatefulWidget {
   const SuperAdminPoliciesPage({super.key});
 
@@ -18,488 +14,348 @@ class SuperAdminPoliciesPage extends ConsumerStatefulWidget {
   ConsumerState<SuperAdminPoliciesPage> createState() => _SuperAdminPoliciesPageState();
 }
 
-class _CategoryCfg {
-  final String label;
-  final String desc;
-  final IconData icon;
-  final Color iconBg;
-  final Color iconColor;
-  const _CategoryCfg(this.label, this.desc, this.icon, this.iconBg, this.iconColor);
-}
-
-class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage> {
-  String _activeTab = 'security';
+class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final Map<String, bool> _draftToggles = {};
-  final Map<String, num> _draftNumbers = {};
+  final Map<String, int> _draftNumbers = {};
 
-  static const Map<String, _CategoryCfg> _catConfig = {
-    'security': _CategoryCfg('Security', 'Authentication, session & access controls', Icons.shield_outlined,
-        Color(0xFFFEF2F2), Color(0xFFEF4444)),
-    'data_isolation': _CategoryCfg('Data Isolation', 'Tenancy boundaries & audit retention', Icons.storage_outlined,
-        Color(0xFFF0F9FF), Color(0xFF0EA5E9)),
-    'billing': _CategoryCfg('Billing', 'GST rates & invoice payment terms', Icons.bolt_outlined,
-        Color(0xFFF5F3FF), Color(0xFF9333EA)),
-    'system': _CategoryCfg('System', 'Infrastructure, backups & tenancy switches', Icons.settings_outlined,
-        Color(0xFFECFDF5), Color(0xFF059669)),
-  };
-
-  List<PolicyEntity> _policiesFor(dynamic state, String cat) {
-    switch (cat) {
-      case 'security':
-        return state.security as List<PolicyEntity>;
-      case 'data_isolation':
-        return state.dataIsolation as List<PolicyEntity>;
-      case 'billing':
-        return state.billing as List<PolicyEntity>;
-      default:
-        return state.system as List<PolicyEntity>;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
   }
 
-  bool _isDirty(PolicyEntity p) {
-    if (p.isToggle) {
-      return _draftToggles.containsKey(p.key) && _draftToggles[p.key] != p.value;
-    }
-    return _draftNumbers.containsKey(p.key) && _draftNumbers[p.key] != p.value;
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildCategoryTab(IconData icon, String label, Color color) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPolicyRow({
+    required String key,
+    required String description,
+    required bool isToggle,
+    required bool isOverridable,
+    required dynamic value,
+    required bool isDirty,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDirty ? AppColors.purpleTint : AppColors.bgPrimary,
+        border: Border.all(
+          color: isDirty ? AppColors.purpleSoft : AppColors.borderPrimary,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Key and badges
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  key,
+                  style: AppTextStyles.policyKey,
+                ),
+              ),
+              if (!isOverridable)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgTertiary,
+                    border: Border.all(color: AppColors.borderPrimary),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'locked',
+                    style: AppTextStyles.chipLabel().copyWith(fontSize: 9),
+                  ),
+                ),
+              if (isDirty) const SizedBox(width: 6),
+              if (isDirty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.purpleTint,
+                    border: Border.all(color: AppColors.purpleSoft),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'unsaved',
+                    style: AppTextStyles.chipLabel(color: AppColors.purpleDeep).copyWith(fontSize: 9),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Description
+          Text(
+            description,
+            style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 12, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+
+          // Control
+          if (isToggle)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Switch(
+                  value: _draftToggles[key] ?? (value as bool),
+                  onChanged: (val) => setState(() => _draftToggles[key] = val),
+                  activeTrackColor: AppColors.primaryPurple,
+                ),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.right,
+                    style: AppTextStyles.policyKey.copyWith(fontSize: 12),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.borderPrimary),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.borderPrimary),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.primaryPurple, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      filled: true,
+                      fillColor: AppColors.bgSecondary,
+                    ),
+                    controller: TextEditingController(
+                      text: (_draftNumbers[key] ?? value).toString(),
+                    ),
+                    onChanged: (val) {
+                      final num = int.tryParse(val);
+                      if (num != null) setState(() => _draftNumbers[key] = num);
+                    },
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final policiesState = ref.watch(policiesProvider);
-    final settings = ref.watch(platformSettingsProvider);
-    final activePolicies = _policiesFor(policiesState, _activeTab);
-    final dirtyInActive = activePolicies.where(_isDirty).length;
-    final cfg = _catConfig[_activeTab]!;
 
     return SchoolTenancyLayout(
       currentPath: '/super-admin/policies',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // HEADER — eyebrow + plain bold title
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('Super Admin',
-                              style: AppTextStyles.pageTitleAccent.copyWith(fontSize: 12, fontWeight: FontWeight.w300)),
-                          Text(' · Config', style: AppTextStyles.kpiLabel.copyWith(fontSize: 11, letterSpacing: 1.5)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('Policies & Settings',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                      const SizedBox(height: 6),
-                      Text('Platform-wide configuration and feature controls', style: AppTextStyles.pageSubtitle),
-                      const SizedBox(height: 14),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppColors.amberSoft,
-                              border: Border.all(color: AppColors.amberBorder),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: const Text('Demo data',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF92400E))),
-                          ),
-                          _smallButton(Icons.refresh, 'Refresh', () => setState(() {})),
-                          _smallButton(Icons.download, 'JSON', () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Export JSON — not yet wired to a live API.')),
-                            );
-                          }),
-                          _smallButton(Icons.download, 'YAML', () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Export YAML — not yet wired to a live API.')),
-                            );
-                          }),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // CATEGORY CHIP TABS
-                SizedBox(
-                  height: 42,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: _catConfig.entries.map((entry) {
-                      final key = entry.key;
-                      final c = entry.value;
-                      final active = _activeTab == key;
-                      final hasDirty = _policiesFor(policiesState, key).any(_isDirty);
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _activeTab = key),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: active ? AppColors.purpleTint : AppColors.bgSecondary,
-                              border: Border.all(color: active ? AppColors.purpleSoft : AppColors.borderPrimary),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    color: active ? AppColors.purpleSoft : c.iconBg,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Icon(c.icon, size: 12, color: active ? AppColors.purpleDeep : c.iconColor),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(c.label,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: active ? AppColors.purpleDeep : AppColors.textSecondary,
-                                    )),
-                                if (hasDirty) ...[
-                                  const SizedBox(width: 6),
-                                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.primaryPurple, shape: BoxShape.circle)),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // ACTIVE CATEGORY PANEL
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.bgPrimary,
-                    border: Border.all(color: AppColors.borderPrimary),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(color: cfg.iconBg, borderRadius: BorderRadius.circular(10)),
-                            child: Icon(cfg.icon, size: 16, color: cfg.iconColor),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(cfg.label, style: AppTextStyles.boardLabel.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
-                                Text(cfg.desc, style: AppTextStyles.sectionSubtitle, overflow: TextOverflow.ellipsis),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      ...activePolicies.map((p) => _buildPolicyRow(p)),
-                      const SizedBox(height: 4),
-                      const Divider(color: AppColors.borderPrimary, height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              dirtyInActive > 0 ? '$dirtyInActive unsaved change${dirtyInActive == 1 ? '' : 's'}' : 'No pending changes',
-                              style: AppTextStyles.sectionSubtitle,
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: dirtyInActive > 0
-                                ? () {
-                                    setState(() {
-                                      _draftToggles.clear();
-                                      _draftNumbers.clear();
-                                    });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Policies saved (not yet wired to a live API).')),
-                                    );
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryPurple,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: AppColors.primaryPurple.withValues(alpha: 0.4),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                            child: const Text('Save changes'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // PLATFORM SETTINGS (read-only)
-                Row(
-                  children: [
-                    const Icon(Icons.public, size: 16, color: AppColors.textTertiary),
-                    const SizedBox(width: 8),
-                    Text('Platform Settings', style: AppTextStyles.boardLabel.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: AppColors.bgTertiary, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(999)),
-                      child: const Text('read-only', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ...settings.entries.map((e) => _SettingSection(title: e.key, data: e.value)),
-
-                const SizedBox(height: 20),
-
-                // QUICK ACTIONS
-                Row(
-                  children: [
-                    const Icon(Icons.lock_outline, size: 16, color: AppColors.textTertiary),
-                    const SizedBox(width: 8),
-                    Text('Quick Actions', style: AppTextStyles.boardLabel.copyWith(fontSize: 13, fontWeight: FontWeight.w700)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _quickAction('Reset to defaults', 'Restore all policies to their default values'),
-                _quickAction('Force MFA enrollment', 'Send MFA setup emails to all admins'),
-                _quickAction('Flush all sessions', 'Immediately invalidate all active user sessions'),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _smallButton(IconData icon, String label, VoidCallback onTap) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 13),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textSecondary,
-        side: const BorderSide(color: AppColors.borderPrimary),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
-        minimumSize: Size.zero,
-      ),
-    );
-  }
-
-  Widget _quickAction(String title, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: OutlinedButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title — not yet wired to a live API.')),
-          );
-        },
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          side: const BorderSide(color: AppColors.borderPrimary),
-          backgroundColor: AppColors.bgPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
           children: [
-            Text(title, style: AppTextStyles.boardLabel.copyWith(fontSize: 12.5, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
-            Text(subtitle, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPolicyRow(PolicyEntity policy) {
-    final dirty = _isDirty(policy);
-    final value = policy.isToggle
-        ? (_draftToggles[policy.key] ?? policy.value as bool)
-        : (_draftNumbers[policy.key] ?? policy.value as num);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: dirty ? AppColors.purpleTint : AppColors.bgSecondary,
-        border: Border.all(color: dirty ? AppColors.purpleSoft : AppColors.borderPrimary),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  children: [
-                    Text(policy.key, style: AppTextStyles.policyKey),
-                    if (!policy.isOverridable)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: AppColors.bgTertiary, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(999)),
-                        child: const Text('locked', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
-                      ),
-                    if (dirty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(color: AppColors.purpleTint, border: Border.all(color: AppColors.purpleSoft), borderRadius: BorderRadius.circular(999)),
-                        child: const Text('unsaved', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.purpleDeep)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(policy.description, style: AppTextStyles.policyDescription),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          if (policy.isToggle)
-            Switch(
-              value: value as bool,
-              onChanged: policy.isOverridable == false && policy.key == 'mfa.required'
-                  ? null
-                  : (v) => setState(() => _draftToggles[policy.key] = v),
-              activeTrackColor: AppColors.primaryPurple,
-            )
-          else
-            SizedBox(
-              width: 64,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.right,
-                style: AppTextStyles.policyKey.copyWith(fontSize: 12),
-                controller: TextEditingController(text: '$value')
-                  ..selection = TextSelection.collapsed(offset: '$value'.length),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: AppColors.bgTertiary,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                ),
-                onChanged: (v) {
-                  final n = num.tryParse(v);
-                  if (n != null) setState(() => _draftNumbers[policy.key] = n);
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Collapsible read-only settings section (web `SettingSection`).
-class _SettingSection extends StatefulWidget {
-  final String title;
-  final Map<String, dynamic> data;
-  const _SettingSection({required this.title, required this.data});
-
-  @override
-  State<_SettingSection> createState() => _SettingSectionState();
-}
-
-class _SettingSectionState extends State<_SettingSection> {
-  bool _open = true;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
-        border: Border.all(color: AppColors.borderPrimary),
-        borderRadius: BorderRadius.circular(11),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => setState(() => _open = !_open),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              child: Row(
+            // PAGE HEADER
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      widget.title.toUpperCase(),
-                      style: AppTextStyles.kpiLabel.copyWith(color: AppColors.textSecondary),
-                    ),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      Text('Policies', style: AppTextStyles.pageTitle),
+                      Text('& Settings', style: AppTextStyles.pageTitleAccent),
+                    ],
                   ),
-                  Icon(_open ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right, size: 16, color: AppColors.textTertiary),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Platform-wide configuration and feature controls',
+                    style: AppTextStyles.pageSubtitle,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.refresh, size: 14),
+                        label: const Text('Refresh'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.borderPrimary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          textStyle: AppTextStyles.buttonSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.download, size: 14),
+                        label: const Text('JSON'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.borderPrimary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          textStyle: AppTextStyles.buttonSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.download, size: 14),
+                        label: const Text('YAML'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.borderPrimary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          textStyle: AppTextStyles.buttonSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-          ),
-          if (_open)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-              child: Column(
-                children: widget.data.entries
-                    .map((e) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(e.key, style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: AppColors.textTertiary)),
-                              Text(
-                                '${e.value}',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: e.value == true
-                                      ? const Color(0xFF059669)
-                                      : e.value == false
-                                          ? AppColors.dangerRed
-                                          : AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+
+            // CATEGORY TABS
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.bgPrimary,
+                border: Border(
+                  bottom: BorderSide(color: AppColors.borderPrimary),
+                ),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: AppColors.primaryPurple,
+                unselectedLabelColor: AppColors.textSecondary,
+                indicatorColor: AppColors.primaryPurple,
+                indicatorWeight: 2,
+                tabs: [
+                  _buildCategoryTab(Icons.shield_outlined, 'Security', const Color(0xFFDC2626)),
+                  _buildCategoryTab(Icons.storage_outlined, 'Data', const Color(0xFF0369A1)),
+                  _buildCategoryTab(Icons.bolt_outlined, 'Billing', const Color(0xFF6D28D9)),
+                  _buildCategoryTab(Icons.settings_outlined, 'System', const Color(0xFF059669)),
+                ],
               ),
             ),
-        ],
+
+            // TAB CONTENT
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Security
+                  _buildCategoryContent(policiesState.security),
+                  // Data Isolation
+                  _buildCategoryContent(policiesState.dataIsolation),
+                  // Billing
+                  _buildCategoryContent(policiesState.billing),
+                  // System
+                  _buildCategoryContent(policiesState.system),
+                ],
+              ),
+            ),
+
+            // SAVE/RESET BUTTONS
+            if (_draftToggles.isNotEmpty || _draftNumbers.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: AppColors.bgPrimary,
+                  border: Border(top: BorderSide(color: AppColors.borderPrimary)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _draftToggles.clear();
+                            _draftNumbers.clear();
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.textPrimary,
+                          side: const BorderSide(color: AppColors.borderPrimary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Reset'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _draftToggles.clear();
+                            _draftNumbers.clear();
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryPurple,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Save changes'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),      ),    );
+  }
+
+  Widget _buildCategoryContent(List policies) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: policies.map<Widget>((policy) {
+          final isDirty = (_draftToggles.containsKey(policy.key) && _draftToggles[policy.key] != policy.value) ||
+              (_draftNumbers.containsKey(policy.key) && _draftNumbers[policy.key] != policy.value);
+
+          return _buildPolicyRow(
+            key: policy.key,
+            description: policy.description,
+            isToggle: policy.isToggle,
+            isOverridable: policy.isOverridable,
+            value: policy.value,
+            isDirty: isDirty,
+          );
+        }).toList(),
       ),
     );
   }

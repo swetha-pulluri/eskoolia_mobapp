@@ -1,104 +1,130 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
 
-/// Action badge for the audit log — colored pill matching the web
-/// `ACTION_CLS` map (super-admin/audit/page.tsx). Shows the raw dotted
-/// action key verbatim (e.g. "school.provision"), not uppercased.
+/// Action badge widget for audit log
+/// Colored background with action label
+/// 
+/// Usage:
+/// ```dart
+/// ActionBadge(
+///   action: 'CREATE',
+///   color: AppColors.successGreen,
+/// )
+/// ```
 class ActionBadge extends StatelessWidget {
   final String action;
+  final Color? color;
 
-  const ActionBadge({super.key, required this.action});
+  const ActionBadge({
+    super.key,
+    required this.action,
+    this.color,
+  });
 
-  ({Color bg, Color fg}) _colorsFor(String action) {
-    const map = <String, ({Color bg, Color fg})>{
-      'auth.login': (bg: Color(0xFFD1FAE5), fg: Color(0xFF0A6638)),
-      'auth.logout': (bg: Color(0xFFF3F4F6), fg: AppColors.textSecondary),
-      'auth.impersonate': (bg: Color(0xFFFEF3C7), fg: Color(0xFF92400E)),
-      'school.provision': (bg: Color(0xFFF6F3FF), fg: AppColors.purpleDeep),
-      'school.update': (bg: Color(0xFFF6F3FF), fg: AppColors.purpleDeep),
-      'school.archive': (bg: Color(0xFFFEE2E2), fg: AppColors.dangerRed),
-      'plan.upgrade': (bg: Color(0xFFD1FAE5), fg: Color(0xFF0A6638)),
-      'plan.downgrade': (bg: Color(0xFFFEF3C7), fg: Color(0xFF92400E)),
-      'invoice.generated': (bg: AppColors.blueSoft, fg: AppColors.infoBlue),
-      'invoice.sent': (bg: AppColors.blueSoft, fg: AppColors.infoBlue),
-      'invoice.overdue': (bg: Color(0xFFFEE2E2), fg: AppColors.dangerRed),
-      'api_key.rotate': (bg: Color(0xFFFEF3C7), fg: Color(0xFF92400E)),
-      'policy.updated': (bg: Color(0xFFFEF3C7), fg: Color(0xFF92400E)),
-      'migration.start': (bg: AppColors.blueSoft, fg: AppColors.infoBlue),
-      'migration.complete': (bg: Color(0xFFD1FAE5), fg: Color(0xFF0A6638)),
-      'migration.rollback': (bg: Color(0xFFFEE2E2), fg: AppColors.dangerRed),
-      'backup.complete': (bg: Color(0xFFD1FAE5), fg: Color(0xFF0A6638)),
-    };
-    return map[action] ??
-        (bg: AppColors.bgTertiary, fg: AppColors.textSecondary);
+  /// Get color based on action type
+  Color _getColorForAction() {
+    if (color != null) return color!;
+
+    switch (action.toUpperCase()) {
+      case 'CREATE':
+      case 'CREATED':
+        return AppColors.successGreen;
+      case 'UPDATE':
+      case 'UPDATED':
+      case 'EDIT':
+      case 'EDITED':
+        return AppColors.infoBlue;
+      case 'DELETE':
+      case 'DELETED':
+      case 'REMOVE':
+      case 'REMOVED':
+        return AppColors.dangerRed;
+      case 'LOGIN':
+      case 'LOGOUT':
+      case 'AUTH':
+        return AppColors.primaryPurple;
+      case 'VIEW':
+      case 'READ':
+        return AppColors.textTertiary;
+      case 'EXPORT':
+      case 'DOWNLOAD':
+        return AppColors.skyBlue;
+      case 'UPLOAD':
+      case 'IMPORT':
+        return AppColors.warningAmber;
+      default:
+        return AppColors.textSecondary;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final c = _colorsFor(action);
+    final actionColor = _getColorForAction();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: c.bg,
-        borderRadius: BorderRadius.circular(999),
+        color: actionColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        action,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c.fg),
+        action.toUpperCase(),
+        style: AppTextStyles.chipLabel(color: actionColor).copyWith(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 }
 
-/// Severity chip for the audit log — matches web `SevChip`
-/// (info / warning / error) with a dot + soft pill background.
+/// Severity badge for audit log
 class SeverityBadge extends StatelessWidget {
   final String severity;
 
-  const SeverityBadge({super.key, required this.severity});
+  const SeverityBadge({
+    super.key,
+    required this.severity,
+  });
 
-  String _normalize(String s) {
-    final v = s.toLowerCase();
-    if (v == 'critical' || v == 'error' || v == 'failed') return 'error';
-    if (v == 'warning' || v == 'partial') return 'warning';
-    return 'info';
+  Color _getColorForSeverity() {
+    switch (severity.toLowerCase()) {
+      case 'critical':
+        return AppColors.dangerRed;
+      case 'high':
+        return AppColors.warningAmber;
+      case 'medium':
+        return AppColors.infoBlue;
+      case 'low':
+        return AppColors.successGreen;
+      default:
+        return AppColors.textTertiary;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final key = _normalize(severity);
-    late Color bg, fg, dot;
-    late String label;
-    switch (key) {
-      case 'error':
-        bg = AppColors.redSoft;
-        fg = AppColors.dangerRed;
-        dot = AppColors.dangerRed;
-        label = 'Error';
-        break;
-      case 'warning':
-        bg = AppColors.amberSoft;
-        fg = const Color(0xFF92400E);
-        dot = AppColors.warningAmber;
-        label = 'Warning';
-        break;
-      default:
-        bg = AppColors.blueSoft;
-        fg = AppColors.infoBlue;
-        dot = AppColors.skyBlue;
-        label = 'Info';
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(width: 6, height: 6, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
-          const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: fg)),
-        ],
-      ),
+    final severityColor = _getColorForSeverity();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: severityColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          severity,
+          style: AppTextStyles.chipLabel(color: severityColor),
+        ),
+      ],
     );
   }
 }

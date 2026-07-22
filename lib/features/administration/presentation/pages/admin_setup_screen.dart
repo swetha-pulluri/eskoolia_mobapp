@@ -6,6 +6,7 @@ import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
 import '../widgets/admin_section_card.dart';
 import '../widgets/admin_confirm_dialog.dart';
+import '../widgets/admin_breadcrumb_header.dart';
 
 /// Admin Setup — converted from web `AdminSetupPanel.tsx`. Manages the 4
 /// lookup "types" (Purpose / Complaint Type / Source / Reference) used as
@@ -106,8 +107,15 @@ class _AdminSetupScreenState extends ConsumerState<AdminSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const AdminBreadcrumbHeader(title: 'Admin Setup'),
           AdminSectionCard(
             title: _editingId == null ? 'Add Admin Setup' : 'Edit Admin Setup',
+            borderRadius: 14,
+            padding: const EdgeInsets.all(24),
+            boxShadow: const [
+              BoxShadow(color: Color(0x0A000000), blurRadius: 3, offset: Offset(0, 1)),
+              BoxShadow(color: Color(0x0F000000), blurRadius: 24, offset: Offset(0, 8)),
+            ],
             child: Form(
               key: _formKey,
               child: Column(
@@ -173,6 +181,12 @@ class _AdminSetupScreenState extends ConsumerState<AdminSetupScreen> {
           ),
           AdminSectionCard(
             title: 'Admin Setup List',
+            borderRadius: 14,
+            padding: const EdgeInsets.all(24),
+            boxShadow: const [
+              BoxShadow(color: Color(0x0A000000), blurRadius: 3, offset: Offset(0, 1)),
+              BoxShadow(color: Color(0x0F000000), blurRadius: 24, offset: Offset(0, 8)),
+            ],
             child: Column(
               children: AdminSetupEntity.typeLabels.entries.map((entry) => _typeAccordion(entry.key, entry.value)).toList(),
             ),

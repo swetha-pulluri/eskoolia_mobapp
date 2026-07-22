@@ -21,6 +21,10 @@ class AdminTextField extends StatelessWidget {
   /// the specific long-text fields that render one on web (e.g. Phone
   /// Calls' Description, Postal's Note) should set this.
   final String Function(int length)? counterBuilder;
+  /// `false` renders a read-only, grey-filled field — matches web's
+  /// `<input readOnly style={{ background: "#f9fafb" }} />` fallback
+  /// (e.g. "All classes"/"All sections" on the Generate & Print screens).
+  final bool enabled;
 
   const AdminTextField({
     super.key,
@@ -36,6 +40,7 @@ class AdminTextField extends StatelessWidget {
     this.inputFormatters,
     this.onChanged,
     this.counterBuilder,
+    this.enabled = true,
   });
 
   @override
@@ -55,7 +60,10 @@ class AdminTextField extends StatelessWidget {
             keyboardType: keyboardType,
             inputFormatters: inputFormatters,
             onChanged: onChanged,
-            decoration: _fieldDecoration(hint: hint),
+            enabled: enabled,
+            decoration: _fieldDecoration(hint: hint).copyWith(
+              fillColor: enabled ? Colors.white : const Color(0xFFF9FAFB),
+            ),
           ),
           if (helper != null) _FieldHelper(text: helper!),
           if (counterBuilder != null)
@@ -245,6 +253,7 @@ class AdminFileField extends StatelessWidget {
   final VoidCallback onTap;
   final String? errorText;
   final String placeholder;
+  final String? helper;
 
   const AdminFileField({
     super.key,
@@ -252,6 +261,7 @@ class AdminFileField extends StatelessWidget {
     required this.onTap,
     this.errorText,
     this.placeholder = 'Choose file',
+    this.helper,
   });
 
   @override
@@ -277,6 +287,7 @@ class AdminFileField extends StatelessWidget {
               ),
             ),
           ),
+          if (helper != null) _FieldHelper(text: helper!),
         ],
       ),
     );

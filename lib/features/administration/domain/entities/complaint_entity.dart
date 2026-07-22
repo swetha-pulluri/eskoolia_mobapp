@@ -1,3 +1,5 @@
+import 'picked_attachment.dart';
+
 /// Complaint entry — mirrors backend `ComplaintEntry` /
 /// `/api/v1/admissions/complaints/`.
 class ComplaintEntity {
@@ -15,6 +17,9 @@ class ComplaintEntity {
   final String? fileUrl;
   final String? createdByName;
   final String? createdAt;
+  /// Transient — a newly-picked file pending upload on save (not part of
+  /// the API's JSON contract), matching Visitor Book's attachment field.
+  final PickedAttachment? attachment;
 
   const ComplaintEntity({
     this.id,
@@ -31,6 +36,7 @@ class ComplaintEntity {
     this.fileUrl,
     this.createdByName,
     this.createdAt,
+    this.attachment,
   });
 
   factory ComplaintEntity.fromJson(Map<String, dynamic> json) {

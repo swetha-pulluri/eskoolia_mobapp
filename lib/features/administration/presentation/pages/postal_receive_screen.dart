@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/postal_entity.dart';
+import '../../domain/entities/picked_attachment.dart';
 import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
 import '../widgets/admin_section_card.dart';
@@ -30,6 +32,29 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
 
   DateTime? _date = DateTime.now();
   int? _editingId;
+  PickedAttachment? _attachment;
+  String? _attachmentError;
+
+  static const _allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
+
+  Future<void> _pickAttachment() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: _allowedExtensions,
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null || file.bytes == null) return;
+    setState(() {
+      if (file.size > 5 * 1024 * 1024) {
+        _attachmentError = 'File size exceeds 5MB limit.';
+        _attachment = null;
+      } else {
+        _attachmentError = null;
+        _attachment = PickedAttachment(name: file.name, bytes: file.bytes!, size: file.size);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -52,6 +77,8 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
     setState(() {
       _date = DateTime.now();
       _editingId = null;
+      _attachment = null;
+      _attachmentError = null;
     });
   }
 
@@ -64,6 +91,8 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
       _noteCtrl.text = e.note ?? '';
       _toTitleCtrl.text = e.toTitle;
       _date = DateTime.tryParse(e.date);
+      _attachment = null;
+      _attachmentError = null;
     });
   }
 
@@ -75,6 +104,10 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
       _showFieldError('Date is required.');
       return;
     }
+    if (_attachmentError != null) {
+      _showFieldError(_attachmentError!);
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     final entry = PostalReceiveEntity(
@@ -84,6 +117,7 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       toTitle: _toTitleCtrl.text.trim(),
       date: _fmtDate(_date!),
+      attachment: _attachment,
     );
 
     final notifier = ref.read(postalReceiveListProvider.notifier);
@@ -190,6 +224,12 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
                     lastDate: DateTime.now(),
                     onChanged: (d) => setState(() => _date = d),
                   ),
+                  AdminFileField(
+                    fileName: _attachment?.name,
+                    errorText: _attachmentError,
+                    onTap: _pickAttachment,
+                  ),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       WebButton(
@@ -209,7 +249,7 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
           AdminSectionCard(
             title: 'Postal Receive List',
             trailing: SizedBox(
-              width: 160,
+              width: 240,
               child: TextField(
                 controller: _searchCtrl,
                 decoration: const InputDecoration(hintText: 'Quick search', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
@@ -240,6 +280,7 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
                   onPageChange: (p) => ref.read(postalReceiveListProvider.notifier).setPage(p),
                   onPageSizeChange: (s) => ref.read(postalReceiveListProvider.notifier).setPageSize(s),
                   pageSizeOptions: const [10, 25, 50],
+                  pageSizeSuffix: ' / page',
                   showPageNumbers: true,
                 ),
               ],

@@ -5,17 +5,32 @@ import '../../domain/entities/postal_entity.dart';
 import '../../domain/entities/admin_setup_entity.dart';
 import '../../domain/entities/student_category_entity.dart';
 import '../../domain/entities/paginated_result.dart';
+import '../../domain/entities/role_entity.dart';
+import '../../domain/entities/id_card_entity.dart';
+import '../../domain/entities/certificate_entity.dart';
 
 /// ========================================================================
-/// UI-ONLY LOCAL SAMPLE DATA — Administration module
+/// UI-ONLY LOCAL DATA STORE — Administration module
 /// ========================================================================
 /// No backend/API calls are made for Administration right now (by explicit
-/// instruction) — every list below is an in-memory placeholder data set
-/// used purely so the real web layout/forms/tables can be reproduced and
-/// interacted with. Complaint Type / Source labels are copied verbatim
-/// from the web's own `fallbackComplaintTypeOptions` /
-/// `fallbackComplaintSourceOptions` (real literals in `ComplaintPanel.tsx`,
-/// not invented). Everything else is a small, clearly-placeholder seed set.
+/// instruction). Every list below starts EMPTY — there is no static/demo
+/// row data anywhere in the actual web source (`VisitorBookPanel.tsx`,
+/// `ComplaintPanel.tsx`, etc. all fetch real rows from the backend; none of
+/// them ship hardcoded sample records). Inventing placeholder rows (fake
+/// visitor names, fake complaints, fake categories, etc.) would show data
+/// that does not exist in the web application, so instead these lists start
+/// empty and each screen renders its own real, web-verified empty-state
+/// text ("No visitor records found.", "No complaints found.", ...) by
+/// default — exactly what an unseeded web instance would show. Anything
+/// that appears in a list after that is only data entered through the
+/// Flutter form itself during this session, via the same CRUD methods
+/// below.
+///
+/// The two exceptions are `fallbackComplaintTypeOptions` /
+/// `fallbackComplaintSourceOptions` below — those ARE real hardcoded
+/// literals inside `ComplaintPanel.tsx` itself (used when the admin-setups
+/// fetch is empty/unavailable), so they are reproduced verbatim rather than
+/// invented.
 ///
 /// When backend integration is restored, only `administration_provider.dart`
 /// needs to change back to the repository-backed wiring — no screen files
@@ -25,148 +40,64 @@ class AdministrationLocalData {
   AdministrationLocalData._();
 
   // ─── Visitor Book ─────────────────────────────────────────────────────
-  static final List<VisitorEntity> _visitors = [
-    const VisitorEntity(
-      id: 1,
-      purposeId: '1',
-      purposeName: 'Admission Inquiry',
-      name: 'Ramesh Kumar',
-      phone: '9876543210',
-      noOfPerson: 2,
-      date: '2026-07-18',
-      inTime: '10:15:00',
-      outTime: '10:45:00',
-    ),
-    const VisitorEntity(
-      id: 2,
-      purposeId: '2',
-      purposeName: 'Meeting',
-      name: 'Sunita Rao',
-      phone: '9123456780',
-      noOfPerson: 1,
-      date: '2026-07-19',
-      inTime: '11:30:00',
-      outTime: '12:00:00',
-    ),
-    const VisitorEntity(
-      id: 3,
-      purposeId: '3',
-      purposeName: 'Delivery',
-      name: 'Courier — BlueDart',
-      noOfPerson: 1,
-      date: '2026-07-20',
-      inTime: '09:05:00',
-      outTime: '09:10:00',
-    ),
-  ];
+  static final List<VisitorEntity> _visitors = [];
 
   // ─── Complaints ───────────────────────────────────────────────────────
-  static final List<ComplaintEntity> _complaints = [
-    const ComplaintEntity(
-      id: 1,
-      complaintBy: 'Parent of Aarav Shah',
-      complaintTypeId: '16',
-      complaintTypeName: 'Discipline Issue',
-      complaintSourceId: '24',
-      complaintSourceName: 'Phone Call',
-      phone: '9988776655',
-      date: '2026-07-17',
-      description: 'Reported bullying incident in class 6.',
-    ),
-    const ComplaintEntity(
-      id: 2,
-      complaintBy: 'Meena Iyer',
-      complaintTypeId: '19',
-      complaintTypeName: 'Fee Related',
-      complaintSourceId: '23',
-      complaintSourceName: 'Walk-in',
-      date: '2026-07-19',
-      actionTaken: 'Forwarded to accounts team.',
-    ),
-  ];
+  static final List<ComplaintEntity> _complaints = [];
 
   // ─── Phone Call Log ───────────────────────────────────────────────────
-  static final List<PhoneCallEntity> _phoneCalls = [
-    const PhoneCallEntity(
-      id: 1,
-      name: 'Vikram Singh',
-      phone: '9871234560',
-      date: '2026-07-18',
-      callDuration: '00:04:30',
-      description: 'Asked about transport routes.',
-      callType: 'I',
-    ),
-    const PhoneCallEntity(
-      id: 2,
-      name: 'Admissions Follow-up',
-      phone: '9012345678',
-      date: '2026-07-19',
-      nextFollowUpDate: '2026-07-26',
-      callDuration: '00:02:10',
-      callType: 'O',
-    ),
-  ];
+  static final List<PhoneCallEntity> _phoneCalls = [];
 
   // ─── Postal Received / Dispatched ─────────────────────────────────────
-  static final List<PostalReceiveEntity> _postalReceives = [
-    const PostalReceiveEntity(
-      id: 1,
-      fromTitle: 'District Education Office',
-      referenceNo: 'PR-2026-001',
-      address: 'Collectorate Road, Hyderabad',
-      toTitle: 'Principal',
-      date: '2026-07-15',
-      note: 'Circular on exam schedule.',
-    ),
-  ];
+  static final List<PostalReceiveEntity> _postalReceives = [];
 
-  static final List<PostalDispatchEntity> _postalDispatches = [
-    const PostalDispatchEntity(
-      id: 1,
-      toTitle: 'Regional Transport Office',
-      referenceNo: 'PD-2026-001',
-      address: 'RTO Complex, Hyderabad',
-      fromTitle: 'School Administration',
-      date: '2026-07-16',
-      note: 'Bus fitness renewal application.',
-    ),
-  ];
+  static final List<PostalDispatchEntity> _postalDispatches = [];
 
   // ─── Admin Setup lookups ───────────────────────────────────────────────
-  // Type "2"/"3" labels are the web's own literal fallback lists
+  // Type "1" (Purpose) and "4" (Reference) have no static fallback in the
+  // web source — they come only from the live API, so they start empty.
+  // Type "2"/"3" are seeded with the web's own literal fallback lists
   // (`fallbackComplaintTypeOptions` / `fallbackComplaintSourceOptions` in
-  // ComplaintPanel.tsx) — not invented.
+  // ComplaintPanel.tsx) since those specific labels really do ship in the
+  // web bundle itself, verbatim, not invented.
   static final List<AdminSetupEntity> _adminSetups = [
-    const AdminSetupEntity(id: 1, type: '1', typeName: 'Purpose', name: 'Admission Inquiry'),
-    const AdminSetupEntity(id: 2, type: '1', typeName: 'Purpose', name: 'Meeting'),
-    const AdminSetupEntity(id: 3, type: '1', typeName: 'Purpose', name: 'Delivery'),
-    const AdminSetupEntity(id: 4, type: '1', typeName: 'Purpose', name: 'Official Visit'),
-    const AdminSetupEntity(id: 5, type: '2', typeName: 'Complaint Type', name: 'Academic Performance'),
-    const AdminSetupEntity(id: 6, type: '2', typeName: 'Complaint Type', name: 'Discipline Issue'),
-    const AdminSetupEntity(id: 7, type: '2', typeName: 'Complaint Type', name: 'Fee Related'),
-    const AdminSetupEntity(id: 8, type: '2', typeName: 'Complaint Type', name: 'Food/Canteen'),
-    const AdminSetupEntity(id: 9, type: '2', typeName: 'Complaint Type', name: 'Infrastructure'),
-    const AdminSetupEntity(id: 10, type: '2', typeName: 'Complaint Type', name: 'Safety Concern'),
-    const AdminSetupEntity(id: 11, type: '2', typeName: 'Complaint Type', name: 'Staff Behaviour'),
-    const AdminSetupEntity(id: 12, type: '2', typeName: 'Complaint Type', name: 'Transport'),
-    const AdminSetupEntity(id: 13, type: '3', typeName: 'Source', name: 'Walk-in'),
-    const AdminSetupEntity(id: 14, type: '3', typeName: 'Source', name: 'Phone Call'),
-    const AdminSetupEntity(id: 15, type: '3', typeName: 'Source', name: 'Website'),
-    const AdminSetupEntity(id: 16, type: '3', typeName: 'Source', name: 'Social Media'),
-    const AdminSetupEntity(id: 17, type: '3', typeName: 'Source', name: 'Newspaper Ad'),
-    const AdminSetupEntity(id: 18, type: '3', typeName: 'Source', name: 'Referral'),
-    const AdminSetupEntity(id: 19, type: '3', typeName: 'Source', name: 'School Event'),
-    const AdminSetupEntity(id: 20, type: '4', typeName: 'Reference', name: 'Existing Parent'),
-    const AdminSetupEntity(id: 21, type: '4', typeName: 'Reference', name: 'Staff Referral'),
+    const AdminSetupEntity(id: 1, type: '2', typeName: 'Complaint Type', name: 'Academic Performance'),
+    const AdminSetupEntity(id: 2, type: '2', typeName: 'Complaint Type', name: 'Discipline Issue'),
+    const AdminSetupEntity(id: 3, type: '2', typeName: 'Complaint Type', name: 'Fee Related'),
+    const AdminSetupEntity(id: 4, type: '2', typeName: 'Complaint Type', name: 'Food/Canteen'),
+    const AdminSetupEntity(id: 5, type: '2', typeName: 'Complaint Type', name: 'Infrastructure'),
+    const AdminSetupEntity(id: 6, type: '2', typeName: 'Complaint Type', name: 'Safety Concern'),
+    const AdminSetupEntity(id: 7, type: '2', typeName: 'Complaint Type', name: 'Staff Behaviour'),
+    const AdminSetupEntity(id: 8, type: '2', typeName: 'Complaint Type', name: 'Transport'),
+    const AdminSetupEntity(id: 9, type: '3', typeName: 'Source', name: 'Walk-in'),
+    const AdminSetupEntity(id: 10, type: '3', typeName: 'Source', name: 'Phone Call'),
+    const AdminSetupEntity(id: 11, type: '3', typeName: 'Source', name: 'Website'),
+    const AdminSetupEntity(id: 12, type: '3', typeName: 'Source', name: 'Social Media'),
+    const AdminSetupEntity(id: 13, type: '3', typeName: 'Source', name: 'Newspaper Ad'),
+    const AdminSetupEntity(id: 14, type: '3', typeName: 'Source', name: 'Referral'),
+    const AdminSetupEntity(id: 15, type: '3', typeName: 'Source', name: 'School Event'),
+    const AdminSetupEntity(id: 16, type: '3', typeName: 'Source', name: 'In Person'),
+    const AdminSetupEntity(id: 17, type: '3', typeName: 'Source', name: 'Online'),
+    const AdminSetupEntity(id: 18, type: '3', typeName: 'Source', name: 'Written'),
   ];
 
+  // ─── Roles / Classes / Sections (ID Card & Certificate generate-setup) ─
+  // All come only from live API/backend data on web — no static fallback,
+  // so these start empty (ID Cards' web panel explicitly renders a "No
+  // roles available" warning in this exact case — see IdCardsScreen).
+  static final List<RoleEntity> _roles = [];
+  static final List<ClassEntity> _classes = [];
+  static final List<SectionEntity> _sections = [];
+  static final List<RecipientEntity> _recipients = [];
+
+  // ─── ID Card Templates ─────────────────────────────────────────────────
+  static final List<IdCardTemplateEntity> _idCardTemplates = [];
+
+  // ─── Certificate Templates ─────────────────────────────────────────────
+  static final List<CertificateTemplateEntity> _certificateTemplates = [];
+
   // ─── Student Categories ───────────────────────────────────────────────
-  static final List<StudentCategoryEntity> _studentCategories = [
-    const StudentCategoryEntity(id: 1, name: 'General', code: 'GEN', description: 'Default category for all students.', status: 'active', studentsCount: 420),
-    const StudentCategoryEntity(id: 2, name: 'SC/ST', code: 'SCST', description: 'Reserved category as per government norms.', status: 'active', studentsCount: 96),
-    const StudentCategoryEntity(id: 3, name: 'OBC', code: 'OBC', description: 'Other Backward Classes category.', status: 'active', studentsCount: 133),
-    const StudentCategoryEntity(id: 4, name: 'Staff Ward', code: 'STAFF', description: 'Children of school staff members.', status: 'inactive', studentsCount: 12),
-  ];
+  static final List<StudentCategoryEntity> _studentCategories = [];
 
   // ─── Generic in-memory pagination + CRUD helpers ──────────────────────
   static PaginatedResult<T> _page<T>(List<T> source, int page, int pageSize) {
@@ -418,6 +349,11 @@ class AdministrationLocalData {
     return _page(filtered, page, pageSize);
   }
 
+  /// Session-local activity log backing the "Recent Activity" summary
+  /// card — records real mutations made this session rather than
+  /// fabricating history (there is no backend activity log to mirror).
+  static final List<({int id, String name, String action, DateTime at})> _categoryActivity = [];
+
   static Future<StudentCategoryEntity> createStudentCategory(StudentCategoryEntity e) async {
     final created = StudentCategoryEntity(
       id: _nextId(_studentCategories),
@@ -426,8 +362,11 @@ class AdministrationLocalData {
       description: e.description,
       status: e.status,
       studentsCount: 0,
+      createdAt: DateTime.now().toIso8601String(),
+      updatedBy: 'Admin',
     );
     _studentCategories.insert(0, created);
+    _categoryActivity.insert(0, (id: created.id!, name: created.name, action: 'created', at: DateTime.now()));
     return created;
   }
 
@@ -441,10 +380,133 @@ class AdministrationLocalData {
       description: e.description,
       status: e.status,
       studentsCount: existing?.studentsCount,
+      createdAt: existing?.createdAt,
+      updatedBy: 'Admin',
     );
     if (existingIndex != -1) _studentCategories[existingIndex] = updated;
+    _categoryActivity.insert(0, (id: id, name: updated.name, action: 'updated', at: DateTime.now()));
     return updated;
   }
 
   static Future<void> deleteStudentCategory(int id) async => _studentCategories.removeWhere((e) => e.id == id);
+
+  /// Activates/deactivates a category by id — mirrors the web's dedicated
+  /// `/{id}/deactivate/` endpoint and the status-toggle PATCH.
+  static Future<StudentCategoryEntity> setStudentCategoryStatus(int id, String status) async {
+    final index = _studentCategories.indexWhere((e) => e.id == id);
+    final updated = _studentCategories[index].copyWith(status: status);
+    _studentCategories[index] = updated;
+    _categoryActivity.insert(0, (id: id, name: updated.name, action: status == 'active' ? 'activated' : 'deactivated', at: DateTime.now()));
+    return updated;
+  }
+
+  /// Mirrors the web's `/api/v1/students/categories/summary/` shape —
+  /// derived from the same in-memory list (no separate backend aggregate).
+  static Future<StudentCategorySummary> getStudentCategorySummary() async {
+    final total = _studentCategories.length;
+    final active = _studentCategories.where((c) => c.isActive).length;
+    final inactive = total - active;
+    final attention = _studentCategories.where((c) => (c.description ?? '').trim().isEmpty).length;
+    final sorted = List.of(_studentCategories)..sort((a, b) => (b.studentsCount ?? 0).compareTo(a.studentsCount ?? 0));
+    final top = sorted.take(5).map((c) => (id: c.id!, name: c.name, studentsCount: c.studentsCount ?? 0)).toList();
+    final totalStudents = _studentCategories.fold<int>(0, (sum, c) => sum + (c.studentsCount ?? 0));
+    return StudentCategorySummary(
+      totalCount: total,
+      activeCount: active,
+      inactiveCount: inactive,
+      attentionCount: attention,
+      topTotalStudents: totalStudents,
+      topCategories: top,
+      recentActivity: List.of(_categoryActivity.take(5)),
+    );
+  }
+
+  // ─── Roles / Classes / Sections / Recipients ──────────────────────────
+  static Future<List<RoleEntity>> getRoles() async => List.of(_roles);
+  static Future<List<ClassEntity>> getClasses() async => List.of(_classes);
+  static Future<List<SectionEntity>> getSections({int? classId}) async =>
+      classId == null ? List.of(_sections) : _sections.where((s) => s.classId == classId).toList();
+  static Future<List<RecipientEntity>> getRecipients() async => List.of(_recipients);
+
+  // ID Card Templates
+  static Future<PaginatedResult<IdCardTemplateEntity>> getIdCardTemplates({required int page, required int pageSize}) async =>
+      _page(_idCardTemplates, page, pageSize);
+
+  static Future<IdCardTemplateEntity> createIdCardTemplate(IdCardTemplateEntity e) async {
+    final created = IdCardTemplateEntity(
+      id: _nextId(_idCardTemplates),
+      title: e.title,
+      pageLayoutStyle: e.pageLayoutStyle,
+      applicableRoleIds: e.applicableRoleIds,
+      backgroundUrl: e.backgroundUrl,
+      profileUrl: e.profileUrl,
+      logoUrl: e.logoUrl,
+      signatureUrl: e.signatureUrl,
+    );
+    _idCardTemplates.insert(0, created);
+    return created;
+  }
+
+  static Future<IdCardTemplateEntity> updateIdCardTemplate(int id, IdCardTemplateEntity e) async {
+    final updated = IdCardTemplateEntity(
+      id: id,
+      title: e.title,
+      pageLayoutStyle: e.pageLayoutStyle,
+      applicableRoleIds: e.applicableRoleIds,
+      backgroundUrl: e.backgroundUrl,
+      profileUrl: e.profileUrl,
+      logoUrl: e.logoUrl,
+      signatureUrl: e.signatureUrl,
+    );
+    final index = _idCardTemplates.indexWhere((x) => x.id == id);
+    if (index != -1) _idCardTemplates[index] = updated;
+    return updated;
+  }
+
+  static Future<void> deleteIdCardTemplate(int id) async => _idCardTemplates.removeWhere((e) => e.id == id);
+
+  // Certificate Templates
+  static Future<PaginatedResult<CertificateTemplateEntity>> getCertificateTemplates({required int page, required int pageSize}) async =>
+      _page(_certificateTemplates, page, pageSize);
+
+  static Future<CertificateTemplateEntity> createCertificateTemplate(CertificateTemplateEntity e) async {
+    final created = CertificateTemplateEntity(
+      id: _nextId(_certificateTemplates),
+      type: e.type,
+      title: e.title,
+      applicableRoleId: e.applicableRoleId,
+      body: e.body,
+      backgroundHeight: e.backgroundHeight,
+      backgroundWidth: e.backgroundWidth,
+      paddingTop: e.paddingTop,
+      paddingRight: e.paddingRight,
+      paddingBottom: e.paddingBottom,
+      paddingLeft: e.paddingLeft,
+      backgroundUrl: e.backgroundUrl,
+    );
+    _certificateTemplates.insert(0, created);
+    return created;
+  }
+
+  static Future<CertificateTemplateEntity> updateCertificateTemplate(int id, CertificateTemplateEntity e) async {
+    final updated = CertificateTemplateEntity(
+      id: id,
+      type: e.type,
+      title: e.title,
+      applicableRoleId: e.applicableRoleId,
+      body: e.body,
+      backgroundHeight: e.backgroundHeight,
+      backgroundWidth: e.backgroundWidth,
+      paddingTop: e.paddingTop,
+      paddingRight: e.paddingRight,
+      paddingBottom: e.paddingBottom,
+      paddingLeft: e.paddingLeft,
+      backgroundUrl: e.backgroundUrl,
+    );
+    final index = _certificateTemplates.indexWhere((x) => x.id == id);
+    if (index != -1) _certificateTemplates[index] = updated;
+    return updated;
+  }
+
+  static Future<void> deleteCertificateTemplate(int id) async => _certificateTemplates.removeWhere((e) => e.id == id);
 }

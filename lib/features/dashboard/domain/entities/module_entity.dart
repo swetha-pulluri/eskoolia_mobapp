@@ -98,7 +98,6 @@ class Modules {
       icon: Icons.check_circle_outline,
       bgColor: AppColors.attendanceBg,
       iconColor: AppColors.attendanceIc,
-      comingSoon: true,
     ),
     ModuleEntity(
       id: 'academics',
