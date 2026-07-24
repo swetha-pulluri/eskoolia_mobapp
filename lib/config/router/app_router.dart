@@ -3,13 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/dashboard/presentation/pages/school_overview_page.dart';
 import '../../features/roles/presentation/pages/roles_permissions_page.dart';
 import '../../features/login_permission/presentation/pages/login_permission_page.dart';
 import '../../features/student/domain/models/student_data.dart';
+import '../../features/student/presentation/pages/student_categories_page.dart';
+import '../../features/student/presentation/pages/student_deleted_page.dart';
+import '../../features/student/presentation/pages/student_disabled_page.dart';
 import '../../features/student/presentation/pages/student_enroll_page.dart';
+import '../../features/student/presentation/pages/student_export_page.dart';
+import '../../features/student/presentation/pages/student_groups_page.dart';
 import '../../features/student/presentation/pages/student_list_page.dart';
+import '../../features/student/presentation/pages/student_promotion_page.dart';
+import '../../features/student/presentation/pages/student_subject_assignment_page.dart';
+import '../../features/student/presentation/pages/student_unassigned_page.dart';
 import '../../features/school_tenancy/presentation/pages/dashboard_tab.dart';
 import '../../features/school_tenancy/presentation/pages/schools_tab.dart';
 import '../../features/school_tenancy/presentation/pages/billing_tab.dart';
@@ -23,6 +32,11 @@ import '../../features/admissions/presentation/pages/admissions_command_center_p
 import '../../features/admissions/presentation/pages/admissions_analytics_page.dart';
 import '../../features/admissions/presentation/pages/admissions_marketing_page.dart';
 import '../../features/attendance/presentation/pages/attendance_student_page.dart';
+import '../../features/academics/presentation/pages/academics_foundation_page.dart';
+import '../../features/academics/presentation/pages/staff_assignment/staff_assignment_page.dart';
+import '../../features/fees/presentation/pages/fees_home_page.dart';
+import '../../features/fees/presentation/pages/fee_configuration_page.dart';
+import '../../features/fees/presentation/pages/fee_assignment_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -32,13 +46,22 @@ import '../../features/attendance/presentation/pages/attendance_student_page.dar
 ///       /dashboard = the KPI overview page (Swetha's SchoolOverviewPage).
 ///       /super-admin/* = School Tenancy routes (matching web frontend structure)
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
+  // Built exactly once per app lifetime — do NOT `ref.watch(authNotifierProvider)`
+  // here. Watching it would rebuild this whole provider (and therefore
+  // construct a brand-new GoRouter/Navigator) on every auth-state change,
+  // which is the classic Riverpod+go_router pitfall that causes "Duplicate
+  // GlobalKey detected in widget tree" and cascading Navigator assertions
+  // when a rebuild lands mid-navigation. `refreshListenable` lets go_router
+  // re-evaluate `redirect` reactively without recreating the router itself.
+  final refreshNotifier = _AuthRefreshNotifier(ref);
+  ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
-      final isAuthenticated = authState.maybeWhen(
+      final isAuthenticated = ref.read(authNotifierProvider).maybeWhen(
         authenticated: (_) => true,
         orElse: () => false,
       );
@@ -166,6 +189,37 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AttendanceStudentPage(),
       ),
 
+      // Academics Routes (matching web frontend structure)
+      GoRoute(
+        path: '/academics/core-setup',
+        name: 'academics-core-setup',
+        builder: (context, state) => const AcademicsFoundationPage(),
+      ),
+      GoRoute(
+        path: '/academics/staff-workspace',
+        name: 'academics-staff-workspace',
+        builder: (context, state) => const StaffAssignmentPage(),
+      ),
+
+      // Fees Routes (matching web frontend structure) — Home only for now;
+      // see fees_layout.dart / fees_module_sub_nav.dart for the other 5
+      // sub-nav tabs, not yet built.
+      GoRoute(
+        path: '/fees/payments',
+        name: 'fees-payments',
+        builder: (context, state) => const FeesHomePage(),
+      ),
+      GoRoute(
+        path: '/fees/configuration',
+        name: 'fees-configuration',
+        builder: (context, state) => const FeeConfigurationPage(),
+      ),
+      GoRoute(
+        path: '/fees/fee-assignment',
+        name: 'fees-fee-assignment',
+        builder: (context, state) => const FeeAssignmentPage(),
+      ),
+
       // Student List & Enroll Routes
       GoRoute(
         path: '/students',
@@ -177,6 +231,48 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'students-enroll',
         builder: (context, state) =>
             StudentEnrollPage(editingStudent: state.extra as StudentData?),
+      ),
+
+      // Students sub-modules (matching web frontend structure)
+      GoRoute(
+        path: '/students/categories',
+        name: 'students-categories',
+        builder: (context, state) => const StudentCategoriesPage(),
+      ),
+      GoRoute(
+        path: '/students/groups',
+        name: 'students-groups',
+        builder: (context, state) => const StudentGroupsPage(),
+      ),
+      GoRoute(
+        path: '/students/disabled',
+        name: 'students-disabled',
+        builder: (context, state) => const StudentDisabledPage(),
+      ),
+      GoRoute(
+        path: '/students/deleted',
+        name: 'students-deleted',
+        builder: (context, state) => const StudentDeletedPage(),
+      ),
+      GoRoute(
+        path: '/students/unassigned',
+        name: 'students-unassigned',
+        builder: (context, state) => const StudentUnassignedPage(),
+      ),
+      GoRoute(
+        path: '/students/multi-subject-assignment',
+        name: 'students-multi-subject-assignment',
+        builder: (context, state) => const StudentSubjectAssignmentPage(),
+      ),
+      GoRoute(
+        path: '/students/export',
+        name: 'students-export',
+        builder: (context, state) => const StudentExportPage(),
+      ),
+      GoRoute(
+        path: '/students/promote',
+        name: 'students-promote',
+        builder: (context, state) => const StudentPromotionPage(),
       ),
 
       // Note: Assign Permissions is not a separate route — it's a tab within
@@ -218,3 +314,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ),
   );
 });
+
+/// Bridges `authNotifierProvider`'s changes into a [Listenable] go_router can
+/// subscribe to via `refreshListenable`, so `redirect` re-evaluates on every
+/// auth-state change without the GoRouter instance itself being torn down
+/// and rebuilt (see the comment on `appRouterProvider` above).
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier(Ref ref) {
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      notifyListeners();
+    });
+  }
+}

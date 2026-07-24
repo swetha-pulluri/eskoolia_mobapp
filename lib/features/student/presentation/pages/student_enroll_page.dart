@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -108,7 +109,16 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
   // Government identity
   final _apaarIdController = TextEditingController();
 
-  // Documents (mock upload state)
+  // Photo
+  String? _photoUrl;
+  bool _photoUploading = false;
+  String? _photoError;
+
+  // Documents — upload is only wired to the backend once a real student id
+  // exists (edit mode); a brand-new enrollment has no id yet (the frontend's
+  // own upload flow relies on a server-assigned draft id this pass doesn't
+  // reproduce), so document upload during new enrollment stays a disclosed
+  // "coming soon" and `_documentsUploaded` stays a local-only toggle there.
   final Map<String, bool> _documentsUploaded = {
     'birth_certificate': false,
     'aadhaar': false,
@@ -117,6 +127,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     'medical_info': false,
     'transfer_certificate': false,
   };
+  final Map<String, bool> _documentsUploading = {};
   bool _consentChecked = false;
 
   // Medical
@@ -151,12 +162,31 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       _admissionNoController.text = editing.admissionNo;
       _firstNameController.text = editing.firstName;
       _lastNameController.text = editing.lastName;
+      final dob = editing.dateOfBirth;
+      if (dob != null) {
+        _dobController.text =
+            '${dob.day.toString().padLeft(2, '0')}/${dob.month.toString().padLeft(2, '0')}/${dob.year}';
+      }
       _gender = editing.gender;
       _isActive = editing.isActive;
       _phoneController.text = editing.phone ?? '';
       _emailController.text = editing.email ?? '';
+      _addressController.text = editing.addressLine ?? '';
+      _cityController.text = editing.city ?? '';
+      _districtController.text = editing.district ?? '';
+      _stateController.text = editing.state ?? '';
+      _pincodeController.text = editing.pincode ?? '';
       _classId = editing.classId;
       _sectionId = editing.sectionId;
+      _academicYearId = editing.academicYearId;
+      _categoryId = editing.categoryId;
+      _photoUrl = editing.photoUrl;
+      if ((editing.guardianName ?? '').isNotEmpty) {
+        _guardians[0].fullName = editing.guardianName!;
+        _guardians[0].phone = editing.guardianPhone ?? '';
+        _guardians[0].relation =
+            editing.guardianRelation?.trim().isNotEmpty == true ? editing.guardianRelation! : 'Father';
+      }
       _maxReachedIndex = _navItems.length - 1;
     }
   }
@@ -255,6 +285,81 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     );
   }
 
+  Future<void> _pickAndUploadPhoto() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null || file.bytes == null) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setState(() => _photoError = 'Please choose an image up to 4MB.');
+      return;
+    }
+    setState(() {
+      _photoUploading = true;
+      _photoError = null;
+    });
+    try {
+      final url = await ref
+          .read(studentRepositoryProvider)
+          .uploadStudentPhoto(bytes: file.bytes!, filename: file.name);
+      if (!mounted) return;
+      setState(() {
+        _photoUrl = url;
+        _photoUploading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Photo uploaded securely.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _photoUploading = false;
+        _photoError = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _pickAndUploadDocument(String documentType) async {
+    final studentId = widget.editingStudent?.id;
+    if (studentId == null) {
+      _comingSoon('Document upload before enrollment');
+      return;
+    }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'],
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null || file.bytes == null) return;
+    setState(() => _documentsUploading[documentType] = true);
+    try {
+      await ref.read(studentRepositoryProvider).uploadStudentDocument(
+            studentId: studentId,
+            documentType: documentType,
+            bytes: file.bytes!,
+            filename: file.name,
+          );
+      if (!mounted) return;
+      setState(() {
+        _documentsUploading[documentType] = false;
+        _documentsUploaded[documentType] = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Document uploaded.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _documentsUploading[documentType] = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   /// Parses the "Date of birth" field's `DD/MM/YYYY` hint format. Returns
   /// null (rather than throwing) for empty/malformed input — DOB is
   /// recommended in the UI but not hard-blocked by `_submit`'s own
@@ -292,8 +397,9 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     final schoolClass = _classes.where((c) => c.id == _classId).firstOrNull;
     final section = schoolClass?.sections.where((s) => s.id == _sectionId).firstOrNull;
     final primaryGuardian = _guardians.where((g) => g.fullName.trim().isNotEmpty).firstOrNull;
+    final editing = widget.editingStudent;
     final draft = StudentData(
-      id: 0,
+      id: editing?.id ?? 0,
       admissionNo: _admissionNoController.text.trim(),
       firstName: _firstNameController.text.trim(),
       lastName: _lastNameController.text.trim(),
@@ -307,14 +413,26 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       sectionName: section?.name ?? '',
       academicYearId: _academicYearId,
       categoryId: _categoryId,
+      guardianId: editing?.guardianId,
       guardianName: primaryGuardian?.fullName.trim(),
       guardianPhone: primaryGuardian?.phone.trim(),
       guardianRelation: primaryGuardian?.relation,
+      photoUrl: _photoUrl,
+      addressLine: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+      district: _districtController.text.trim().isEmpty ? null : _districtController.text.trim(),
+      state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
+      pincode: _pincodeController.text.trim().isEmpty ? null : _pincodeController.text.trim(),
       status: _isActive ? StudentStatus.active : StudentStatus.inactive,
       enrolledAt: DateTime.now(),
     );
     try {
-      await ref.read(studentRepositoryProvider).createStudent(draft);
+      final repo = ref.read(studentRepositoryProvider);
+      if (isEditMode) {
+        await repo.updateStudent(editing!.id, draft);
+      } else {
+        await repo.createStudent(draft);
+      }
       if (!mounted) return;
       setState(() => _saving = false);
       Navigator.of(context).pop(true);
@@ -712,23 +830,44 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
           Row(
             children: [
               InkWell(
-                onTap: () => _comingSoon('Photo upload'),
+                onTap: _photoUploading ? null : _pickAndUploadPhoto,
                 borderRadius: BorderRadius.circular(50),
                 child: Container(
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
+                    color: _photoUrl != null ? const Color(0xFFF0FDF4) : const Color(0xFFF3F4F6),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.studentEnrollLine),
+                    border: Border.all(
+                      color: _photoUrl != null ? const Color(0xFF86EFAC) : AppColors.studentEnrollLine,
+                    ),
                   ),
-                  child: const Icon(Icons.camera_alt_outlined, color: Color(0xFF9CA3AF)),
+                  child: _photoUploading
+                      ? const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          _photoUrl != null ? Icons.check_circle : Icons.camera_alt_outlined,
+                          color: _photoUrl != null ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
-              const Text('ADD PHOTO', style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
+              Text(
+                _photoUploading
+                    ? 'UPLOADING…'
+                    : _photoUrl != null
+                        ? 'PHOTO UPLOADED · TAP TO REPLACE'
+                        : 'ADD PHOTO',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
+              ),
             ],
           ),
+          if (_photoError != null) ...[
+            const SizedBox(height: 6),
+            Text(_photoError!, style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626))),
+          ],
           const SizedBox(height: 20),
           EnrollFieldGrid(children: [
             EnrollTextField(
@@ -1137,8 +1276,9 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
 
   Widget _buildDocumentCard(String key, String label, EnrollBadge badge) {
     final uploaded = _documentsUploaded[key] ?? false;
+    final uploading = _documentsUploading[key] ?? false;
     return InkWell(
-      onTap: () => setState(() => _documentsUploaded[key] = !uploaded),
+      onTap: uploading ? null : () => _pickAndUploadDocument(key),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -1153,11 +1293,18 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
           children: [
             Row(
               children: [
-                Icon(
-                  uploaded ? Icons.check_circle : Icons.upload_file_outlined,
-                  size: 18,
-                  color: uploaded ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
-                ),
+                if (uploading)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  Icon(
+                    uploaded ? Icons.check_circle : Icons.upload_file_outlined,
+                    size: 18,
+                    color: uploaded ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
+                  ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1171,7 +1318,13 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
             const SizedBox(height: 6),
             EnrollLabel('', badge: badge),
             Text(
-              uploaded ? 'Uploaded' : 'Tap to mark as uploaded',
+              uploading
+                  ? 'Uploading…'
+                  : uploaded
+                      ? 'Uploaded'
+                      : isEditMode
+                          ? 'Tap to upload'
+                          : 'Available once the student is enrolled',
               style: TextStyle(
                 fontSize: 11,
                 color: uploaded ? const Color(0xFF16A34A) : AppColors.studentHelpText,

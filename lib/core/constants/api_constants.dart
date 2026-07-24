@@ -73,13 +73,122 @@ class ApiConstants {
   static const String studentCategories = '$studentsBasePath/categories/';
   static const String guardians = '$studentsBasePath/guardians/';
   static String guardianDetail(int id) => '$guardians$id/';
+  static const String studentUploadPhoto = '$studentsBasePath/students/upload-photo/';
+  static const String studentDocumentUpload = '$studentsBasePath/documents/upload_document/';
+  static String studentRestore(int id) => '$studentsBasePath/students/$id/restore/';
+  static String studentPermanentDelete(int id) =>
+      '$studentsBasePath/students/$id/permanent-delete/';
+  static const String studentRecordAudits = '$studentsBasePath/record-audits/';
+  static const String studentExportXlsx = '$studentsBasePath/students/export-xlsx/';
 
-  // Core — Classes / Sections / Academic Years
+  // Student Categories (full CRUD) — Reference: apps/students/views.py::StudentCategoryViewSet
+  static String categoryDetail(int id) => '$studentCategories$id/';
+  static const String categorySummary = '${studentCategories}summary/';
+  static const String categoryCheckName = '${studentCategories}check-name/';
+  static const String categoryBulkStatus = '${studentCategories}bulk-status/';
+  static const String categoryBulkDelete = '${studentCategories}bulk-delete/';
+
+  // Student Groups / Clubs — Reference: apps/students/views.py::StudentGroupViewSet
+  static const String studentGroups = '$studentsBasePath/groups/';
+  static String studentGroupDetail(int id) => '$studentGroups$id/';
+  static const String studentGroupStats = '${studentGroups}stats/';
+  static const String studentGroupStudents = '${studentGroups}students/';
+  static const String studentGroupAssign = '${studentGroups}assign/';
+  static const String studentGroupBulkAssign = '${studentGroups}bulk-assign/';
+  static const String studentGroupClubToggle = '${studentGroups}club-toggle/';
+  static const String studentGroupClubAssign = '${studentGroups}club-assign/';
+  static const String studentGroupSortwellPreview = '${studentGroups}sortwell-preview/';
+  static const String studentGroupSortwell = '${studentGroups}sortwell/';
+
+  // Student Promotion — Reference: apps/students/views.py::PromotionBatchViewSet
+  static const String promotionBatches = '$studentsBasePath/promotion-batches/';
+  static const String promotionBatchCreateOrGet =
+      '${promotionBatches}create-or-get/';
+  static String promotionBatchUpdateRecord(int batchId) =>
+      '$promotionBatches$batchId/update-record/';
+  static String promotionBatchBulkUpdate(int batchId) =>
+      '$promotionBatches$batchId/bulk-update/';
+  static String promotionBatchAiRecommendation(int batchId) =>
+      '$promotionBatches$batchId/ai-recommendation/';
+  static String promotionBatchConfirm(int batchId) =>
+      '$promotionBatches$batchId/confirm/';
+  static String promotionBatchFinalize(int batchId) =>
+      '$promotionBatches$batchId/finalize/';
+
+  // Multi Subject Assignment — Reference: apps/students/views.py (StudentViewSet +
+  // StudentSubjectAssignmentViewSet actions). Frontend route is named
+  // "multi-class" but the actual screen is subject (2nd language/sport/etc.)
+  // assignment, not multiple homeroom classes — see student_subject_assignment
+  // feature doc comment.
+  static const String subjectAssignmentStats =
+      '$studentsBasePath/students/subject-assignment-stats/';
+  static const String subjectAssignmentClassSectionTree =
+      '$studentsBasePath/students/class-section-tree/';
+  static const String subjectAssignmentSectionStudents =
+      '$studentsBasePath/students/section-students/';
+  static const String subjectAssignmentUpsertOptional =
+      '$studentsBasePath/subject-assignments/upsert-optional/';
+
+  // Attendance — Reference: backend/apps/attendance/urls.py + views.py
+  static const String attendanceBasePath = '$apiBasePath/attendance';
+  static const String studentAttendance = '$attendanceBasePath/student-attendance/';
+
+  // Core — Classes / Sections / Academic Years / Streams / Rooms / Holidays
   // Reference: backend/apps/core/urls.py + views.py
   static const String coreBasePath = '$apiBasePath/core';
   static const String coreClasses = '$coreBasePath/classes/';
   static const String coreSections = '$coreBasePath/sections/';
+  static const String coreSectionsReplace = '${coreSections}replace/';
+  static const String coreSectionsBulkDelete = '${coreSections}bulk-delete/';
   static const String coreAcademicYears = '$coreBasePath/academic-years/';
+  static const String coreStreams = '$coreBasePath/streams/';
+  static const String coreClassRooms = '$coreBasePath/class-rooms/';
+  static const String coreHolidays = '$coreBasePath/holidays/';
+  static const String coreHolidaysCopyFromYear = '${coreHolidays}copy-from-year/';
+  static const String coreSubjects = '$coreBasePath/subjects/';
+
+  // Academics — Foundation setup (class-subject entries)
+  // Reference: backend/apps/academics/urls.py + views.py
+  static const String academicsBasePath = '$apiBasePath/academics';
+  static const String academicsClassSubjectEntries = '$academicsBasePath/class-subject-entries/';
+  static const String academicsClassSubjectEntriesResetClass = '${academicsClassSubjectEntries}reset-class/';
+
+  // Academics — Staff Assignment (class teachers, subject teachers, workload, audit, KPI)
+  // Reference: backend/apps/academics/urls.py + views.py
+  static const String staffTeachers = '$academicsBasePath/staff/teachers/';
+  static const String staffClassTeachers = '$academicsBasePath/staff/class-teachers/';
+  static const String staffSubjectAssignments = '$academicsBasePath/staff/subject-assignments/';
+  static const String staffWorkload = '$academicsBasePath/staff/workload/';
+  static const String staffAuditLog = '$academicsBasePath/staff/audit-log/';
+  static const String staffKpi = '$academicsBasePath/staff/kpi/';
+
+  // Fees — Home screen only (Payments feed, Assignments summary, Home
+  // dashboard tasks/audit). Reference: backend/apps/fees/urls.py + views.py.
+  static const String feesBasePath = '$apiBasePath/fees';
+  static const String feesAssignments = '$feesBasePath/assignments/';
+  static String feesAssignmentDetail(int id) => '$feesAssignments$id/';
+  static const String feesAssignmentsSummary =
+      '$feesBasePath/assignments/summary/';
+  static const String feesPayments = '$feesBasePath/payments/';
+  // NOTE: no `home/` route exists on the backend yet — see
+  // fees_repository_impl.dart::fetchHomeDashboard doc comment.
+  static const String feesHome = '$feesBasePath/home/';
+
+  // Fees — Fee Configuration screen (Groups, Types, Term Settings,
+  // Schedules, Concession Rules, Late Fee Rules).
+  // Reference: backend/apps/fees/urls.py + views.py.
+  static const String feesGroups = '$feesBasePath/groups/';
+  static String feesGroupDetail(int id) => '$feesGroups$id/';
+  static const String feesTypes = '$feesBasePath/types/';
+  static String feesTypeDetail(int id) => '$feesTypes$id/';
+  static const String feesTermSettings = '$feesBasePath/term-settings/';
+  static String feesTermSettingsDetail(int id) => '$feesTermSettings$id/';
+  static const String feesSchedules = '$feesBasePath/schedules/';
+  static String feesScheduleDetail(int id) => '$feesSchedules$id/';
+  static const String feesConcessionRules = '$feesBasePath/concession-rules/';
+  static String feesConcessionRuleDetail(int id) => '$feesConcessionRules$id/';
+  static const String feesLateFeeRules = '$feesBasePath/late-fee-rules/';
+  static String feesLateFeeRuleDetail(int id) => '$feesLateFeeRules$id/';
 
   // Dashboard Endpoints
   static const String attentionCountEndpoint =

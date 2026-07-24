@@ -62,6 +62,8 @@ class StudentData {
   final String? guardianPhone;
   final String? guardianRelation;
 
+  final String? photoUrl;
+
   final String? addressLine;
   final String? city;
   final String? district;
@@ -97,6 +99,7 @@ class StudentData {
     this.guardianName,
     this.guardianPhone,
     this.guardianRelation,
+    this.photoUrl,
     this.addressLine,
     this.city,
     this.district,
@@ -115,6 +118,11 @@ class StudentData {
 
   bool get isActive => status == StudentStatus.active && !isArchived;
 
+  /// Backend's `is_disabled` flag (see `docsPendingCount` doc comment above
+  /// — this is the same field, just named for what it actually gates: the
+  /// Disabled Students screen).
+  bool get isDisabled => docsPendingCount > 0;
+
   bool isNewThisMonth(DateTime now) =>
       enrolledAt.year == now.year && enrolledAt.month == now.month;
 
@@ -123,7 +131,8 @@ class StudentData {
     if (dob == null) return null;
     final now = DateTime.now();
     var age = now.year - dob.year;
-    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
       age--;
     }
     return age;
@@ -145,7 +154,8 @@ class StudentData {
       return null;
     }
 
-    DateTime? parseDate(String? value) => value == null ? null : DateTime.tryParse(value);
+    DateTime? parseDate(String? value) =>
+        value == null ? null : DateTime.tryParse(value);
 
     final isDisabled = json['is_disabled'] as bool? ?? false;
 
@@ -168,6 +178,7 @@ class StudentData {
       guardianId: json['guardian'] as int?,
       guardianName: json['guardian_name'] as String?,
       guardianPhone: json['guardian_phone'] as String?,
+      photoUrl: json['photo'] as String?,
       addressLine: json['address_line'] as String?,
       city: json['city'] as String?,
       district: json['district'] as String?,
@@ -204,17 +215,20 @@ class StudentData {
       'current_section': sectionId,
       if (academicYearId != null) 'academic_year': academicYearId,
       if (categoryId != null) 'category': categoryId,
-      if (guardianId != null) 'guardian': guardianId,
+      'guardian': ?guardianId,
+      if (photoUrl != null && photoUrl!.isNotEmpty) 'photo': photoUrl,
+      if (addressLine != null && addressLine!.isNotEmpty) 'address_line': addressLine,
+      if (city != null && city!.isNotEmpty) 'city': city,
+      if (district != null && district!.isNotEmpty) 'district': district,
+      if (state != null && state!.isNotEmpty) 'state': state,
+      if (pincode != null && pincode!.isNotEmpty) 'pincode': pincode,
       'status': status.value,
       'is_active': status == StudentStatus.active,
       'is_disabled': status != StudentStatus.active,
     };
   }
 
-  StudentData copyWith({
-    StudentStatus? status,
-    bool? isArchived,
-  }) {
+  StudentData copyWith({StudentStatus? status, bool? isArchived}) {
     return StudentData(
       id: id,
       admissionNo: admissionNo,
@@ -235,6 +249,7 @@ class StudentData {
       guardianName: guardianName,
       guardianPhone: guardianPhone,
       guardianRelation: guardianRelation,
+      photoUrl: photoUrl,
       addressLine: addressLine,
       city: city,
       district: district,

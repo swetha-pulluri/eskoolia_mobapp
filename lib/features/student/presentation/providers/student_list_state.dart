@@ -62,6 +62,16 @@ class StudentListState {
   final Set<int> selectedIds;
   final Set<int> mutatingIds;
 
+  /// Classes confirmed (via a probe fetch) to have at least one student with
+  /// no section — mirrors the frontend's `classesWithUnassigned` state,
+  /// which reveals a synthetic "Unassigned" tab per class once known.
+  final Set<int> classesWithUnassigned;
+
+  /// Per-class count of section-less students, for the "Unassigned" tab's
+  /// badge — mirrors the frontend's `classSectionStudents.get(secKey)
+  /// ?.length` for that synthetic key.
+  final Map<int, int> unassignedCounts;
+
   final String? flashSuccess;
   final String? flashError;
 
@@ -99,6 +109,8 @@ class StudentListState {
     required this.sectionPage,
     required this.selectedIds,
     required this.mutatingIds,
+    required this.classesWithUnassigned,
+    required this.unassignedCounts,
     this.flashSuccess,
     this.flashError,
   });
@@ -128,6 +140,8 @@ class StudentListState {
       sectionPage: 1,
       selectedIds: {},
       mutatingIds: {},
+      classesWithUnassigned: {},
+      unassignedCounts: {},
     );
   }
 
@@ -165,6 +179,8 @@ class StudentListState {
     int? sectionPage,
     Set<int>? selectedIds,
     Set<int>? mutatingIds,
+    Set<int>? classesWithUnassigned,
+    Map<int, int>? unassignedCounts,
     Object? flashSuccess = _unset,
     Object? flashError = _unset,
   }) {
@@ -209,6 +225,8 @@ class StudentListState {
       sectionPage: sectionPage ?? this.sectionPage,
       selectedIds: selectedIds ?? this.selectedIds,
       mutatingIds: mutatingIds ?? this.mutatingIds,
+      classesWithUnassigned: classesWithUnassigned ?? this.classesWithUnassigned,
+      unassignedCounts: unassignedCounts ?? this.unassignedCounts,
       flashSuccess: identical(flashSuccess, _unset) ? this.flashSuccess : flashSuccess as String?,
       flashError: identical(flashError, _unset) ? this.flashError : flashError as String?,
     );

@@ -49,7 +49,8 @@ class Modules {
       icon: Icons.dashboard_outlined,
       bgColor: AppColors.dashboardBg,
       iconColor: AppColors.dashboardIc,
-      comingSoon: true, // KPI page not implemented yet in Flutter (exists in web)
+      // SchoolOverviewPage is implemented and routed at /dashboard —
+      // this flag was stale from before that page existed.
     ),
     ModuleEntity(
       id: 'super_admin',
@@ -132,7 +133,7 @@ class Modules {
       icon: Icons.payment_outlined,
       bgColor: AppColors.feesBg,
       iconColor: AppColors.feesIc,
-      comingSoon: true,
+      comingSoon: false,
     ),
     ModuleEntity(
       id: 'hr',

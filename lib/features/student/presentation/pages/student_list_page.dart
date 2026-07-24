@@ -8,6 +8,7 @@ import '../providers/student_list_state.dart';
 import '../providers/student_providers.dart';
 import '../widgets/student_class_accordion.dart';
 import '../widgets/student_filters_panel.dart';
+import '../widgets/student_module_sub_nav.dart';
 import '../widgets/student_stats_grid.dart';
 
 /// Student List Page — mirrors frontend
@@ -37,30 +38,91 @@ class StudentListPage extends ConsumerWidget {
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.dark,
         child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async => notifier.refresh(),
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _buildPageHead(context, notifier),
-                      const SizedBox(height: 12),
-                      StudentStatsGrid(loading: state.loadingStats, stats: state.stats),
-                      const SizedBox(height: 12),
-                      const StudentFiltersPanel(),
-                      const SizedBox(height: 12),
-                      const StudentClassAccordion(),
-                    ]),
+          child: Column(
+            children: [
+              // Mirrors `<ModuleSubNav />`, rendered above the page content
+              // by the frontend's dashboard shell for whichever module is
+              // active — full-bleed, sitting above the "Student List" card
+              // rather than inside its padding.
+              const StudentModuleSubNav(active: StudentModuleTab.enrollList),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async => notifier.refresh(),
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildPageHead(context, notifier),
+                            const SizedBox(height: 12),
+                            StudentStatsGrid(loading: state.loadingStats, stats: state.stats),
+                            const SizedBox(height: 12),
+                            const StudentFiltersPanel(),
+                            const SizedBox(height: 12),
+                            const StudentClassAccordion(),
+                          ]),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Mobile adaptation (disclosed): the frontend cross-links its Students
+  /// sub-screens (Categories, Groups, Disabled, Deleted/Restore,
+  /// Unassigned, Multi Subject Assignment, Promotion) via breadcrumbs and
+  /// buttons scattered across each of those pages rather than one central
+  /// menu — there's no single equivalent "hub" in the reference frontend.
+  /// A bottom sheet from the List screen's own "More" button is the
+  /// natural mobile entry point for the same set of destinations.
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        final items = [
+          ('Categories', Icons.category_outlined, '/students/categories'),
+          ('Groups & Clubs', Icons.groups_outlined, '/students/groups'),
+          ('Disabled Students', Icons.block_outlined, '/students/disabled'),
+          ('Delete / Restore Records', Icons.delete_outline, '/students/deleted'),
+          ('Unassigned Students', Icons.person_search_outlined, '/students/unassigned'),
+          ('Multi Subject Assignment', Icons.menu_book_outlined, '/students/multi-subject-assignment'),
+          ('Student Promotion', Icons.trending_up, '/students/promote'),
+        ];
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('More Students tools', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                ),
+              ),
+              for (final item in items)
+                ListTile(
+                  leading: Icon(item.$2, color: AppColors.studentListBrand),
+                  title: Text(item.$1, style: const TextStyle(fontSize: 13)),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.push(item.$3);
+                  },
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -88,38 +150,62 @@ class StudentListPage extends ConsumerWidget {
         spacing: 12,
         runSpacing: 10,
         children: [
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.4,
-                height: 1.15,
-                color: Color(0xFF0F172A),
-              ),
-              children: [
-                TextSpan(text: 'Student '),
-                TextSpan(
-                  text: 'List',
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RichText(
+                text: const TextSpan(
                   style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF6C3CE1),
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                    height: 1.15,
+                    color: Color(0xFF0F172A),
                   ),
+                  children: [
+                    TextSpan(text: 'Student '),
+                    TextSpan(
+                      text: 'List',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF6C3CE1),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              // Mirrors `.page-head > div:first-child p` exactly.
+              const Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Text(
+                  'Browse, search, and manage every enrolled student · Click any row to see full profile.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF6B6A65)),
+                ),
+              ),
+            ],
           ),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               OutlinedButton.icon(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Export is coming soon.')),
-                ),
+                onPressed: () => context.push('/students/export'),
                 icon: const Icon(Icons.file_download_outlined, size: 14),
                 label: const Text('Export'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.studentListInk,
+                  side: const BorderSide(color: Color(0x1F000000)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _showMoreMenu(context),
+                icon: const Icon(Icons.more_horiz, size: 16),
+                label: const Text('More'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.studentListInk,
                   side: const BorderSide(color: Color(0x1F000000)),

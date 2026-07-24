@@ -799,3 +799,89 @@ sets, so no functionality overlapped — the merge conflicts were all in shared 
   over the network, which Flutter's test sandbox always blocks); not a merge regression. Fixed
   the test's stale `EskooliaApp()` reference to `MyApp()` (the class was renamed back during the
   `main.dart` merge) — otherwise the test wouldn't even compile.
+
+---
+
+## Date: 2026-07-22 (Wednesday)
+
+Developer: Swetha
+Git Branch: feature/login-screen / Main
+
+Completed Work:
+- Extended the Student module with new sub-pages beyond Enroll & List: Student Categories,
+  Deleted, Disabled, Unassigned, Export, Promotion, and Multi Subject Assignment
+- Built the domain/data/repository layers backing each new sub-page (category, subject-assignment,
+  and promotion repositories, models, and remote datasources)
+- Reworked core student domain models (`student_data`, `school_class`, `student_record_audit`) and
+  the student list provider/state/notifier to support the new sub-pages
+- Added the shared `student_module_sub_nav`, `student_pager_footer`, and `student_subpage_header`
+  widgets used across the new Student sub-pages
+- Registered all new Student sub-module routes in `app_router.dart` and added the matching API
+  endpoints in `api_constants.dart`
+
+---
+
+## Date: 2026-07-23 (Thursday)
+
+Developer: Swetha
+Git Branch: feature/login-screen / Main
+
+Completed Work:
+- Added the Student Groups feature (domain model, repository, remote datasource, and the Student
+  Groups page/widgets)
+- Started the new **Academics** module, matching the web frontend's Academics sub-nav (Foundation,
+  Staff Assignment, plus Timetable/Planning Studio/Reports left as "Soon"-badged placeholders to
+  match `COMING_SOON_PATHS`)
+- Built the Academics Foundation Setup flow: domain entities (class, section, room, subject,
+  holiday) and its step-by-step wizard pages (Academic Year, Classes, Rooms, Sections, Subjects)
+- Built the Academics Staff Assignment feature: domain entities, repository/datasource layer, the
+  Staff Assignment page with Workload and Audit Log tabs, and supporting dialogs/widgets
+- Registered the new Academics routes (`/academics/core-setup`, `/academics/staff-workspace`) in
+  `app_router.dart`
+
+---
+
+## Date: 2026-07-24 (Friday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Started and built out the new **Fees** module end-to-end, converting three screens from the web
+  frontend (`frontend/components/fees/*`) one at a time, each strictly matched against its literal
+  source rather than redesigned:
+  - **Fees Home** (`/fees/payments`): summary/KPI cards, task queue, live payment feed, and audit
+    trail cards, fully wired to the real backend (no mock data).
+  - **Fee Configuration** (`/fees/configuration`): all 5 tabs — Fee Groups, Fee Types, Fee
+    Schedules, Concession Rules, Late Fee Rules — with full CRUD, shared style/button/dropdown
+    helpers, and the help modal.
+  - **Fee Assignment** (`/fees/fee-assignment`): student roster grouped by class with
+    filters/tabs/stats, the Assign/Edit Fee dialog (per-fee-type create-or-update, matching the
+    source's `confirmAssign` exactly), Bulk Assign dialog (loops individual creates client-side —
+    confirmed via backend research that no bulk-assign endpoint exists), Change Payment Plan dialog
+    (confirmed cosmetic-only in the source, no backend persistence), and the Info dialog.
+- Traced backend behavior directly from `apps/fees` rather than guessing: the assignment endpoint
+  upserts on `(academic_year, student, fees_type)`, uses a **bare** DRF error envelope (unlike
+  several sibling fees endpoints, which wrap errors in `{success, message, errors}`), and
+  `FeeAssignment.status` is a server-computed property, never client-settable.
+- Found and fixed several real rendering crashes and layout bugs, each only visible with realistic
+  (non-empty) data rather than an empty/unauthenticated backend — a recurring lesson this module
+  reinforced repeatedly:
+  - A `Border` with non-uniform side colors combined with `borderRadius` crashing Fees Home's KPI
+    and task-queue cards.
+  - `RenderFlex` overflow in Fee Configuration's table "Actions" columns (4 tabs) — two side-by-side
+    buttons didn't fit a phone width; restacked vertically.
+  - A `Container(color:, decoration:)` crash in Fee Assignment's student roster row (Flutter
+    disallows setting both at once).
+  - A 32px `RenderFlex` overflow on every roster table row — the row `Container`'s own horizontal
+    padding wasn't accounted for in the fixed table width; fixed by including it in the width
+    calculation.
+  - A `FaModalFooter` (`Cancel` + a long primary-button label like "Confirm Plan Switch"/"Assign to
+    Unassigned") overflowing on narrow widths — switched its `Row` to a `Wrap`.
+  - A genuine startup crash (`Bad state: No element`, visible as a full red error screen for a few
+    seconds on first opening Fee Assignment): the YEAR filter dropdown looked up a label via an
+    unguarded `firstWhere` before the academic-years API call had resolved. Fixed with the file's
+    existing `.firstOrNull` safe-lookup pattern.
+- Verified throughout with `flutter analyze` (clean each pass) and headless Chrome/Playwright
+  checks — including fake-repository provider overrides and small isolated widget harnesses built
+  specifically to reproduce layout bugs that don't show up against empty/fast-resolving data.

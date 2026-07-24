@@ -1,8 +1,14 @@
-/// School Class + Section models
-/// Source: frontend/components/students/StudentListPanel.tsx — SchoolClass /
-/// Section types (used by the "Browse & edit by class" accordion).
-/// Backend: GET /api/v1/core/classes/ (nested sections) + GET
-/// /api/v1/core/sections/ (apps/core — ClassSerializer/SectionSerializer).
+// School Class + Section models
+// Source: frontend/components/students/StudentListPanel.tsx — SchoolClass /
+// Section types (used by the "Browse & edit by class" accordion).
+// Backend: GET /api/v1/core/classes/ (nested sections) + GET
+// /api/v1/core/sections/ (apps/core — ClassSerializer/SectionSerializer).
+
+/// Mirrors `UNASSIGNED_SECTION_ID = -1` — a sentinel id (no real backend
+/// section has this) used to represent the synthetic "Unassigned" tab that
+/// the frontend appends to any class with section-less students.
+const int kUnassignedSectionId = -1;
+
 class SectionData {
   final int id;
   final int classId;
@@ -26,6 +32,18 @@ class SectionData {
       studentCount: json['student_count'] as int? ?? 0,
     );
   }
+
+  /// The synthetic "Unassigned" section frontend appends per-class
+  /// (`classSectionsMap`'s `push({id: UNASSIGNED_SECTION_ID, ...})`).
+  factory SectionData.unassigned({required int classId, required int studentCount}) {
+    return SectionData(id: kUnassignedSectionId, classId: classId, name: 'Unassigned', studentCount: studentCount);
+  }
+
+  bool get isUnassigned => id == kUnassignedSectionId;
+
+  /// Mirrors `formatSectionLabel`: "Unassigned" for the synthetic bucket
+  /// (no "Section " prefix), else "Section {name}".
+  String get displayLabel => isUnassigned ? 'Unassigned' : 'Section $name';
 }
 
 class SchoolClass {
@@ -59,6 +77,17 @@ class SchoolClass {
     this.specialNeedsCount = 0,
     this.docsPendingCount = 0,
   });
+
+  /// Mirrors `formatClassLabel`: numeric class names 1–12 become "Grade N"
+  /// (the backend stores plain numeric strings for these); non-numeric
+  /// names (Nursery/LKG/UKG/etc.) are shown as-is.
+  String get displayLabel {
+    final text = name.trim();
+    if (text.isEmpty) return 'Class $id';
+    final num = int.tryParse(text);
+    if (num != null && num > 0 && num <= 12) return 'Grade $num';
+    return text;
+  }
 
   factory SchoolClass.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as int;

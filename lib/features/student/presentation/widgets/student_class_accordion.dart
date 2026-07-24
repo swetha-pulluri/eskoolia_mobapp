@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/school_class.dart';
@@ -235,7 +236,7 @@ class StudentClassAccordion extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          schoolClass.name,
+                          schoolClass.displayLabel,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 14,
@@ -280,7 +281,15 @@ class StudentClassAccordion extends ConsumerWidget {
                         AppColors.studentBadgeRedText,
                       ),
                       _classBadge(
-                        '${schoolClass.sections.length} ${schoolClass.sections.length == 1 ? 'section' : 'sections'}',
+                        // Includes the synthetic "Unassigned" tab once
+                        // revealed — mirrors `clsSections.length` in the
+                        // frontend, whose `classSectionsMap` already has
+                        // that synthetic entry pushed in.
+                        () {
+                          final count = schoolClass.sections.length +
+                              (state.classesWithUnassigned.contains(schoolClass.id) ? 1 : 0);
+                          return '$count ${count == 1 ? 'section' : 'sections'}';
+                        }(),
                         AppColors.studentTagGrayBg,
                         AppColors.studentTagGrayBorder,
                         AppColors.studentTagGrayText,
@@ -351,8 +360,20 @@ class StudentClassAccordion extends ConsumerWidget {
     StudentListNotifier notifier,
     SchoolClass schoolClass,
   ) {
+    // Mirrors the frontend's `classSectionsMap`, which appends a synthetic
+    // "Unassigned" entry (`{id: UNASSIGNED_SECTION_ID, name: "Unassigned"}`)
+    // to any class confirmed (via the background probe in toggleClass) to
+    // have section-less students — for EVERY class, not hardcoded to any
+    // specific grade.
     final visibleSections = state.appliedSectionId == null
-        ? schoolClass.sections
+        ? [
+            ...schoolClass.sections,
+            if (state.classesWithUnassigned.contains(schoolClass.id))
+              SectionData.unassigned(
+                classId: schoolClass.id,
+                studentCount: state.unassignedCounts[schoolClass.id] ?? 0,
+              ),
+          ]
         : schoolClass.sections.where((s) => s.id == state.appliedSectionId).toList();
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -361,36 +382,6 @@ class StudentClassAccordion extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: visibleSections.map((section) {
-              final isActive = state.activeSectionId == section.id;
-              return InkWell(
-                onTap: () => notifier.selectSectionTab(section.id),
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: isActive ? AppColors.studentListBrand : Colors.white,
-                    border: Border.all(
-                      color: isActive ? AppColors.studentListBrand : AppColors.studentListLine,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Section ${section.name} · ${section.studentCount}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : AppColors.studentListInk,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
           Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
@@ -398,7 +389,39 @@ class StudentClassAccordion extends ConsumerWidget {
               border: Border.all(color: AppColors.studentListLine),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: _buildActiveSectionBody(context, state, notifier),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Mirrors `.sl-sec-tabs`/`.sl-stab`/`.sl-stab.active`/
+                // `.sl-stab-ct` exactly: an underline tab row (not bordered
+                // pill buttons) with a count pill directly beside the label
+                // (no " · " separator), horizontally scrollable like the
+                // frontend's own `overflow-x: auto`.
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFAFBFF),
+                    border: Border(bottom: BorderSide(color: AppColors.studentListLine)),
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: visibleSections.map((section) {
+                        final isActive = state.activeSectionId == section.id;
+                        return _SectionTabButton(
+                          label: section.displayLabel,
+                          count: section.studentCount,
+                          isActive: isActive,
+                          onTap: () => notifier.selectSectionTab(section.id),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                _buildActiveSectionBody(context, state, notifier, schoolClass),
+              ],
+            ),
           ),
         ],
       ),
@@ -409,6 +432,7 @@ class StudentClassAccordion extends ConsumerWidget {
     BuildContext context,
     StudentListState state,
     StudentListNotifier notifier,
+    SchoolClass schoolClass,
   ) {
     if (state.activeSectionId == null) {
       return const Padding(
@@ -419,32 +443,49 @@ class StudentClassAccordion extends ConsumerWidget {
         ),
       );
     }
+    final activeSection = state.activeSectionId == kUnassignedSectionId
+        ? SectionData.unassigned(
+            classId: schoolClass.id,
+            studentCount: state.unassignedCounts[schoolClass.id] ?? 0,
+          )
+        : schoolClass.sections.where((s) => s.id == state.activeSectionId).firstOrNull;
+    final sectionLabel = activeSection?.displayLabel ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Mirrors `.sl-sec-bar`: select-all checkbox + selection/count text
+        // on the left, the Export button on the right — replaces the
+        // previous standalone "Roster" title (which the frontend doesn't
+        // have) with the frontend's actual row.
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: Row(
             children: [
-              const Expanded(
-                child: Text(
-                  'Roster',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.studentListInk,
+              Expanded(
+                child: InkWell(
+                  onTap: () => notifier.toggleSelectAllOnPage(
+                    !(state.sectionStudents.isNotEmpty &&
+                        state.sectionStudents.every((s) => state.selectedIds.contains(s.id))),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _sectionSelectAllCheckbox(state),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _sectionCountLabel(state, schoolClass.displayLabel, sectionLabel),
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF6F7287)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: () => _showExportToast(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.studentListBrand,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                child: const Text('Export', style: TextStyle(fontSize: 12)),
-              ),
+              const SizedBox(width: 8),
+              _sectionExportButton(context),
             ],
           ),
         ),
@@ -496,7 +537,6 @@ class StudentClassAccordion extends ConsumerWidget {
             selectedIds: state.selectedIds,
             mutatingIds: state.mutatingIds,
             onSelectRow: notifier.toggleSelectRow,
-            onSelectAllOnPage: notifier.toggleSelectAllOnPage,
             onView: (s) => Navigator.of(context)
                 .push<bool>(MaterialPageRoute(builder: (_) => StudentProfilePage(student: s)))
                 .then((mutated) {
@@ -505,21 +545,24 @@ class StudentClassAccordion extends ConsumerWidget {
                 notifier.refresh();
               }
             }),
-            onEdit: (s) => _showEditToast(context),
-            onMessage: (s) => _showMessageToast(context),
+            onEdit: (s) => _openEnrollForm(context, notifier, state, editingStudent: s),
             onArchiveOne: (s) => _confirmArchive(context, notifier, [s.id]),
             onToggleStatus: (s) => notifier.setStatusForIds([s.id], isActive: !s.isActive),
           ),
         if (state.sectionStudents.isNotEmpty)
-          _buildPagerFooter(context, state, notifier),
+          _buildPagerFooter(context, state, notifier, sectionLabel),
       ],
     );
   }
 
+  /// Mirrors `.sl-tbl-foot`'s count span exactly: `"{start}–{end} of {total}
+  /// students in {sectionLabel}"` (frontend: `secStartIdx+1}–{secEndIdx} of
+  /// {secTotal} students in {secLabel}`) — not just "... of N students".
   Widget _buildPagerFooter(
     BuildContext context,
     StudentListState state,
     StudentListNotifier notifier,
+    String sectionLabel,
   ) {
     const pageSize = 10;
     final start = (state.sectionPage - 1) * pageSize + 1;
@@ -535,7 +578,7 @@ class StudentClassAccordion extends ConsumerWidget {
         runSpacing: 8,
         children: [
           Text(
-            '$start–$end of ${state.sectionTotalCount} students',
+            '$start–$end of ${state.sectionTotalCount} students${sectionLabel.isEmpty ? '' : ' in $sectionLabel'}',
             style: const TextStyle(fontSize: 12, color: AppColors.studentPagerFootText),
           ),
           Row(
@@ -565,7 +608,7 @@ class StudentClassAccordion extends ConsumerWidget {
             ],
           ),
           TextButton(
-            onPressed: () => _showEditToast(context),
+            onPressed: () => _openEnrollForm(context, notifier, state),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.studentListBrand,
               padding: EdgeInsets.zero,
@@ -641,15 +684,150 @@ class StudentClassAccordion extends ConsumerWidget {
     );
   }
 
-  void _showEditToast(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening the enroll form in edit mode is coming soon.')),
+  /// Mirrors `.sl-sec-check input[type=checkbox]` — a select-all/indeterminate
+  /// checkbox for every student currently visible in this section's roster.
+  Widget _sectionSelectAllCheckbox(StudentListState state) {
+    final total = state.sectionStudents.length;
+    final allSelected = total > 0 && state.sectionStudents.every((s) => state.selectedIds.contains(s.id));
+    final someSelected = !allSelected && state.sectionStudents.any((s) => state.selectedIds.contains(s.id));
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: Checkbox(
+        value: allSelected,
+        tristate: true,
+        onChanged: null,
+        activeColor: AppColors.studentListBrand,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        // Rendered via the surrounding InkWell's onTap — this Checkbox is
+        // display-only here (`someSelected` drives visual indeterminate
+        // state, matching the frontend's `el.indeterminate = someSecSelected`).
+        fillColor: someSelected ? WidgetStateProperty.all(AppColors.studentListBrand) : null,
+        checkColor: Colors.white,
+      ),
     );
   }
 
-  void _showMessageToast(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Messaging parents is coming soon.')),
+  /// Mirrors `.sl-sec-count`'s two states exactly: `"{n} of {total} selected"`
+  /// when some rows are checked, else `"{total} student(s) in {class} ·
+  /// {section}"`.
+  String _sectionCountLabel(StudentListState state, String classLabel, String sectionLabel) {
+    final total = state.sectionStudents.length;
+    final selectedCount = state.selectedIds.length;
+    if (selectedCount > 0) {
+      return '$selectedCount of $total selected';
+    }
+    return '$total student${total == 1 ? '' : 's'} in $classLabel · $sectionLabel';
+  }
+
+  /// Mirrors `.sl-sec-export` exactly: 12×12 download icon, "Export" label,
+  /// 1px `#dfe0eb` border, 7px radius, 4px/10px padding, 11px `#42455d` text.
+  Widget _sectionExportButton(BuildContext context) {
+    return InkWell(
+      onTap: () => _showExportToast(context),
+      borderRadius: BorderRadius.circular(7),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFDFE0EB)),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.file_download_outlined, size: 12, color: Color(0xFF42455D)),
+            SizedBox(width: 4),
+            Text('Export', style: TextStyle(fontSize: 11, color: Color(0xFF42455D))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Pushes the Enroll form — in edit mode when [editingStudent] is given,
+  /// otherwise a fresh enrollment (mirrors the frontend's "+ Add student"
+  /// shortcut, which opens the same add form as the page-head button).
+  Future<void> _openEnrollForm(
+    BuildContext context,
+    StudentListNotifier notifier,
+    StudentListState state, {
+    StudentData? editingStudent,
+  }) async {
+    final saved = await context.push<bool>('/students/enroll', extra: editingStudent);
+    if (saved == true) {
+      notifier.refresh();
+      if (state.activeSectionId != null) {
+        notifier.goToSectionPage(state.sectionPage);
+      }
+    }
+  }
+}
+
+/// Mirrors `.sl-stab`/`.sl-stab.active`/`.sl-stab-ct` exactly: an underline
+/// tab (2px bottom border when active, no background/box border) with a
+/// count pill directly beside the label — not a bordered pill button with
+/// a " · count" suffix.
+class _SectionTabButton extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SectionTabButton({
+    required this.label,
+    required this.count,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isActive ? const Color(0xFF4F39F6) : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                color: isActive ? const Color(0xFF4F39F6) : const Color(0xFF6B6E8A),
+              ),
+            ),
+            const SizedBox(width: 5),
+            Container(
+              constraints: const BoxConstraints(minWidth: 18),
+              height: 18,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFF4F39F6) : const Color(0xFFECE8FF),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? Colors.white : const Color(0xFF4F39F6),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -659,10 +837,8 @@ class _StudentTable extends StatelessWidget {
   final Set<int> selectedIds;
   final Set<int> mutatingIds;
   final void Function(int, bool) onSelectRow;
-  final void Function(bool) onSelectAllOnPage;
   final void Function(StudentData) onView;
   final void Function(StudentData) onEdit;
-  final void Function(StudentData) onMessage;
   final void Function(StudentData) onArchiveOne;
   final void Function(StudentData) onToggleStatus;
 
@@ -671,30 +847,28 @@ class _StudentTable extends StatelessWidget {
     required this.selectedIds,
     required this.mutatingIds,
     required this.onSelectRow,
-    required this.onSelectAllOnPage,
     required this.onView,
     required this.onEdit,
-    required this.onMessage,
     required this.onArchiveOne,
     required this.onToggleStatus,
   });
 
   static const double _checkboxW = 40;
   static const double _studentW = 170;
-  static const double _admissionW = 110;
+  // Wide enough to fit a full admission number (e.g. "ADM202691011") without
+  // ever needing an ellipsis — the frontend's plain `<td>` has no fixed
+  // width/truncation at all.
+  static const double _admissionW = 150;
   static const double _guardianW = 150;
   static const double _dobW = 100;
   static const double _rollW = 60;
   static const double _statusW = 100;
   static const double _actionsW = 130; // 4 icons (View/Edit/Message/Archive) × 30px each + margin
-  static const double _padH = 12;
+  static const double _padH = 10; // matches frontend `th, td { padding: 10px 10px }`
   static const double _padV = 10;
 
   double get _tableWidth =>
       _checkboxW + _studentW + _admissionW + _guardianW + _dobW + _rollW + _statusW + _actionsW;
-
-  bool get _allOnPageSelected =>
-      students.isNotEmpty && students.every((s) => selectedIds.contains(s.id));
 
   @override
   Widget build(BuildContext context) {
@@ -721,22 +895,15 @@ class _StudentTable extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: _checkboxW,
-            child: Center(
-              child: Checkbox(
-                value: _allOnPageSelected,
-                onChanged: (v) => onSelectAllOnPage(v ?? false),
-                activeColor: AppColors.studentListBrand,
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ),
+          // Mirrors `<th style={{width:36}}><span className="sr-only">
+          // Select</span></th>` exactly — the header row has NO visible
+          // checkbox at all (only a screen-reader-only label); the real
+          // select-all control lives in the `.sl-sec-bar` above the table.
+          const SizedBox(width: _checkboxW),
           _headerCell('Student', _studentW),
           _headerCell('Admission No', _admissionW),
           _headerCell('Guardian', _guardianW),
-          _headerCell('DOB / Age', _dobW),
+          _headerCell('DOB', _dobW),
           _headerCell('Roll', _rollW),
           _headerCell('Status', _statusW, align: TextAlign.center),
           _headerCell('Actions', _actionsW, align: TextAlign.center),
@@ -788,10 +955,10 @@ class _StudentTable extends StatelessWidget {
               ),
             ),
             _studentCell(student),
-            _plainCell(student.admissionNo, _admissionW),
+            _admissionCell(student),
             _guardianCell(student),
             _dobCell(student),
-            _plainCell(student.rollNo ?? '—', _rollW),
+            _plainCell(student.rollNo?.isNotEmpty == true ? student.rollNo! : '-', _rollW),
             _statusCell(student, isMutating),
             _actionsCell(context, student, isMutating),
           ],
@@ -834,15 +1001,15 @@ class _StudentTable extends StatelessWidget {
                   Text(
                     student.fullName,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.studentPrimaryText,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    student.gender?.label ?? '—',
-                    style: const TextStyle(fontSize: 11, color: AppColors.studentSecondaryText),
+                    '${student.gender?.label ?? '-'} · Roll ${student.rollNo?.isNotEmpty == true ? student.rollNo : '-'}',
+                    style: const TextStyle(fontSize: 12, color: AppColors.studentSecondaryText),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -854,6 +1021,28 @@ class _StudentTable extends StatelessWidget {
     );
   }
 
+  /// Mirrors the frontend's plain `<td>{row.admission_no || "-"}</td>` —
+  /// no ellipsis truncation, ever (see `_admissionW`'s comment for why the
+  /// column itself is wide enough that this should never even need to wrap).
+  Widget _admissionCell(StudentData student) {
+    return SizedBox(
+      width: _admissionW,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: _padH, vertical: _padV),
+        child: Text(
+          student.admissionNo.isNotEmpty ? student.admissionNo : '-',
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
+          style: const TextStyle(fontSize: 12.5, color: AppColors.studentListInk),
+        ),
+      ),
+    );
+  }
+
+  /// Mirrors `resolveGuardianName`/`resolveGuardianPhone` exactly: "Not
+  /// linked" (never a dash) when there's no guardian name, "-" for a missing
+  /// phone.
   Widget _guardianCell(StudentData student) {
     return SizedBox(
       width: _guardianW,
@@ -864,13 +1053,17 @@ class _StudentTable extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              student.guardianName ?? '—',
-              style: const TextStyle(fontSize: 13, color: AppColors.studentPrimaryText),
+              student.guardianName?.isNotEmpty == true ? student.guardianName! : 'Not linked',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.studentPrimaryText,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              student.guardianPhone ?? '',
-              style: const TextStyle(fontSize: 11, color: AppColors.studentSecondaryText),
+              student.guardianPhone?.isNotEmpty == true ? student.guardianPhone! : '-',
+              style: const TextStyle(fontSize: 12, color: AppColors.studentSecondaryText),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -882,7 +1075,7 @@ class _StudentTable extends StatelessWidget {
   Widget _dobCell(StudentData student) {
     final dob = student.dateOfBirth;
     final age = student.ageYears;
-    if (dob == null) return _plainCell('—', _dobW);
+    if (dob == null) return _plainCell('-', _dobW);
     return SizedBox(
       width: _dobW,
       child: Padding(
@@ -893,13 +1086,17 @@ class _StudentTable extends StatelessWidget {
           children: [
             Text(
               DateFormat('dd/MM/yyyy').format(dob),
-              style: const TextStyle(fontSize: 13, color: AppColors.studentSecondaryText),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.studentPrimaryText,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
             if (age != null)
               Text(
                 '$age ${age == 1 ? 'yr' : 'yrs'}',
-                style: const TextStyle(fontSize: 11, color: AppColors.studentSecondaryText),
+                style: const TextStyle(fontSize: 12, color: AppColors.studentSecondaryText),
                 overflow: TextOverflow.ellipsis,
               ),
           ],
@@ -915,7 +1112,7 @@ class _StudentTable extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: _padH, vertical: _padV),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 13, color: AppColors.studentSecondaryText),
+          style: const TextStyle(fontSize: 12.5, color: AppColors.studentListInk),
           overflow: TextOverflow.ellipsis,
         ),
       ),
@@ -977,13 +1174,14 @@ class _StudentTable extends StatelessWidget {
             tooltip: 'Edit student',
             onTap: isMutating ? null : () => onEdit(student),
           ),
-          _ActionIconButton(
+          // Permanently disabled — mirrors the reference frontend, which
+          // also renders this as `disabled` with a "coming soon" tooltip
+          // everywhere (row action, bulk bar, profile footer), not a
+          // working feature this app should fake with a toast.
+          const _ActionIconButton(
             icon: Icons.chat_bubble_outline_rounded,
-            tooltip: 'Message parent',
-            onTap: () => onMessage(student),
-            hoverBorder: AppColors.studentIconMessageHoverBorder,
-            hoverBg: AppColors.studentIconMessageHoverBg,
-            hoverText: AppColors.studentIconMessageHoverText,
+            tooltip: 'Message parent (coming soon)',
+            onTap: null,
           ),
           _ActionIconButton(
             icon: Icons.archive_outlined,

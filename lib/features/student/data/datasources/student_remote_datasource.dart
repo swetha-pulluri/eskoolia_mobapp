@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../domain/models/academic_year.dart';
 import '../../domain/models/school_class.dart';
+import '../../domain/models/student_attendance_record.dart';
 import '../../domain/models/student_data.dart';
 import '../../domain/models/student_stats.dart';
 
@@ -25,13 +26,14 @@ abstract class StudentRemoteDataSource {
   /// GET /api/v1/students/categories/?status=active&page_size=200
   Future<List<StudentCategory>> fetchCategories();
 
-  /// GET /api/v1/students/students/?current_class=&current_section=&search=&is_active=&deleted_only=&include_deleted=true&page=&page_size=
+  /// GET /api/v1/students/students/?current_class=&current_section=&search=&is_active=&deleted_only=&include_deleted=true&unassigned=&page=&page_size=
   Future<StudentsPage> fetchStudents({
     int? classId,
     int? sectionId,
     String? search,
     bool? isActive,
     bool deletedOnly = false,
+    bool? unassigned,
     required int page,
     required int pageSize,
   });
@@ -43,7 +45,11 @@ abstract class StudentRemoteDataSource {
   Future<String> fetchNextAdmissionNo();
 
   /// POST /api/v1/students/students/{id}/set-status/
-  Future<void> setStudentStatus(int id, {required bool isActive, required String reason});
+  Future<void> setStudentStatus(
+    int id, {
+    required bool isActive,
+    required String reason,
+  });
 
   /// POST /api/v1/students/students/{id}/soft-delete/
   Future<void> archiveStudent(int id, {required String reason});
@@ -65,6 +71,57 @@ abstract class StudentRemoteDataSource {
 
   /// PUT /api/v1/students/students/{id}/
   Future<StudentData> updateStudent(int id, Map<String, dynamic> body);
+
+  /// PATCH /api/v1/students/students/{id}/ — a raw partial update for the
+  /// handful of call sites that only ever touch a couple of fields directly
+  /// (Disabled screen's "Enable", Unassigned screen's "Assign class"), the
+  /// same way the reference frontend does, rather than round-tripping a
+  /// full StudentData draft through [updateStudent].
+  Future<void> patchStudentFields(int id, Map<String, dynamic> fields);
+
+  /// POST /api/v1/students/students/{id}/restore/
+  Future<void> restoreStudent(int id);
+
+  /// DELETE /api/v1/students/students/{id}/permanent-delete/ (superuser-only
+  /// server-side).
+  Future<void> permanentDeleteStudent(int id);
+
+  /// GET /api/v1/students/record-audits/?student=&action=&class=&section=&search=
+  Future<List<Map<String, dynamic>>> fetchRecordAudits({
+    int? studentId,
+    String? action,
+    int? classId,
+    int? sectionId,
+    String? search,
+  });
+
+  /// GET /api/v1/attendance/student-attendance/?student_id=&date_from=&date_to=&page_size=1000
+  Future<List<StudentAttendanceRecord>> fetchStudentAttendance(
+    int studentId, {
+    required DateTime from,
+    required DateTime to,
+  });
+
+  /// GET /api/v1/students/students/export-xlsx/?current_class=&current_section=&is_active=
+  /// — returns the raw .xlsx file bytes. This is the ONLY real
+  /// backend-wired export for students (fixed 8 columns: Admission No,
+  /// Student, Class, Section, Guardian, Phone, DOB, Status) — see
+  /// student_export_page.dart's doc comment for why the reference
+  /// frontend's own CSV/PDF/column-picker UI isn't reproduced here.
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive});
+
+  /// POST /api/v1/students/students/upload-photo/ (multipart, field `photo`)
+  /// — returns the uploaded photo's URL.
+  Future<String> uploadStudentPhoto({required List<int> bytes, required String filename});
+
+  /// POST /api/v1/students/documents/upload_document/ (multipart, fields
+  /// `student_id`, `document_type`, `file`).
+  Future<void> uploadStudentDocument({
+    required int studentId,
+    required String documentType,
+    required List<int> bytes,
+    required String filename,
+  });
 }
 
 class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
@@ -77,7 +134,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     try {
       final response = await _dio.get(ApiConstants.studentsSummary);
       final body = response.data as Map<String, dynamic>;
-      return StudentStats.fromJson(body['data'] as Map<String, dynamic>? ?? const {});
+      return StudentStats.fromJson(
+        body['data'] as Map<String, dynamic>? ?? const {},
+      );
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to load student stats.');
     }
@@ -92,7 +151,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       );
       final body = response.data as Map<String, dynamic>;
       final results = body['results'] as List<dynamic>? ?? const [];
-      return results.map((e) => SchoolClass.fromJson(e as Map<String, dynamic>)).toList();
+      return results
+          .map((e) => SchoolClass.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to load classes.');
     }
@@ -107,7 +168,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       );
       final body = response.data as Map<String, dynamic>;
       final results = body['results'] as List<dynamic>? ?? const [];
-      return results.map((e) => AcademicYear.fromJson(e as Map<String, dynamic>)).toList();
+      return results
+          .map((e) => AcademicYear.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to load academic years.');
     }
@@ -122,7 +185,9 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
       );
       final body = response.data as Map<String, dynamic>;
       final results = body['results'] as List<dynamic>? ?? const [];
-      return results.map((e) => StudentCategory.fromJson(e as Map<String, dynamic>)).toList();
+      return results
+          .map((e) => StudentCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to load categories.');
     }
@@ -135,6 +200,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     String? search,
     bool? isActive,
     bool deletedOnly = false,
+    bool? unassigned,
     required int page,
     required int pageSize,
   }) async {
@@ -145,11 +211,13 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           'page': page,
           'page_size': pageSize,
           'include_deleted': 'true',
-          if (classId != null) 'current_class': classId,
-          if (sectionId != null) 'current_section': sectionId,
-          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          'current_class': ?classId,
+          'current_section': ?sectionId,
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
           if (isActive != null) 'is_active': isActive.toString(),
           if (deletedOnly) 'deleted_only': 'true',
+          if (unassigned == true) 'unassigned': 'true',
         },
       );
       return StudentsPage.fromJson(response.data as Map<String, dynamic>);
@@ -180,7 +248,11 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<void> setStudentStatus(int id, {required bool isActive, required String reason}) async {
+  Future<void> setStudentStatus(
+    int id, {
+    required bool isActive,
+    required String reason,
+  }) async {
     try {
       await _dio.post(
         ApiConstants.studentSetStatus(id),
@@ -232,7 +304,10 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     try {
       final response = await _dio.get(ApiConstants.guardianDetail(id));
       final body = response.data as Map<String, dynamic>;
-      return ((body['full_name'] as String?) ?? '', (body['phone'] as String?) ?? '');
+      return (
+        (body['full_name'] as String?) ?? '',
+        (body['phone'] as String?) ?? '',
+      );
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to load guardian.');
     }
@@ -250,13 +325,161 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
+  Future<void> patchStudentFields(int id, Map<String, dynamic> fields) async {
+    try {
+      await _dio.patch(ApiConstants.studentDetail(id), data: fields);
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to update student.');
+    }
+  }
+
+  @override
+  Future<void> restoreStudent(int id) async {
+    try {
+      await _dio.post(ApiConstants.studentRestore(id));
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to restore student.');
+    }
+  }
+
+  @override
+  Future<void> permanentDeleteStudent(int id) async {
+    try {
+      await _dio.delete(ApiConstants.studentPermanentDelete(id));
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to permanently delete student.');
+    }
+  }
+
+  @override
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive}) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.studentExportXlsx,
+        queryParameters: {
+          'current_class': ?classId,
+          'current_section': ?sectionId,
+          if (isActive != null) 'is_active': isActive.toString(),
+        },
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data as List<int>;
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to export students.');
+    }
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRecordAudits({
+    int? studentId,
+    String? action,
+    int? classId,
+    int? sectionId,
+    String? search,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.studentRecordAudits,
+        queryParameters: {
+          'student_id': ?studentId,
+          if (action != null && action.isNotEmpty) 'action': action,
+          'class': ?classId,
+          'section': ?sectionId,
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          'page_size': 200,
+        },
+      );
+      final data = response.data;
+      final raw = data is List
+          ? data
+          : data is Map<String, dynamic>
+              ? (data['results'] as List<dynamic>? ?? const [])
+              : const [];
+      return raw.cast<Map<String, dynamic>>();
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to load audit log.');
+    }
+  }
+
+  @override
   Future<StudentData> updateStudent(int id, Map<String, dynamic> body) async {
     try {
-      final response = await _dio.put(ApiConstants.studentDetail(id), data: body);
+      final response = await _dio.put(
+        ApiConstants.studentDetail(id),
+        data: body,
+      );
       final responseBody = response.data as Map<String, dynamic>;
       return StudentData.fromJson(responseBody['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to update student.');
+    }
+  }
+
+  @override
+  Future<List<StudentAttendanceRecord>> fetchStudentAttendance(
+    int studentId, {
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    try {
+      final response = await _dio.get(
+        ApiConstants.studentAttendance,
+        queryParameters: {
+          'student_id': studentId,
+          'date_from': fmt(from),
+          'date_to': fmt(to),
+          'page_size': 1000,
+        },
+      );
+      final data = response.data;
+      final raw = data is List
+          ? data
+          : data is Map<String, dynamic>
+              ? (data['results'] as List<dynamic>? ?? data['data'] as List<dynamic>? ?? const [])
+              : const [];
+      return raw
+          .cast<Map<String, dynamic>>()
+          .map(StudentAttendanceRecord.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to load attendance.');
+    }
+  }
+
+  @override
+  Future<String> uploadStudentPhoto({required List<int> bytes, required String filename}) async {
+    try {
+      final formData = FormData.fromMap({
+        'photo': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = await _dio.post(ApiConstants.studentUploadPhoto, data: formData);
+      final body = response.data as Map<String, dynamic>;
+      final url = (body['data'] as Map<String, dynamic>?)?['photo'] as String?;
+      if (url == null || url.isEmpty) throw Exception('Photo upload failed.');
+      return url;
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to upload photo.');
+    }
+  }
+
+  @override
+  Future<void> uploadStudentDocument({
+    required int studentId,
+    required String documentType,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'student_id': studentId.toString(),
+        'document_type': documentType,
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      await _dio.post(ApiConstants.studentDocumentUpload, data: formData);
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Failed to upload document.');
     }
   }
 }

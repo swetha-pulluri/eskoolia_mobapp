@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/models/school_class.dart';
 import '../../domain/models/student_data.dart';
 import '../../domain/repositories/student_repository.dart';
 import 'student_list_state.dart';
@@ -15,6 +16,12 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
   /// `classSectionStudents`-derived card stats — these badges only become
   /// accurate for classes/sections that have actually been opened.
   final Map<int, Set<int>> _seenStudentIdsByClass = {};
+
+  /// Per-class cache of section-less students (the synthetic "Unassigned"
+  /// bucket) — mirrors the frontend's `classSectionStudents` cache for that
+  /// same synthetic key. Cleared whenever filters are re-applied so a
+  /// changed search term takes effect.
+  final Map<int, List<StudentData>> _unassignedCacheByClass = {};
 
   StudentListNotifier(this._repository) : super(StudentListState.initial()) {
     _loadStats();
@@ -125,6 +132,7 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
   }
 
   void resetFilters() {
+    _unassignedCacheByClass.clear();
     state = state.copyWith(
       searchDraft: '',
       classIdFilterDraft: null,
@@ -141,13 +149,21 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
       appliedSpecialNeeds: false,
       appliedHasAllergy: false,
       appliedOnMedication: false,
+      classesWithUnassigned: {},
+      unassignedCounts: {},
     );
-    if (state.activeSectionId != null) _loadSection(page: 1);
+    final classId = state.expandedClassId;
+    if (classId != null) _probeUnassigned(classId);
+    if (state.activeSectionId != null) _loadActiveSection(page: 1);
   }
 
   /// Frontend gate: filter values only take effect on Apply — mirrors
   /// StudentListPanel.tsx's `filterApplied` state.
   void applyFilters() {
+    // Mirrors the frontend's own `setClassSectionStudents(new Map())` on
+    // Apply — busts every cached section (real and synthetic) so the new
+    // filter values actually take effect on re-fetch.
+    _unassignedCacheByClass.clear();
     state = state.copyWith(
       filtersApplied: true,
       appliedSearch: state.searchDraft,
@@ -157,8 +173,12 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
       appliedSpecialNeeds: state.specialNeedsDraft,
       appliedHasAllergy: state.hasAllergyDraft,
       appliedOnMedication: state.onMedicationDraft,
+      classesWithUnassigned: {},
+      unassignedCounts: {},
     );
-    if (state.activeSectionId != null) _loadSection(page: 1);
+    final classId = state.expandedClassId;
+    if (classId != null) _probeUnassigned(classId);
+    if (state.activeSectionId != null) _loadActiveSection(page: 1);
   }
 
   void toggleClass(int classId) {
@@ -174,11 +194,24 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
       selectedIds: {},
     );
     if (firstSection != null) _loadSection(page: 1);
+    // Mirrors the frontend's unconditional `loadClassSection(classId,
+    // UNASSIGNED_SECTION_ID)` inside its own `toggleClass` — probes for
+    // section-less students so the synthetic "Unassigned" tab can reveal
+    // itself even when a real section is the one actually shown first.
+    _probeUnassigned(classId);
   }
 
   void selectSectionTab(int sectionId) {
     state = state.copyWith(activeSectionId: sectionId, selectedIds: {});
-    _loadSection(page: 1);
+    _loadActiveSection(page: 1);
+  }
+
+  void _loadActiveSection({required int page}) {
+    if (state.activeSectionId == kUnassignedSectionId) {
+      _loadUnassignedSection(page: page);
+    } else {
+      _loadSection(page: page);
+    }
   }
 
   Future<void> _loadSection({required int page}) async {
@@ -215,6 +248,69 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
     }
   }
 
+  /// Fetches (or reuses the cached) full list of section-less students for
+  /// [classId], reveals the synthetic "Unassigned" tab if any exist, and
+  /// folds new arrivals into that class's running active/docs-pending tally
+  /// — same bookkeeping `_loadSection` does for real sections, just without
+  /// server-side pagination (see `fetchClassUnassignedStudents`'s doc
+  /// comment for why: the frontend itself has no backend endpoint for this
+  /// and fetches the whole class once, then paginates client-side).
+  Future<List<StudentData>> _fetchAndRevealUnassigned(int classId) async {
+    final cached = _unassignedCacheByClass[classId];
+    if (cached != null) return cached;
+    final rows = await _repository.fetchClassUnassignedStudents(classId, search: state.appliedSearch);
+    _unassignedCacheByClass[classId] = rows;
+    if (!mounted) return rows;
+    if (rows.isNotEmpty) {
+      state = state.copyWith(
+        classesWithUnassigned: {...state.classesWithUnassigned, classId},
+        unassignedCounts: {...state.unassignedCounts, classId: rows.length},
+      );
+      _accumulateClassStats(classId, rows);
+    }
+    return rows;
+  }
+
+  /// Silent background probe (no loading/error state of its own) — mirrors
+  /// the frontend calling `loadClassSection(classId, UNASSIGNED_SECTION_ID)`
+  /// as a fire-and-forget side effect of opening a class.
+  Future<void> _probeUnassigned(int classId) async {
+    try {
+      await _fetchAndRevealUnassigned(classId);
+    } catch (_) {
+      // Matches the frontend's own `catch { setClassSectionStudents(...,
+      // [])}` — a failed probe just means the tab never appears, not a
+      // user-facing error for an entirely optional affordance.
+    }
+  }
+
+  Future<void> _loadUnassignedSection({required int page}) async {
+    final classId = state.expandedClassId;
+    if (classId == null || state.activeSectionId != kUnassignedSectionId) return;
+    state = state.copyWith(sectionLoading: true, sectionError: null, sectionPage: page);
+    try {
+      final rows = await _fetchAndRevealUnassigned(classId);
+      if (!mounted || state.activeSectionId != kUnassignedSectionId || state.expandedClassId != classId) return;
+      final start = (page - 1) * _sectionPageSize;
+      final pageRows = start >= rows.length
+          ? const <StudentData>[]
+          : rows.sublist(start, (start + _sectionPageSize).clamp(0, rows.length));
+      state = state.copyWith(
+        sectionLoading: false,
+        sectionStudents: pageRows,
+        sectionTotalCount: rows.length,
+      );
+    } catch (e) {
+      if (!mounted || state.activeSectionId != kUnassignedSectionId) return;
+      state = state.copyWith(
+        sectionLoading: false,
+        sectionError: _cleanMessage(e),
+        sectionStudents: [],
+        sectionTotalCount: 0,
+      );
+    }
+  }
+
   /// Folds newly-fetched rows into that class's running active/docs-pending
   /// tally, counting each student id at most once even if the same section
   /// page is re-fetched (e.g. paging back and forth). See the field doc on
@@ -241,7 +337,21 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
     state = state.copyWith(classes: updated);
   }
 
-  void goToSectionPage(int page) => _loadSection(page: page);
+  void goToSectionPage(int page) => _loadActiveSection(page: page);
+
+  /// Re-fetches whichever section (real or the synthetic "Unassigned"
+  /// bucket) is currently active — used after a status/archive mutation.
+  /// For the synthetic bucket, the class's cache is dropped first so a
+  /// stale cached row doesn't linger with an outdated status.
+  Future<void> _reloadActiveSectionAfterMutation() async {
+    if (state.activeSectionId == kUnassignedSectionId) {
+      final classId = state.expandedClassId;
+      if (classId != null) _unassignedCacheByClass.remove(classId);
+      await _loadUnassignedSection(page: state.sectionPage);
+    } else {
+      await _loadSection(page: state.sectionPage);
+    }
+  }
 
   void toggleSelectRow(int studentId, bool selected) {
     final next = {...state.selectedIds};
@@ -283,7 +393,7 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
             : '${ids.length} student${ids.length == 1 ? '' : 's'} deactivated.',
         flashError: null,
       );
-      await _loadSection(page: state.sectionPage);
+      await _reloadActiveSectionAfterMutation();
       _loadStats();
     } catch (e) {
       if (!mounted) return;
@@ -312,7 +422,7 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
         flashSuccess: '${ids.length} student${ids.length == 1 ? '' : 's'} archived.',
         flashError: null,
       );
-      await _loadSection(page: state.sectionPage);
+      await _reloadActiveSectionAfterMutation();
       _loadStats();
     } catch (e) {
       if (!mounted) return;

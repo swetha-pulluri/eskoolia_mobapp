@@ -1,6 +1,8 @@
 import '../../domain/models/academic_year.dart';
 import '../../domain/models/school_class.dart';
+import '../../domain/models/student_attendance_record.dart';
 import '../../domain/models/student_data.dart';
+import '../../domain/models/student_record_audit.dart';
 import '../../domain/models/student_stats.dart';
 import '../../domain/repositories/student_repository.dart';
 import '../datasources/student_remote_datasource.dart';
@@ -144,5 +146,138 @@ class StudentRepositoryImpl implements StudentRepository {
     }
     final body = draft.toRequestJson(guardianId: guardianId);
     return _remoteDataSource.createStudent(body);
+  }
+
+  @override
+  Future<StudentData> updateStudent(int id, StudentData draft) async {
+    int? guardianId = draft.guardianId;
+    if (guardianId == null) {
+      final name = draft.guardianName?.trim() ?? '';
+      if (name.isNotEmpty) {
+        guardianId = await _remoteDataSource.createGuardian(
+          fullName: name,
+          relation: draft.guardianRelation?.trim().isNotEmpty == true
+              ? draft.guardianRelation!.trim()
+              : 'Father',
+          phone: draft.guardianPhone?.trim() ?? '',
+        );
+      }
+    }
+    final body = draft.toRequestJson(guardianId: guardianId);
+    return _remoteDataSource.updateStudent(id, body);
+  }
+
+  @override
+  Future<List<StudentAttendanceRecord>> fetchStudentAttendance(
+    int studentId, {
+    required DateTime from,
+    required DateTime to,
+  }) {
+    return _remoteDataSource.fetchStudentAttendance(studentId, from: from, to: to);
+  }
+
+  @override
+  Future<String> uploadStudentPhoto({required List<int> bytes, required String filename}) {
+    return _remoteDataSource.uploadStudentPhoto(bytes: bytes, filename: filename);
+  }
+
+  @override
+  Future<void> uploadStudentDocument({
+    required int studentId,
+    required String documentType,
+    required List<int> bytes,
+    required String filename,
+  }) {
+    return _remoteDataSource.uploadStudentDocument(
+      studentId: studentId,
+      documentType: documentType,
+      bytes: bytes,
+      filename: filename,
+    );
+  }
+
+  @override
+  Future<StudentsPage> fetchStudentsFiltered({
+    int? classId,
+    int? sectionId,
+    String? search,
+    bool? isActive,
+    bool deletedOnly = false,
+    bool? unassigned,
+    int page = 1,
+    int pageSize = 25,
+  }) {
+    return _remoteDataSource.fetchStudents(
+      classId: classId,
+      sectionId: sectionId,
+      search: search,
+      isActive: isActive,
+      deletedOnly: deletedOnly,
+      unassigned: unassigned,
+      page: page,
+      pageSize: pageSize,
+    );
+  }
+
+  @override
+  Future<void> enableStudents(List<int> ids) async {
+    for (final id in ids) {
+      await _remoteDataSource.patchStudentFields(id, {'is_disabled': false, 'is_active': true});
+    }
+  }
+
+  @override
+  Future<void> assignClassSection(List<int> ids, {required int classId, required int sectionId}) async {
+    for (final id in ids) {
+      await _remoteDataSource.patchStudentFields(id, {
+        'current_class': classId,
+        'current_section': sectionId,
+        'is_active': true,
+      });
+    }
+  }
+
+  @override
+  Future<void> restoreStudents(List<int> ids) async {
+    for (final id in ids) {
+      await _remoteDataSource.restoreStudent(id);
+    }
+  }
+
+  @override
+  Future<void> permanentDeleteStudent(int id) => _remoteDataSource.permanentDeleteStudent(id);
+
+  @override
+  Future<List<StudentRecordAudit>> fetchRecordAudits({
+    int? studentId,
+    String? action,
+    int? classId,
+    int? sectionId,
+    String? search,
+  }) async {
+    final raw = await _remoteDataSource.fetchRecordAudits(
+      studentId: studentId,
+      action: action,
+      classId: classId,
+      sectionId: sectionId,
+      search: search,
+    );
+    return raw.map(StudentRecordAudit.fromJson).toList();
+  }
+
+  @override
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive}) {
+    return _remoteDataSource.exportStudentsXlsx(classId: classId, sectionId: sectionId, isActive: isActive);
+  }
+
+  @override
+  Future<List<StudentData>> fetchClassUnassignedStudents(int classId, {String? search}) async {
+    final page = await _remoteDataSource.fetchStudents(
+      classId: classId,
+      search: search,
+      page: 1,
+      pageSize: 200,
+    );
+    return page.results.where((s) => s.sectionId == 0).toList();
   }
 }

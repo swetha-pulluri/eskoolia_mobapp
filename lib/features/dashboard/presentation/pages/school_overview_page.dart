@@ -93,7 +93,18 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
+                    // This page is reached via context.go('/dashboard') from
+                    // the Home module tile — go() replaces the whole route
+                    // stack, so there's nothing beneath this page to pop
+                    // back to. Navigator.of(context).pop() in that situation
+                    // is invalid (nothing to pop) and was the actual cause
+                    // of the "Duplicate GlobalKey" crash reported here —
+                    // go_router's redirect/page-building logic gets invoked
+                    // in a bad state trying to recover from the failed pop.
+                    // Navigating explicitly to /home is what "Home" in a
+                    // breadcrumb means anyway, and sidesteps relying on
+                    // Navigator history that this route doesn't have.
+                    onTap: () => context.go('/home'),
                     child: const Text(
                       'Home',
                       style: TextStyle(
