@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/school_class_entity.dart';
+import '../providers/admissions_provider.dart';
 
 /// Class Portfolio — section "02" of the Command Center. Converted from
 /// web `command-center/ClassPortfolioGrid.tsx`. Collapsible grid of class
@@ -229,7 +231,7 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
     };
     return InkWell(
       onTap: () => widget.onSelectClass(cls.id),
-      onLongPress: _manageMode ? () => _showCardMenu(cls) : null,
+      onLongPress: () => _showCardMenu(cls),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -245,8 +247,14 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
               Container(width: 8, height: 8, decoration: BoxDecoration(color: healthColor, shape: BoxShape.circle)),
               const SizedBox(width: 6),
               Expanded(child: Text(cls.name, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis)),
-              if (_manageMode)
-                InkWell(onTap: () => _showCardMenu(cls), child: const Icon(Icons.more_vert, size: 16, color: Color(0xFF9CA3AF))),
+              InkWell(
+                onTap: () => _showCardMenu(cls),
+                borderRadius: BorderRadius.circular(999),
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.more_vert, size: 16, color: Color(0xFF9CA3AF)),
+                ),
+              ),
             ]),
             const Spacer(),
             Text('${cls.pipelineCount}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
@@ -302,21 +310,22 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
   }
 }
 
-class _EditSeatsDialog extends StatefulWidget {
+class _EditSeatsDialog extends ConsumerStatefulWidget {
   final ClassConfigEntity cls;
   final VoidCallback onSaved;
   const _EditSeatsDialog({required this.cls, required this.onSaved});
 
   @override
-  State<_EditSeatsDialog> createState() => _EditSeatsDialogState();
+  ConsumerState<_EditSeatsDialog> createState() => _EditSeatsDialogState();
 }
 
-class _EditSeatsDialogState extends State<_EditSeatsDialog> {
+class _EditSeatsDialogState extends ConsumerState<_EditSeatsDialog> {
   late final Map<int, TextEditingController> _controllers = {
     for (final s in widget.cls.sections) s.id: TextEditingController(text: '${s.capacity}'),
   };
   late final TextEditingController _totalCtrl = TextEditingController(text: '${widget.cls.capacity}');
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -327,14 +336,39 @@ class _EditSeatsDialogState extends State<_EditSeatsDialog> {
     super.dispose();
   }
 
+  /// Matches `EditSeatsModal`'s two real behaviors: when the class has
+  /// sections, PATCH each section's capacity to the real backend
+  /// (`/api/v1/core/sections/{id}/`); when it has none, there is genuinely
+  /// no backend field to save a class-level seat count to (`core.Class`
+  /// has no `capacity` column) — web itself only stores that case in
+  /// `localStorage`, so this dialog just closes without a backend call,
+  /// matching that real limitation instead of inventing an endpoint.
   Future<void> _save() async {
-    setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() => _saving = false);
-    Navigator.of(context).pop();
-    widget.onSaved();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seats updated.')));
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      if (widget.cls.sections.isNotEmpty) {
+        final repo = ref.read(admissionsRepositoryProvider);
+        for (final s in widget.cls.sections) {
+          final raw = _controllers[s.id]!.text.trim();
+          final cap = int.tryParse(raw);
+          if (cap == null || cap < 1) {
+            throw Exception('Invalid capacity for section ${s.name}');
+          }
+          await repo.updateSectionCapacity(s.id, cap);
+        }
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSaved();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seats updated.')));
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Failed to update seats.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -383,6 +417,7 @@ class _EditSeatsDialogState extends State<_EditSeatsDialog> {
                   SizedBox(width: 70, child: TextField(controller: _totalCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(isDense: true))),
                 ],
               ),
+            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)))),
             const SizedBox(height: 16),
             Row(
               children: [

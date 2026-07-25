@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/certificate_entity.dart';
+import '../../domain/entities/picked_attachment.dart';
 import '../../domain/entities/role_entity.dart';
 import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
@@ -36,6 +38,30 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
   int? _roleId;
   int? _editingId;
   String? _backgroundName;
+  PickedAttachment? _backgroundAttachment;
+  String? _backgroundError;
+  String? _existingBackgroundUrl;
+
+  Future<void> _pickBackground() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['png', 'jpg', 'jpeg'],
+      withData: true,
+    );
+    final file = result?.files.singleOrNull;
+    if (file == null || file.bytes == null) return;
+    setState(() {
+      if (file.size > 2 * 1024 * 1024) {
+        _backgroundError = 'Background image must be 2MB or smaller.';
+        _backgroundName = null;
+        _backgroundAttachment = null;
+      } else {
+        _backgroundError = null;
+        _backgroundName = file.name;
+        _backgroundAttachment = PickedAttachment(name: file.name, bytes: file.bytes!, size: file.size);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -66,6 +92,9 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
       _roleId = null;
       _editingId = null;
       _backgroundName = null;
+      _backgroundAttachment = null;
+      _backgroundError = null;
+      _existingBackgroundUrl = null;
     });
   }
 
@@ -83,6 +112,9 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
       _pbCtrl.text = '${e.paddingBottom}';
       _plCtrl.text = '${e.paddingLeft}';
       _backgroundName = null;
+      _backgroundAttachment = null;
+      _backgroundError = null;
+      _existingBackgroundUrl = e.backgroundUrl;
     });
   }
 
@@ -97,6 +129,7 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_backgroundError != null) return;
 
     final entry = CertificateTemplateEntity(
       type: _type,
@@ -109,6 +142,7 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
       paddingRight: int.tryParse(_prCtrl.text.trim()) ?? 5,
       paddingBottom: int.tryParse(_pbCtrl.text.trim()) ?? 5,
       paddingLeft: int.tryParse(_plCtrl.text.trim()) ?? 5,
+      backgroundAttachment: _backgroundAttachment,
     );
 
     final notifier = ref.read(certificateTemplateListProvider.notifier);
@@ -126,7 +160,7 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(certificateTemplateListProvider);
-    final rolesAsync = ref.watch(rolesProvider);
+    final rolesAsync = ref.watch(certificateRolesProvider);
     final roles = rolesAsync.maybeWhen(data: (r) => r, orElse: () => const <RoleEntity>[]);
     final isSaving = state.savingId != null;
 
@@ -151,6 +185,11 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (rolesAsync.hasError)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: AdminMessageBanner(error: 'Unable to load roles: ${rolesAsync.error}'),
+                    ),
                   AdminDropdownField<String>(
                     label: 'Certificate Type',
                     required: true,
@@ -257,8 +296,10 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
                   ),
                   AdminFileField(
                     fileName: _backgroundName,
+                    errorText: _backgroundError,
                     placeholder: 'Click to upload or drag and drop — PNG, JPG (max 2MB)',
-                    onTap: () => setState(() => _backgroundName = 'certificate_bg.jpg'),
+                    onTap: _pickBackground,
+                    existingFileUrl: _editingId != null ? _existingBackgroundUrl : null,
                   ),
                   const SizedBox(height: 6),
                   SizedBox(
@@ -314,7 +355,7 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
                     AdminColumn('Title', width: 140),
                     AdminColumn('Type', width: 80),
                     AdminColumn('Role', width: 110),
-                    AdminColumn('Actions', width: 80),
+                    AdminColumn('Actions', width: 90),
                   ],
                   rows: _buildRows(state, roles),
                 ),

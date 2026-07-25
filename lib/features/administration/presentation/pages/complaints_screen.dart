@@ -6,15 +6,30 @@ import '../../domain/entities/complaint_entity.dart';
 import '../../domain/entities/picked_attachment.dart';
 import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
-import '../widgets/admin_section_card.dart';
 import '../widgets/admin_data_table.dart';
 import '../widgets/admin_confirm_dialog.dart';
-import '../widgets/admin_badges.dart';
-import '../widgets/admin_breadcrumb_header.dart';
-import '../widgets/web_button.dart';
+import '../widgets/admin_section_card.dart';
+import '../widgets/admin_stepper_shell.dart';
 
-/// Complaints — converted from web `ComplaintPanel.tsx`.
-/// Sub-tab of Communication Hub.
+/// Complaints — converted from `origin/demo`'s `ComplaintPanel.tsx`. 3-step
+/// numbered nav: 01 Add/Edit Complaint, 02 Smart Filter, 03 Complaints
+/// List. Complaint Type/Source dropdowns come from
+/// `/api/v1/admissions/admin-setups/?type=2` (Complaint Type) and
+/// `?type=3` (Source) — confirmed by enumerating the currently-deployed
+/// backend's actual registered routes: `/complaint-types/`/
+/// `/complaint-sources/` (a dedicated FK-table design that exists only on
+/// `origin/demo`) are NOT registered here, so those endpoints always 404.
+/// `main`'s `ComplaintEntrySerializer` (what is actually running) resolves
+/// `complaint_type`/`complaint_source` via `AdminSetupEntry` lookups
+/// instead, matching Purpose's own `type=1` pattern.
+///
+/// Browse/Save currently return HTTP 500 regardless of what this screen
+/// sends: the live `public.complaint_entries` table is missing the
+/// `assigned` column that `main`'s `ComplaintEntry` model still declares
+/// (confirmed directly — `SELECT` and `INSERT` both reference a column
+/// that does not exist, `psycopg2.errors.UndefinedColumn`, reproduced via
+/// `force_authenticate` against the real view). This is a backend
+/// model/migration defect, out of scope for this app to fix.
 class ComplaintsScreen extends ConsumerStatefulWidget {
   const ComplaintsScreen({super.key});
 
@@ -26,26 +41,40 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _complaintByCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  final _actionTakenCtrl = TextEditingController();
   final _assignedCtrl = TextEditingController();
+  final _actionTakenCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
-  final _searchCtrl = TextEditingController();
+  final _filterSearchCtrl = TextEditingController();
+
+  final _addKey = GlobalKey();
+  final _filterKey = GlobalKey();
+  final _listKey = GlobalKey();
+
+  int _activeTab = 0;
+  bool _filterOpen = false;
+  String? _filterTypeId;
+  String? _filterSourceId;
+  DateTime? _filterDate;
+  List<String> _filterChips = [];
+  String _search = '';
+  String? _typeFilterValue;
+  String? _sourceFilterValue;
+  String? _dateFilterValue;
 
   String? _complaintTypeId;
   String? _complaintSourceId;
   DateTime? _date = DateTime.now();
   int? _editingId;
+  String _sortKey = 'date';
+  bool? _sortAsc;
   PickedAttachment? _attachment;
   String? _attachmentError;
+  String? _formBanner;
 
   static const _allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
 
   Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: _allowedExtensions,
-      withData: true,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: _allowedExtensions, withData: true);
     final file = result?.files.singleOrNull;
     if (file == null || file.bytes == null) return;
     setState(() {
@@ -63,19 +92,30 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
   void dispose() {
     _complaintByCtrl.dispose();
     _phoneCtrl.dispose();
-    _actionTakenCtrl.dispose();
     _assignedCtrl.dispose();
+    _actionTakenCtrl.dispose();
     _descriptionCtrl.dispose();
-    _searchCtrl.dispose();
+    _filterSearchCtrl.dispose();
     super.dispose();
+  }
+
+  void _scrollToTab(int index) {
+    setState(() => _activeTab = index);
+    if (index == 1) setState(() => _filterOpen = true);
+    final key = index == 0 ? _addKey : (index == 1 ? _filterKey : _listKey);
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+      final ctx = key.currentContext;
+      if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+    });
   }
 
   void _resetForm() {
     _formKey.currentState?.reset();
     _complaintByCtrl.clear();
     _phoneCtrl.clear();
-    _actionTakenCtrl.clear();
     _assignedCtrl.clear();
+    _actionTakenCtrl.clear();
     _descriptionCtrl.clear();
     setState(() {
       _complaintTypeId = null;
@@ -84,15 +124,25 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       _editingId = null;
       _attachment = null;
       _attachmentError = null;
+      _formBanner = null;
     });
   }
 
+  String? _resolveId(List<dynamic> options, String? rawId, String? rawName) {
+    for (final o in options) {
+      if (o.id.toString() == rawId || o.name == rawId || o.name == rawName) return o.id.toString();
+    }
+    return rawId;
+  }
+
   void _loadForEdit(ComplaintEntity c) {
+    final typeOptions = ref.read(complaintTypeOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
+    final sourceOptions = ref.read(complaintSourceOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
     setState(() {
       _editingId = c.id;
       _complaintByCtrl.text = c.complaintBy;
-      _complaintTypeId = c.complaintTypeId;
-      _complaintSourceId = c.complaintSourceId;
+      _complaintTypeId = _resolveId(typeOptions, c.complaintTypeId, c.complaintTypeName);
+      _complaintSourceId = _resolveId(sourceOptions, c.complaintSourceId, c.complaintSourceName);
       _phoneCtrl.text = c.phone ?? '';
       _date = DateTime.tryParse(c.date);
       _actionTakenCtrl.text = c.actionTaken ?? '';
@@ -100,49 +150,20 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       _descriptionCtrl.text = c.description ?? '';
       _attachment = null;
       _attachmentError = null;
+      _formBanner = null;
     });
+    _scrollToTab(0);
   }
 
-  String _fmtDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  Future<void> _handleDateChange(DateTime picked) async {
-    final daysOld = DateTime.now().difference(picked).inDays;
-    if (daysOld > 7) {
-      final keep = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Complaint Date Warning'),
-          content: const Text('This date is more than 7 days old. Are you sure?'),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('No, let me change it')),
-            ElevatedButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Yes, keep this date')),
-          ],
-        ),
-      );
-      if (keep != true) return;
-    }
-    setState(() => _date = picked);
-  }
+  String _fmtDate(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
-    if (_complaintTypeId == null) {
-      _showFieldError('Please select a complaint type.');
+    setState(() => _formBanner = null);
+    final formValid = _formKey.currentState!.validate();
+    if (_complaintTypeId == null || _complaintSourceId == null || _date == null || _attachmentError != null || !formValid) {
+      setState(() => _formBanner = 'Please fix the errors below before submitting.');
       return;
     }
-    if (_complaintSourceId == null) {
-      _showFieldError('Please select a complaint source.');
-      return;
-    }
-    if (_date == null) {
-      _showFieldError('Please select a date.');
-      return;
-    }
-    if (_attachmentError != null) {
-      _showFieldError(_attachmentError!);
-      return;
-    }
-    if (!_formKey.currentState!.validate()) return;
 
     final complaint = ComplaintEntity(
       complaintBy: _complaintByCtrl.text.trim(),
@@ -161,15 +182,62 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
 
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_editingId == null ? 'Record created successfully.' : 'Record updated successfully.')),
-      );
       _resetForm();
+      _scrollToTab(2);
     }
   }
 
-  void _showFieldError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.dangerRed));
+  void _applyFilters() {
+    final typeOptions = ref.read(complaintTypeOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
+    final sourceOptions = ref.read(complaintSourceOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
+    final typeName = _filterTypeId == null ? null : typeOptions.where((o) => o.id.toString() == _filterTypeId).map((o) => o.name).firstOrNull;
+    final sourceName = _filterSourceId == null ? null : sourceOptions.where((o) => o.id.toString() == _filterSourceId).map((o) => o.name).firstOrNull;
+    setState(() {
+      _search = _filterSearchCtrl.text.trim();
+      _typeFilterValue = _filterTypeId;
+      _sourceFilterValue = _filterSourceId;
+      _dateFilterValue = _filterDate == null ? null : _fmtDate(_filterDate!);
+      _filterChips = [
+        if (_search.isNotEmpty) 'Search: $_search',
+        if (typeName != null) 'Type: $typeName',
+        if (sourceName != null) 'Source: $sourceName',
+        if (_filterDate != null) 'Date: ${_fmtDate(_filterDate!)}',
+      ];
+      _filterOpen = false;
+    });
+  }
+
+  void _clearFilters() {
+    _filterSearchCtrl.clear();
+    setState(() {
+      _filterTypeId = null;
+      _filterSourceId = null;
+      _filterDate = null;
+      _search = '';
+      _typeFilterValue = null;
+      _sourceFilterValue = null;
+      _dateFilterValue = null;
+      _filterChips = [];
+    });
+  }
+
+  void _removeChip(String chip) {
+    if (chip.startsWith('Search:')) _filterSearchCtrl.clear();
+    if (chip.startsWith('Type:')) _filterTypeId = null;
+    if (chip.startsWith('Source:')) _filterSourceId = null;
+    if (chip.startsWith('Date:')) _filterDate = null;
+    _applyFilters();
+  }
+
+  void _toggleSort(String key) {
+    setState(() {
+      if (_sortKey == key) {
+        _sortAsc = _sortAsc == true ? false : true;
+      } else {
+        _sortKey = key;
+        _sortAsc = true;
+      }
+    });
   }
 
   @override
@@ -177,6 +245,8 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
     final state = ref.watch(complaintListProvider);
     final typeOptions = ref.watch(complaintTypeOptionsProvider);
     final sourceOptions = ref.watch(complaintSourceOptionsProvider);
+    final typeItems = typeOptions.maybeWhen(data: (o) => o, orElse: () => const []);
+    final sourceItems = sourceOptions.maybeWhen(data: (o) => o, orElse: () => const []);
     final isSaving = state.savingId != null;
 
     return SingleChildScrollView(
@@ -184,165 +254,169 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AdminBreadcrumbHeader(title: 'Complaint'),
-          AdminSectionCard(
-            title: _editingId == null ? 'Add Complaint' : 'Edit Complaint',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AdminTextField(
-                    label: 'Complaint By',
-                    required: true,
-                    controller: _complaintByCtrl,
-                    hint: 'e.g. Parent of Rahul',
-                    maxLength: 100,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return 'Complaint By is required.';
-                      if (value.length < 2) return 'Minimum 2 characters required.';
-                      if (!RegExp(r"^[A-Za-z\s\-']+$").hasMatch(value)) {
-                        return 'Only letters, spaces, hyphens, apostrophes allowed.';
-                      }
-                      return null;
-                    },
-                  ),
-                  // Always render the <select>, even if the fetch failed —
-                  // matches web (an empty-options select, not a vanished
-                  // field); otherwise these required fields become
-                  // permanently unfillable whenever admin-setups 401s/500s.
-                  AdminDropdownField<String>(
-                    label: 'Complaint Type',
-                    required: true,
-                    value: _complaintTypeId,
-                    hint: 'Select Complaint Type',
-                    items: typeOptions
-                        .maybeWhen(data: (options) => options, orElse: () => const [])
-                        .map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _complaintTypeId = v),
-                  ),
-                  if (typeOptions.isLoading)
-                    const Padding(padding: EdgeInsets.only(bottom: 8), child: LinearProgressIndicator()),
-                  if (typeOptions.hasError)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text('Unable to load complaint types.', style: TextStyle(color: AppColors.dangerRed, fontSize: 12)),
-                    ),
-                  AdminDropdownField<String>(
-                    label: 'Complaint Source',
-                    required: true,
-                    value: _complaintSourceId,
-                    hint: 'Select Complaint Source',
-                    items: sourceOptions
-                        .maybeWhen(data: (options) => options, orElse: () => const [])
-                        .map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _complaintSourceId = v),
-                  ),
-                  if (sourceOptions.isLoading)
-                    const Padding(padding: EdgeInsets.only(bottom: 8), child: LinearProgressIndicator()),
-                  if (sourceOptions.hasError)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text('Unable to load complaint sources.', style: TextStyle(color: AppColors.dangerRed, fontSize: 12)),
-                    ),
-                  AdminTextField(
-                    label: 'Phone',
-                    controller: _phoneCtrl,
-                    hint: 'e.g. 9876543210',
-                    keyboardType: TextInputType.phone,
-                    maxLength: 12,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return null;
-                      if (!RegExp(r'^\d+$').hasMatch(value)) return 'Only digits (0-9) are allowed.';
-                      if (value.length < 10) return 'Phone must be at least 10 digits.';
-                      if (value.length > 12) return 'Phone must not exceed 12 digits.';
-                      return null;
-                    },
-                  ),
-                  AdminDateField(
-                    label: 'Date',
-                    required: true,
-                    value: _date,
-                    lastDate: DateTime.now(),
-                    onChanged: (d) {
-                      if (d != null) _handleDateChange(d);
-                    },
-                  ),
-                  AdminTextField(label: 'Action Taken', controller: _actionTakenCtrl, hint: 'e.g. Called parent for discussion', maxLength: 500),
-                  AdminTextField(label: 'Assigned', controller: _assignedCtrl, hint: 'e.g. Mr. Sharma', maxLength: 100),
-                  AdminTextField(
-                    label: 'Description',
-                    controller: _descriptionCtrl,
-                    hint: 'e.g. Parent reported broken fence near playground',
-                    maxLines: 3,
-                    maxLength: 2000,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return null;
-                      if (value.length < 10) return 'Description must be at least 10 characters.';
-                      return null;
-                    },
-                  ),
-                  AdminFileField(
-                    fileName: _attachment?.name,
-                    errorText: _attachmentError,
-                    onTap: _pickAttachment,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
+          AdminStepperNav(
+            activeIndex: _activeTab,
+            steps: [
+              AdminStep(number: '01', icon: Icons.add, label: _editingId == null ? 'Add Complaint' : 'Edit Complaint'),
+              const AdminStep(number: '02', icon: Icons.filter_alt_outlined, label: 'Smart Filter'),
+              const AdminStep(number: '03', icon: Icons.description_outlined, label: 'Complaints List'),
+            ],
+            onTap: _scrollToTab,
+          ),
+          KeyedSubtree(
+            key: _addKey,
+            child: AdminStepFormCard(
+              title: _editingId == null ? 'Register New Complaint' : 'Edit Complaint Details',
+              subtitle: 'Fields marked with * are mandatory. Please provide accurate details for resolution tracking.',
+              editingBadgeText: _editingId == null ? null : 'Editing Complaint By: ${_complaintByCtrl.text}',
+              banner: _formBanner,
+              isEditing: _editingId != null,
+              saving: isSaving,
+              onReset: _resetForm,
+              onSave: _submit,
+              footerHelperText: 'All records are securely saved into the complaint tracking module.',
+              fields: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      WebButton(
-                        label: isSaving ? 'Saving...' : (_editingId == null ? 'Save' : 'Update'),
-                        onPressed: isSaving ? null : _submit,
+                      AdminTextField(
+                        label: 'Complaint By',
+                        required: true,
+                        controller: _complaintByCtrl,
+                        hint: 'e.g. Parent of Rahul',
+                        maxLength: 100,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Complaint By is required.';
+                          if (value.length < 2) return 'Minimum 2 characters required.';
+                          if (!RegExp(r"^[A-Za-z\s\-']+$").hasMatch(value)) return 'Only letters, spaces, hyphens, apostrophes allowed.';
+                          return null;
+                        },
                       ),
-                      if (_editingId != null) ...[
-                        const SizedBox(width: 8),
-                        WebButton(label: 'Cancel', color: const Color(0xFF6B7280), onPressed: _resetForm),
-                      ],
+                      AdminDropdownField<String>(
+                        label: 'Complaint Type',
+                        required: true,
+                        value: _complaintTypeId,
+                        hint: 'Select Type',
+                        items: typeItems.map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name))).toList(),
+                        onChanged: (v) => setState(() => _complaintTypeId = v),
+                      ),
+                      AdminDropdownField<String>(
+                        label: 'Complaint Source',
+                        required: true,
+                        value: _complaintSourceId,
+                        hint: 'Select Source',
+                        items: sourceItems.map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name))).toList(),
+                        onChanged: (v) => setState(() => _complaintSourceId = v),
+                      ),
+                      AdminTextField(
+                        label: 'Phone No.',
+                        controller: _phoneCtrl,
+                        hint: 'e.g. 9876543210',
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return null;
+                          if (!RegExp(r'^[6-9]\d{9}$').hasMatch(value)) return 'Please enter a valid 10-digit mobile number.';
+                          return null;
+                        },
+                      ),
+                      AdminDateField(label: 'Date', required: true, value: _date, lastDate: DateTime.now(), onChanged: (d) => setState(() => _date = d)),
+                      AdminTextField(label: 'Assigned To', controller: _assignedCtrl, hint: 'e.g. Mr. Sharma', maxLength: 100),
+                      AdminTextField(label: 'Action Taken', controller: _actionTakenCtrl, hint: 'e.g. Called parent for discussion', maxLength: 500),
+                      AdminTextField(
+                        label: 'Description',
+                        controller: _descriptionCtrl,
+                        hint: 'e.g. Parent reported broken fence near playground',
+                        maxLines: 3,
+                        maxLength: 2000,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return null;
+                          if (value.length < 10) return 'Description must be at least 10 characters.';
+                          return null;
+                        },
+                      ),
+                      AdminFileField(label: 'Attachment', fileName: _attachment?.name, errorText: _attachmentError, onTap: _pickAttachment),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          AdminSectionCard(
-            title: 'Complaint List',
-            trailing: SizedBox(
-              width: 240,
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: const InputDecoration(hintText: 'Quick search', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
-                onChanged: (v) => ref.read(complaintListProvider.notifier).setSearch(v),
-              ),
-            ),
-            child: Column(
-              children: [
-                if (state.error != null) const AdminMessageBanner(error: 'Unable to load complaints.'),
-                AdminDataTable(
-                  isLoading: state.isLoading,
-                  emptyText: 'No complaints found.',
-                  columns: const [
-                    AdminColumn('SL', width: 40),
-                    AdminColumn('Complaint By', width: 130),
-                    AdminColumn('Type', width: 140),
-                    AdminColumn('Source', width: 110),
-                    AdminColumn('Phone', width: 100),
-                    AdminColumn('Date', width: 100),
-                    AdminColumn('Actions', width: 80),
-                  ],
-                  rows: _buildRows(state),
+          KeyedSubtree(
+            key: _filterKey,
+            child: AdminSmartFilterSection(
+              stepNumber: '02',
+              subtitle: 'Find complaints easily by search, type, source, or date.',
+              open: _filterOpen,
+              onToggle: () => setState(() => _filterOpen = !_filterOpen),
+              chips: _filterChips,
+              onRemoveChip: _removeChip,
+              onClearAll: _clearFilters,
+              onApply: _applyFilters,
+              onClear: _clearFilters,
+              fields: [
+                AdminTextField(label: 'Search', controller: _filterSearchCtrl, hint: 'Name, Phone...'),
+                AdminDropdownField<String>(
+                  label: 'Complaint Type',
+                  value: _filterTypeId,
+                  hint: 'All Types',
+                  items: typeItems.map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name))).toList(),
+                  onChanged: (v) => setState(() => _filterTypeId = v),
                 ),
-                AdminPaginationBar(
-                  page: state.page,
-                  pageSize: state.pageSize,
-                  totalCount: state.totalCount,
-                  onPageChange: (p) => ref.read(complaintListProvider.notifier).setPage(p),
-                  onPageSizeChange: (s) => ref.read(complaintListProvider.notifier).setPageSize(s),
-                  pageSizeOptions: const [10, 25, 50],
+                AdminDropdownField<String>(
+                  label: 'Complaint Source',
+                  value: _filterSourceId,
+                  hint: 'All Sources',
+                  items: sourceItems.map<DropdownMenuItem<String>>((o) => DropdownMenuItem(value: o.id.toString(), child: Text(o.name))).toList(),
+                  onChanged: (v) => setState(() => _filterSourceId = v),
+                ),
+                AdminDateField(label: 'Date', value: _filterDate, onChanged: (d) => setState(() => _filterDate = d)),
+              ],
+            ),
+          ),
+          KeyedSubtree(
+            key: _listKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AdminBrowseHeading(stepNumber: '03', title: 'Browse Complaints'),
+                Container(
+                  decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      if (state.error != null) AdminMessageBanner(error: state.error),
+                      AdminDataTable(
+                        isLoading: state.isLoading,
+                        emptyText: 'No complaints found matching criteria.',
+                        columns: [
+                          const AdminColumn('SL', width: 36),
+                          AdminColumn('Complaint By', width: 130, onTap: () => _toggleSort('complaint_by'), sortArrow: _sortKey == 'complaint_by' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          const AdminColumn('Phone', width: 100),
+                          AdminColumn('Type', width: 90, onTap: () => _toggleSort('complaint_type'), sortArrow: _sortKey == 'complaint_type' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          AdminColumn('Source', width: 90, onTap: () => _toggleSort('complaint_source'), sortArrow: _sortKey == 'complaint_source' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          AdminColumn('Date', width: 100, onTap: () => _toggleSort('date'), sortArrow: _sortKey == 'date' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          const AdminColumn('Actions', width: 90),
+                        ],
+                        rows: _buildRows(state),
+                      ),
+                      AdminPaginationBar(
+                        page: state.page,
+                        pageSize: state.pageSize,
+                        totalCount: state.totalCount,
+                        onPageChange: (p) => ref.read(complaintListProvider.notifier).setPage(p),
+                        onPageSizeChange: (s) => ref.read(complaintListProvider.notifier).setPageSize(s),
+                        pageSizeOptions: const [5, 10, 20, 30, 40, 50],
+                        summaryStyle: PaginationSummaryStyle.pageOfTotal,
+                        chevronStyle: true,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -355,29 +429,56 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
   List<List<Widget>> _buildRows(dynamic state) {
     final notifier = ref.read(complaintListProvider.notifier);
     final visible = notifier.filtered((c, q) =>
-        c.complaintBy.toLowerCase().contains(q) ||
-        (c.complaintTypeName ?? '').toLowerCase().contains(q) ||
-        (c.complaintSourceName ?? '').toLowerCase().contains(q) ||
-        (c.phone ?? '').toLowerCase().contains(q));
+        c.complaintBy.toLowerCase().contains(q) || (c.phone ?? '').toLowerCase().contains(q) || (c.complaintTypeName ?? '').toLowerCase().contains(q) || (c.complaintSourceName ?? '').toLowerCase().contains(q));
 
-    return List.generate(visible.length, (index) {
-      final c = visible[index];
+    // The deployed backend always returns `complaint_type`/`complaint_source`
+    // resolved to the setup's NAME (never the id) — so the Smart Filter's
+    // selected dropdown id must be resolved to that same name before
+    // comparing against a saved complaint's value.
+    final typeOptions = ref.read(complaintTypeOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
+    final sourceOptions = ref.read(complaintSourceOptionsProvider).maybeWhen(data: (o) => o, orElse: () => const []);
+    final typeFilterName = _typeFilterValue == null ? null : typeOptions.where((o) => o.id.toString() == _typeFilterValue).map((o) => o.name).firstOrNull;
+    final sourceFilterName = _sourceFilterValue == null ? null : sourceOptions.where((o) => o.id.toString() == _sourceFilterValue).map((o) => o.name).firstOrNull;
+
+    // Web's own Smart Filter (Type/Source/Date) applies on top of the free-text search.
+    var filtered = visible;
+    if (typeFilterName != null) filtered = filtered.where((c) => c.complaintTypeName == typeFilterName || c.complaintTypeId == typeFilterName).toList();
+    if (sourceFilterName != null) filtered = filtered.where((c) => c.complaintSourceName == sourceFilterName || c.complaintSourceId == sourceFilterName).toList();
+    if (_dateFilterValue != null) filtered = filtered.where((c) => c.date == _dateFilterValue).toList();
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      filtered = filtered.where((c) => c.complaintBy.toLowerCase().contains(q) || (c.phone ?? '').toLowerCase().contains(q)).toList();
+    }
+
+    final asc = _sortAsc ?? false;
+    filtered.sort((a, b) {
+      final mult = asc ? 1 : -1;
+      switch (_sortKey) {
+        case 'complaint_by':
+          return a.complaintBy.compareTo(b.complaintBy) * mult;
+        case 'complaint_type':
+          return (a.complaintTypeName ?? '').compareTo(b.complaintTypeName ?? '') * mult;
+        case 'complaint_source':
+          return (a.complaintSourceName ?? '').compareTo(b.complaintSourceName ?? '') * mult;
+        default:
+          return a.date.compareTo(b.date) * mult;
+      }
+    });
+
+    return List.generate(filtered.length, (index) {
+      final c = filtered[index];
       return [
         Text('${(state.page - 1) * state.pageSize + index + 1}', style: const TextStyle(fontSize: 12.5)),
         Text(c.complaintBy, style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
-        AdminBadge.complaintType(c.complaintTypeName),
-        AdminBadge.source(c.complaintSourceName),
-        Text(c.phone ?? '-', style: const TextStyle(fontSize: 12.5)),
+        _naText(c.phone),
+        _naText(c.complaintTypeName ?? c.complaintTypeId),
+        _naText(c.complaintSourceName ?? c.complaintSourceId),
         Text(c.date, style: const TextStyle(fontSize: 12.5)),
         AdminIconActionButtons(
           onEdit: () => _loadForEdit(c),
           isDeleting: state.deletingId == c.id,
           onDelete: () async {
-            final confirmed = await showAdminConfirmDialog(
-              context,
-              message: 'Are you sure you want to delete this complaint? This action cannot be undone.',
-              confirmLabel: 'Yes, Delete',
-            );
+            final confirmed = await showAdminConfirmDialog(context, message: 'Are you sure you want to delete this complaint record? This action cannot be undone.');
             if (confirmed && c.id != null) {
               await ref.read(complaintListProvider.notifier).remove(c.id!);
             }
@@ -385,5 +486,12 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
         ),
       ];
     });
+  }
+
+  Widget _naText(String? value) {
+    if (value == null || value.trim().isEmpty || value.trim() == '-') {
+      return const Text('N/A', style: TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic, color: AppColors.textTertiary));
+    }
+    return Text(value, style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis);
   }
 }

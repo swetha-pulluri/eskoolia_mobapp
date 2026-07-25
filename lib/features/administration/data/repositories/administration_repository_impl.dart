@@ -5,6 +5,9 @@ import '../../domain/entities/admin_setup_entity.dart';
 import '../../domain/entities/postal_entity.dart';
 import '../../domain/entities/student_category_entity.dart';
 import '../../domain/entities/paginated_result.dart';
+import '../../domain/entities/id_card_entity.dart';
+import '../../domain/entities/certificate_entity.dart';
+import '../../domain/entities/role_entity.dart';
 import '../../domain/repositories/administration_repository.dart';
 import '../datasources/administration_remote_datasource.dart';
 
@@ -14,8 +17,14 @@ class AdministrationRepositoryImpl implements AdministrationRepository {
   AdministrationRepositoryImpl(this._remote);
 
   @override
-  Future<PaginatedResult<VisitorEntity>> getVisitors({int page = 1, int pageSize = 10, String? search}) {
-    return _remote.getVisitors(page: page, pageSize: pageSize);
+  Future<PaginatedResult<VisitorEntity>> getVisitors({
+    int page = 1,
+    int pageSize = 10,
+    String? search,
+    String? purpose,
+    String? date,
+  }) {
+    return _remote.getVisitors(page: page, pageSize: pageSize, search: search, purpose: purpose, date: date);
   }
 
   @override
@@ -62,6 +71,9 @@ class AdministrationRepositoryImpl implements AdministrationRepository {
   }
 
   @override
+  Future<PaginatedResult<AdminSetupEntity>> getAdminSetupsUnfiltered() => _remote.getAdminSetupsUnfiltered();
+
+  @override
   Future<AdminSetupEntity> createAdminSetup(AdminSetupEntity entry) => _remote.createAdminSetup(entry);
 
   @override
@@ -102,8 +114,14 @@ class AdministrationRepositoryImpl implements AdministrationRepository {
   Future<void> deletePostalDispatch(int id) => _remote.deletePostalDispatch(id);
 
   @override
-  Future<PaginatedResult<StudentCategoryEntity>> getStudentCategories({int page = 1, int pageSize = 10, String? status}) {
-    return _remote.getStudentCategories(page: page, pageSize: pageSize, status: status);
+  Future<PaginatedResult<StudentCategoryEntity>> getStudentCategories({
+    int page = 1,
+    int pageSize = 10,
+    String? status,
+    String? search,
+    bool attention = false,
+  }) {
+    return _remote.getStudentCategories(page: page, pageSize: pageSize, status: status, search: search, attention: attention);
   }
 
   @override
@@ -116,4 +134,65 @@ class AdministrationRepositoryImpl implements AdministrationRepository {
 
   @override
   Future<void> deleteStudentCategory(int id) => _remote.deleteStudentCategory(id);
+
+  @override
+  Future<StudentCategorySummary> getStudentCategorySummary({String? search}) =>
+      _remote.getStudentCategorySummary(search: search);
+
+  @override
+  Future<bool> checkStudentCategoryNameExists(String name, {int? excludeId}) =>
+      _remote.checkStudentCategoryNameExists(name, excludeId: excludeId);
+
+  @override
+  Future<String> bulkUpdateStudentCategoryStatus(List<int> ids, String status) =>
+      _remote.bulkUpdateStudentCategoryStatus(ids, status);
+
+  @override
+  Future<String> bulkDeleteStudentCategories(List<int> ids) => _remote.bulkDeleteStudentCategories(ids);
+
+  @override
+  Future<PaginatedResult<IdCardTemplateEntity>> getIdCardTemplates({int page = 1, int pageSize = 10}) =>
+      _remote.getIdCardTemplates(page: page, pageSize: pageSize);
+
+  @override
+  Future<IdCardTemplateEntity> createIdCardTemplate(IdCardTemplateEntity entry) => _remote.createIdCardTemplate(entry);
+
+  @override
+  Future<IdCardTemplateEntity> updateIdCardTemplate(int id, IdCardTemplateEntity entry) =>
+      _remote.updateIdCardTemplate(id, entry);
+
+  @override
+  Future<void> deleteIdCardTemplate(int id) => _remote.deleteIdCardTemplate(id);
+
+  @override
+  Future<DocumentGenerateSetup> getIdCardGenerateSetup() => _remote.getIdCardGenerateSetup();
+
+  @override
+  Future<RecipientsResult> getIdCardRecipients({required int role, int? classId, int? sectionId}) =>
+      _remote.getIdCardRecipients(role: role, classId: classId, sectionId: sectionId);
+
+  @override
+  Future<PaginatedResult<CertificateTemplateEntity>> getCertificateTemplates({int page = 1, int pageSize = 10}) =>
+      _remote.getCertificateTemplates(page: page, pageSize: pageSize);
+
+  @override
+  Future<CertificateTemplateEntity> createCertificateTemplate(CertificateTemplateEntity entry) =>
+      _remote.createCertificateTemplate(entry);
+
+  @override
+  Future<CertificateTemplateEntity> updateCertificateTemplate(int id, CertificateTemplateEntity entry) =>
+      _remote.updateCertificateTemplate(id, entry);
+
+  @override
+  Future<void> deleteCertificateTemplate(int id) => _remote.deleteCertificateTemplate(id);
+
+  @override
+  Future<DocumentGenerateSetup> getCertificateGenerateSetup() => _remote.getCertificateGenerateSetup();
+
+  @override
+  Future<RecipientsResult> getCertificateRecipients({required int role, int? classId, int? sectionId}) =>
+      _remote.getCertificateRecipients(role: role, classId: classId, sectionId: sectionId);
+
+  @override
+  Future<List<RoleEntity>> getRoles() => _remote.getRoles();
 }

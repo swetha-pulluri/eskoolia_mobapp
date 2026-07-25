@@ -37,34 +37,38 @@ class _CampaignEditModalState extends State<CampaignEditModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 480),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                const Expanded(child: Text('Edit Campaign', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF111827)))),
-                IconButton(onPressed: widget.onClose, icon: const Icon(Icons.close, size: 16, color: Color(0xFF9CA3AF))),
-              ]),
-              const SizedBox(height: 6),
-              _labeled('Campaign Name', TextField(controller: _name, decoration: _dec())),
-              const SizedBox(height: 14),
-              _labeled('Channel', TextField(controller: TextEditingController(text: widget.campaign.channel), readOnly: true, decoration: _dec(readOnly: true))),
-              const SizedBox(height: 14),
-              _labeled('Audience', TextField(controller: TextEditingController(text: widget.campaign.audience), readOnly: true, decoration: _dec(readOnly: true))),
-              const SizedBox(height: 20),
-              Row(children: [
-                Expanded(child: OutlinedButton(onPressed: widget.onClose, child: const Text('Cancel'))),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: widget.onClose,
-                    style: ElevatedButton.styleFrom(backgroundColor: kMarketingBlue, foregroundColor: Colors.white),
-                    child: const Text('Save Changes'),
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 480),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Expanded(child: Text('Edit Campaign', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF111827)))),
+                  IconButton(onPressed: widget.onClose, icon: const Icon(Icons.close, size: 16, color: Color(0xFF9CA3AF))),
+                ]),
+                const SizedBox(height: 6),
+                _labeled('Campaign Name', TextField(controller: _name, decoration: _dec())),
+                const SizedBox(height: 14),
+                _labeled('Channel', TextField(controller: TextEditingController(text: widget.campaign.channel), readOnly: true, decoration: _dec(readOnly: true))),
+                const SizedBox(height: 14),
+                _labeled('Audience', TextField(controller: TextEditingController(text: widget.campaign.audience), readOnly: true, decoration: _dec(readOnly: true))),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(child: OutlinedButton(onPressed: widget.onClose, child: const Text('Cancel'))),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: widget.onClose,
+                      style: ElevatedButton.styleFrom(backgroundColor: kMarketingBlue, foregroundColor: Colors.white),
+                      child: const Text('Save Changes'),
+                    ),
                   ),
-                ),
+                ]),
               ]),
-            ]),
+            ),
           ),
         ),
       ),
@@ -132,7 +136,10 @@ class _TemplatePreviewModalState extends State<TemplatePreviewModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             clipBehavior: Clip.antiAlias,
@@ -222,6 +229,7 @@ class _TemplatePreviewModalState extends State<TemplatePreviewModal> {
                 ]),
               ),
             ]),
+            ),
           ),
         ),
       ),
@@ -310,7 +318,10 @@ class _NewCampaignModalState extends State<NewCampaignModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
             constraints: const BoxConstraints(maxWidth: 520),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
@@ -348,6 +359,7 @@ class _NewCampaignModalState extends State<NewCampaignModal> {
                   ),
                 ]),
               ]),
+            ),
             ),
           ),
         ),

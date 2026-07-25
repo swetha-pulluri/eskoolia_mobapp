@@ -213,44 +213,51 @@ class _ApplicationRowState extends State<ApplicationRow> {
       opacity: _movingStage ? 0.5 : 1,
       child: GestureDetector(
         onTap: () => widget.onOpenDetail(inq),
-        child: Container(
-          decoration: BoxDecoration(
-            color: widget.isSelected ? const Color(0x14EEF2FF) : Colors.white,
-            border: Border(
-              bottom: const BorderSide(color: Color(0xFFF9FAFB)),
-              left: BorderSide(color: leftBorderColor, width: 2),
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: widget.isSelected ? const Color(0x14EEF2FF) : Colors.white,
+                border: const Border(bottom: BorderSide(color: Color(0xFFF9FAFB))),
+              ),
+              child: Row(
+                children: [
+                  _cell(
+                    ApplicationTableColumns.checkbox,
+                    Checkbox(
+                      value: widget.isSelected,
+                      onChanged: (_) => widget.onToggleSelect(inq.id),
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  _cell(ApplicationTableColumns.name, _nameCell(inq, initials, sentiment)),
+                  _cell(
+                    ApplicationTableColumns.grade,
+                    _badge(inq.classNameResolved ?? '–', const Color(0xFF1D4ED8), const Color(0xFFEFF6FF)),
+                  ),
+                  _cell(ApplicationTableColumns.source, _sourceCell(inq)),
+                  _cell(
+                    ApplicationTableColumns.age,
+                    Text('${age}d', style: TextStyle(fontSize: 11.5, color: ageColor, fontWeight: age > 2 ? FontWeight.w600 : FontWeight.normal)),
+                  ),
+                  _cell(ApplicationTableColumns.stage, _stageCell(stage, inq)),
+                  _cell(ApplicationTableColumns.followUp, _followUpCell(inq, today, overdueDays, nba)),
+                  _cell(
+                    ApplicationTableColumns.counsellor,
+                    Text(inq.assigned.isEmpty ? '–' : inq.assigned, style: const TextStyle(fontSize: 11.5, color: Color(0xFF4B5563)), overflow: TextOverflow.ellipsis),
+                  ),
+                  _cell(ApplicationTableColumns.actions, _actionsCell(inq)),
+                ],
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              _cell(
-                ApplicationTableColumns.checkbox,
-                Checkbox(
-                  value: widget.isSelected,
-                  onChanged: (_) => widget.onToggleSelect(inq.id),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              _cell(ApplicationTableColumns.name, _nameCell(inq, initials, sentiment)),
-              _cell(
-                ApplicationTableColumns.grade,
-                _badge(inq.classNameResolved ?? '–', const Color(0xFF1D4ED8), const Color(0xFFEFF6FF)),
-              ),
-              _cell(ApplicationTableColumns.source, _sourceCell(inq)),
-              _cell(
-                ApplicationTableColumns.age,
-                Text('${age}d', style: TextStyle(fontSize: 11.5, color: ageColor, fontWeight: age > 2 ? FontWeight.w600 : FontWeight.normal)),
-              ),
-              _cell(ApplicationTableColumns.stage, _stageCell(stage, inq)),
-              _cell(ApplicationTableColumns.followUp, _followUpCell(inq, today, overdueDays, nba)),
-              _cell(
-                ApplicationTableColumns.counsellor,
-                Text(inq.assigned.isEmpty ? '–' : inq.assigned, style: const TextStyle(fontSize: 11.5, color: Color(0xFF4B5563)), overflow: TextOverflow.ellipsis),
-              ),
-              _cell(ApplicationTableColumns.actions, _actionsCell(inq)),
-            ],
-          ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(width: 2, color: leftBorderColor),
+            ),
+          ],
         ),
       ),
     );

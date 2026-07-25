@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/shared_prefs.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -30,14 +31,20 @@ final sharedPrefsProvider = Provider((ref) => SharedPrefs());
 
 // Attention Count Provider
 final attentionCountProvider = FutureProvider<int>((ref) async {
+  debugPrint('[DashboardProvider] attentionCountProvider: fetching...');
   final repository = ref.watch(dashboardRepositoryProvider);
-  return await repository.getAttentionCount();
+  final result = await repository.getAttentionCount();
+  debugPrint('[DashboardProvider] attentionCountProvider: result=$result');
+  return result;
 });
 
 // Recent Modules Provider
 final recentModulesProvider = FutureProvider<List<RecentItemEntity>>((ref) async {
+  debugPrint('[DashboardProvider] recentModulesProvider: fetching...');
   final repository = ref.watch(dashboardRepositoryProvider);
-  return await repository.getRecentModules();
+  final result = await repository.getRecentModules();
+  debugPrint('[DashboardProvider] recentModulesProvider: result count=${result.length}');
+  return result;
 });
 
 // Pins Provider (StateNotifier for CRUD operations)
@@ -54,10 +61,13 @@ class PinsNotifier extends StateNotifier<AsyncValue<List<PinItemEntity>>> {
 
   Future<void> _loadPins() async {
     state = const AsyncValue.loading();
+    debugPrint('[DashboardProvider] PinsNotifier: loading pins...');
     try {
       final pins = await _repository.getPins();
+      debugPrint('[DashboardProvider] PinsNotifier: loaded ${pins.length} pins');
       state = AsyncValue.data(pins);
     } catch (e, stack) {
+      debugPrint('[DashboardProvider] PinsNotifier: FAILED: $e');
       state = AsyncValue.error(e, stack);
     }
   }

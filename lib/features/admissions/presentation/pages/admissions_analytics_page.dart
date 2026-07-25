@@ -1,9 +1,46 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/entities/analytics_data_entity.dart';
 import '../providers/admissions_provider.dart';
 import '../widgets/admissions_layout.dart';
 import '../widgets/analytics_widgets.dart';
+
+/// Matches `AdmissionsAnalytics.tsx`'s own `exportCSV()` exactly — same
+/// section order/headers. Mobile has no `Blob` + `<a download>`, so this
+/// hands the built CSV to the native share/save sheet instead.
+String _buildAnalyticsCsv(AnalyticsDataEntity data) {
+  final rows = <List<String>>[
+    ['Metric', 'Value'],
+    ['Total Inquiries', '${data.total}'],
+    ['Contacted', '${data.contacted}'],
+    ['Visited', '${data.visited}'],
+    ['Enrolled', '${data.enrolled}'],
+    ['Declined', '${data.declined}'],
+    ['Contact Rate %', '${data.contactRatePct}'],
+    ['Visit Rate %', '${data.visitRatePct}'],
+    ['Enroll Rate %', '${data.enrollRatePct}'],
+    [],
+    ['Source', 'Inquiries', 'Enrolled'],
+    for (final s in data.bySource) [s.sourceName ?? 'Unknown', '${s.count}', '${s.enrolled}'],
+    [],
+    ['Grade', 'Inquiries'],
+    for (final g in data.byGrade) [g.gradeName ?? 'Unknown', '${g.count}'],
+    [],
+    ['Counsellor', 'Total', 'Enrolled', 'Conversion %'],
+    for (final c in data.counsellorStats) [c.assigned, '${c.total}', '${c.enrolled}', '${c.conversionPct}'],
+  ];
+  return rows.map((r) => r.join(',')).join('\n');
+}
+
+Future<void> _exportAnalyticsCsv(AnalyticsDataEntity data) async {
+  final csv = _buildAnalyticsCsv(data);
+  final bytes = Uint8List.fromList(utf8.encode(csv));
+  final today = DateTime.now().toIso8601String().substring(0, 10);
+  await Share.shareXFiles([XFile.fromData(bytes, name: 'admissions-analytics-$today.csv', mimeType: 'text/csv')]);
+}
 
 const Map<String, String> kPeriodLabels = {
   'month': 'This Month',
@@ -31,9 +68,10 @@ const Map<String, ({Color color, String icon})> _kSourceConfig = {
 
 /// Admissions Analytics — converted from `AdmissionsAnalytics.tsx`. KPI
 /// cards, conversion funnel, 6-month trend, source/grade breakdowns,
-/// counsellor leaderboard, and key insights, all driven by
-/// `AdmissionsLocalData.getAnalyticsOverview()` (see that method for the
-/// exact backend-aggregation parity notes).
+/// counsellor leaderboard, and key insights, all driven by the real
+/// `GET /api/v1/admissions/analytics/overview/?period=...` endpoint via
+/// `analyticsOverviewProvider` — a genuine backend aggregation, unlike
+/// Command Center's client-computed stats.
 class AdmissionsAnalyticsPage extends ConsumerWidget {
   const AdmissionsAnalyticsPage({super.key});
 
@@ -59,7 +97,7 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _header(ref, period),
+                _header(ref, period, asyncData.hasValue ? data : null),
                 const SizedBox(height: 14),
                 _kpiRow(data, monthlyInquiries, monthlyEnrolled),
                 const SizedBox(height: 12),
@@ -86,7 +124,7 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
     );
   }
 
-  Widget _header(WidgetRef ref, String period) {
+  Widget _header(WidgetRef ref, String period, AnalyticsDataEntity? data) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -109,6 +147,18 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
             ),
           ),
           IconButton(onPressed: () => ref.invalidate(analyticsOverviewProvider), tooltip: 'Refresh', icon: const Icon(Icons.refresh, size: 15, color: Color(0xFF9CA3AF))),
+          if (data != null)
+            OutlinedButton.icon(
+              onPressed: () => _exportAnalyticsCsv(data),
+              icon: const Icon(Icons.download_outlined, size: 13),
+              label: const Text('Export CSV'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF6B7280),
+                side: const BorderSide(color: Color(0xFFE5E7EB)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                textStyle: const TextStyle(fontSize: 12.5),
+              ),
+            ),
         ]),
         const SizedBox(height: 10),
         SizedBox(

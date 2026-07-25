@@ -2,6 +2,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../domain/entities/paginated_result.dart';
 
+/// Mirrors the web's `getErrorMessage(err, fallback)` — a short, clean
+/// message, never Dio's full technical exception dump. Shared so screens
+/// that call the repository directly (bulk actions) can surface the same
+/// clean message the generic list notifier does.
+String adminErrorMessage(Object e) {
+  if (e is DioException) {
+    final data = e.response?.data;
+    if (data is Map && data['message'] is String) return data['message'] as String;
+    if (data is Map && data['detail'] is String) return data['detail'] as String;
+    final status = e.response?.statusCode;
+    if (status == 401 || status == 403) return 'You are not authorized to do this.';
+    if (status != null) return 'Request failed (HTTP $status).';
+    return 'Unable to connect to the server.';
+  }
+  return 'Something went wrong. Please try again.';
+}
+
 /// Generic list state for an Administration CRUD screen (Visitor Book,
 /// Complaints, Phone Calls, Admin Setup, ...): server-side pagination +
 /// client-side quick-search over the currently loaded page, matching the
@@ -153,18 +170,5 @@ class AdminListNotifier<T> extends StateNotifier<AdminListState<T>> {
     }
   }
 
-  /// Mirrors the web's `getErrorMessage(err, fallback)` — a short, clean
-  /// message, never Dio's full technical exception dump.
-  String _errorMessage(Object e) {
-    if (e is DioException) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] is String) return data['detail'] as String;
-      if (data is Map && data['message'] is String) return data['message'] as String;
-      final status = e.response?.statusCode;
-      if (status == 401 || status == 403) return 'You are not authorized to view these records.';
-      if (status != null) return 'Request failed (HTTP $status).';
-      return 'Unable to connect to the server.';
-    }
-    return 'Something went wrong. Please try again.';
-  }
+  String _errorMessage(Object e) => adminErrorMessage(e);
 }

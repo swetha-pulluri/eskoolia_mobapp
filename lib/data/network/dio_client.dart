@@ -87,6 +87,15 @@ class DioClient {
   InterceptorsWrapper _errorInterceptor() {
     return InterceptorsWrapper(
       onError: (error, handler) {
+        // TEMP DEBUG: raw error details before they get flattened to a
+        // generic message below — remove once the post-login issue is resolved.
+        // ignore: avoid_print
+        print(
+          '[DioClient] RAW error on ${error.requestOptions.method} ${error.requestOptions.path} -> '
+          'type=${error.type}, statusCode=${error.response?.statusCode}, '
+          'message=${error.message}, responseData=${error.response?.data}',
+        );
+
         // Format error response
         String errorMessage = 'An unexpected error occurred';
 

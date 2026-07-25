@@ -18,15 +18,18 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       portal_type: json['portal_type'] as String? ?? 'admin',
       is_superuser: json['is_superuser'] as bool? ?? false,
       is_school_admin: json['is_school_admin'] as bool? ?? false,
-      role_ids: (json['role_ids'] as List<dynamic>?)
+      role_ids:
+          (json['role_ids'] as List<dynamic>?)
               ?.map((e) => (e as num).toInt())
               .toList() ??
           const [],
-      role_names: (json['role_names'] as List<dynamic>?)
+      role_names:
+          (json['role_names'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
-      permission_codes: (json['permission_codes'] as List<dynamic>?)
+      permission_codes:
+          (json['permission_codes'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -36,7 +39,8 @@ _$UserModelImpl _$$UserModelImplFromJson(Map<String, dynamic> json) =>
       school_branding: json['school_branding'] == null
           ? null
           : SchoolBrandingModel.fromJson(
-              json['school_branding'] as Map<String, dynamic>),
+              json['school_branding'] as Map<String, dynamic>,
+            ),
     );
 
 Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
@@ -61,17 +65,17 @@ Map<String, dynamic> _$$UserModelImplToJson(_$UserModelImpl instance) =>
     };
 
 _$SchoolBrandingModelImpl _$$SchoolBrandingModelImplFromJson(
-        Map<String, dynamic> json) =>
-    _$SchoolBrandingModelImpl(
-      name: json['name'] as String?,
-      brand_color: json['brand_color'] as String?,
-      logo_url: json['logo_url'] as String?,
-    );
+  Map<String, dynamic> json,
+) => _$SchoolBrandingModelImpl(
+  name: json['name'] as String?,
+  brand_color: json['brand_color'] as String?,
+  logo_url: json['logo_url'] as String?,
+);
 
 Map<String, dynamic> _$$SchoolBrandingModelImplToJson(
-        _$SchoolBrandingModelImpl instance) =>
-    <String, dynamic>{
-      'name': instance.name,
-      'brand_color': instance.brand_color,
-      'logo_url': instance.logo_url,
-    };
+  _$SchoolBrandingModelImpl instance,
+) => <String, dynamic>{
+  'name': instance.name,
+  'brand_color': instance.brand_color,
+  'logo_url': instance.logo_url,
+};

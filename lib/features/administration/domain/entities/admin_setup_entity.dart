@@ -4,6 +4,12 @@
 /// `type`: "1" = Purpose, "2" = Complaint Type, "3" = Source, "4" = Reference.
 class AdminSetupEntity {
   final int? id;
+  /// Owning school id — present on every response row (`AdminSetupEntrySerializer`
+  /// includes `school`). Used to client-side re-scope results for accounts
+  /// where the backend's own `get_queryset()` skips school filtering
+  /// (`is_superuser` bypass), since that leaks every other school's rows
+  /// merged together otherwise.
+  final int? schoolId;
   final String type;
   final String? typeName;
   final String name;
@@ -13,6 +19,7 @@ class AdminSetupEntity {
 
   const AdminSetupEntity({
     this.id,
+    this.schoolId,
     required this.type,
     this.typeName,
     required this.name,
@@ -24,6 +31,7 @@ class AdminSetupEntity {
   factory AdminSetupEntity.fromJson(Map<String, dynamic> json) {
     return AdminSetupEntity(
       id: json['id'] as int?,
+      schoolId: json['school'] as int?,
       type: json['type']?.toString() ?? '1',
       typeName: json['type_name'] as String?,
       name: json['name'] as String? ?? '',

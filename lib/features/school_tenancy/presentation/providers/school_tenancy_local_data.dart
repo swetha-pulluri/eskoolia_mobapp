@@ -371,6 +371,7 @@ class SchoolTenancyLocalData {
           detail: 'Provisioned Delhi Public School (schema: dps_noida)',
           severity: 'info',
           schoolName: 'Delhi Public School',
+          status: 'success',
         ),
         AuditEventEntity(
           id: 'ev-002',
@@ -381,6 +382,7 @@ class SchoolTenancyLocalData {
           detail: 'Invoice INV-2026-0045 generated for Ryan International (\u20b99,999)',
           severity: 'info',
           schoolName: 'Ryan International',
+          status: 'success',
         ),
         AuditEventEntity(
           id: 'ev-003',
@@ -391,6 +393,7 @@ class SchoolTenancyLocalData {
           detail: 'Super admin impersonated school admin at Ryan International',
           severity: 'warning',
           schoolName: 'Ryan International',
+          status: 'success',
         ),
         AuditEventEntity(
           id: 'ev-004',
@@ -400,6 +403,7 @@ class SchoolTenancyLocalData {
           action: 'policy.updated',
           detail: 'GST rate changed from 9% to 18% (key: gst.default_rate)',
           severity: 'warning',
+          status: 'success',
         ),
         AuditEventEntity(
           id: 'ev-005',
@@ -410,6 +414,7 @@ class SchoolTenancyLocalData {
           detail: 'Invoice INV-2026-0031 (Sunrise Academy) marked overdue \u2014 \u20b92,999',
           severity: 'critical',
           schoolName: 'Sunrise Academy',
+          status: 'failed',
         ),
       ],
     );

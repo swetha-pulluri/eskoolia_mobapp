@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/usecases/check_auth_status_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
@@ -38,21 +39,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Login user
   Future<void> login(String username, String password) async {
     state = const AuthState.loading();
+    debugPrint('[AuthNotifier] login: calling loginUseCase for "$username"');
     try {
       final loginResult = await _loginUseCase(username, password);
+      debugPrint('[AuthNotifier] login: loginUseCase succeeded, mustChangePassword=${loginResult.mustChangePassword}, portalType=${loginResult.portalType}');
 
       // Get user profile after successful login
+      debugPrint('[AuthNotifier] login: calling getCurrentUserUseCase (GET /api/v1/auth/me/)');
       final user = await _getCurrentUserUseCase();
+      debugPrint('[AuthNotifier] login: getCurrentUserUseCase succeeded for user=${user.username}');
 
       // Check if password change is required
       if (loginResult.mustChangePassword) {
         state = AuthState.error('Password change required');
         // Navigation will be handled by the UI
+        debugPrint('[AuthNotifier] login: mustChangePassword=true, staying on error state');
         return;
       }
 
       state = AuthState.authenticated(user);
+      debugPrint('[AuthNotifier] login: state -> authenticated');
     } catch (e) {
+      debugPrint('[AuthNotifier] login: FAILED with error: $e');
       state = AuthState.error(e.toString().replaceAll('Exception: ', ''));
     }
   }

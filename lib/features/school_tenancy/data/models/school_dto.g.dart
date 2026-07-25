@@ -13,7 +13,7 @@ SchoolDto _$SchoolDtoFromJson(Map<String, dynamic> json) => SchoolDto(
   subdomainUrl: json['subdomain_url'] as String,
   shardRegion: json['shard_region'] as String,
   storageRegion: json['storage_region'] as String,
-  backupRetention: (json['backup_retention'] as num).toInt(),
+  backupRetention: (json['backup_retention'] as num?)?.toInt(),
   ssoMethod: json['sso_method'] as String,
   apiAccess: json['api_access'] as bool,
   plan: json['plan'] as String,

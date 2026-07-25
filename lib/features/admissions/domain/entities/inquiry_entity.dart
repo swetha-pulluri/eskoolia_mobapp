@@ -2,6 +2,11 @@
 /// `/api/v1/admissions/inquiries/` (frontend type `ApiInquiry`).
 class InquiryEntity {
   final int id;
+  /// Owning school id (`AdmissionInquirySerializer`'s read-only `school`
+  /// field). Used to client-side re-scope results for accounts where
+  /// `AdmissionInquiryViewSet.get_queryset()` skips school filtering
+  /// (`is_superuser` bypass merges every school's inquiries together).
+  final int? schoolId;
   final String fullName;
   final String phone;
   final String email;
@@ -32,6 +37,7 @@ class InquiryEntity {
 
   const InquiryEntity({
     required this.id,
+    this.schoolId,
     required this.fullName,
     required this.phone,
     this.email = '',
@@ -58,6 +64,69 @@ class InquiryEntity {
     this.documentsStatus = 'not_requested',
     this.lastContactedAt,
   });
+
+  /// Mirrors backend `AdmissionInquirySerializer`'s real output fields
+  /// (`serializers.py:184-233`) — `reference_name`/`source_name`/
+  /// `class_name_resolved` are server-computed display names, distinct
+  /// from the writable `reference`/`source`/`school_class` FK ids.
+  factory InquiryEntity.fromJson(Map<String, dynamic> json) {
+    return InquiryEntity(
+      id: json['id'] as int,
+      schoolId: json['school'] as int?,
+      fullName: json['full_name'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      queryDate: json['query_date'] as String?,
+      followUpDate: json['follow_up_date'] as String?,
+      nextFollowUpDate: json['next_follow_up_date'] as String?,
+      assigned: json['assigned'] as String? ?? '',
+      reference: json['reference'] as int?,
+      referenceName: json['reference_name'] as String?,
+      source: json['source'] as int?,
+      sourceName: json['source_name'] as String?,
+      schoolClass: json['school_class'] as int?,
+      classNameResolved: (json['class_name_resolved'] as String?) ?? (json['class_name'] as String?),
+      noOfChild: json['no_of_child'] as int? ?? 1,
+      activeStatus: json['active_status'] as int? ?? 1,
+      status: json['status'] as String? ?? 'new',
+      note: json['note'] as String? ?? '',
+      childName: json['child_name'] as String? ?? '',
+      hasSiblingEnrolled: json['has_sibling_enrolled']?.toString() ?? '',
+      siblingName: json['sibling_name'] as String? ?? '',
+      leadScore: json['lead_score'] as int? ?? 0,
+      documentsStatus: json['documents_status'] as String? ?? 'not_requested',
+      lastContactedAt: json['last_contacted_at'] as String?,
+    );
+  }
+
+  /// Write payload matching `AdmissionInquirySerializer`'s writable fields.
+  /// `full_name`/`phone` regex + duplicate-guard validation, and the
+  /// date-order checks, are enforced server-side (`serializers.py:240-363`)
+  /// — this just shapes the wire format, matching `AdmissionsCommandCenter.tsx`'s
+  /// own create/update payload fields.
+  Map<String, dynamic> toJson() {
+    return {
+      'full_name': fullName,
+      'phone': phone,
+      if (email.isNotEmpty) 'email': email,
+      if (address.isNotEmpty) 'address': address,
+      if (description.isNotEmpty) 'description': description,
+      if (queryDate != null) 'query_date': queryDate,
+      if (followUpDate != null) 'follow_up_date': followUpDate,
+      if (nextFollowUpDate != null) 'next_follow_up_date': nextFollowUpDate,
+      'assigned': assigned,
+      if (reference != null) 'reference': reference,
+      if (source != null) 'source': source,
+      if (schoolClass != null) 'school_class': schoolClass,
+      'no_of_child': noOfChild,
+      'active_status': activeStatus,
+      'status': status,
+      'note': note,
+      'documents_status': documentsStatus,
+    };
+  }
 
   InquiryEntity copyWith({
     String? fullName,

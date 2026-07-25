@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/inquiry_entity.dart';
-import '../providers/admissions_local_data.dart';
+import '../providers/admissions_provider.dart';
 
 const List<Map<String, String>> kRequiredDocs = [
   {'key': 'birth_cert', 'label': 'Birth Certificate'},
@@ -66,9 +67,9 @@ String _formatLongDate(String? v) {
 
 /// Application Detail Panel — full-width slide-in panel opened from any
 /// row in the Class Workspace table. Converted from web
-/// `command-center/ApplicationDetailPanel.tsx`. Mutations go straight to
-/// `AdmissionsLocalData` (no backend), matching this module's architecture.
-class ApplicationDetailPanel extends StatefulWidget {
+/// `command-center/ApplicationDetailPanel.tsx`. Mutations go through the
+/// real `AdmissionsRepository` (`PATCH /api/v1/admissions/inquiries/{id}/`).
+class ApplicationDetailPanel extends ConsumerStatefulWidget {
   final InquiryEntity? inquiry;
   final bool isOpen;
   final VoidCallback onClose;
@@ -93,10 +94,10 @@ class ApplicationDetailPanel extends StatefulWidget {
   });
 
   @override
-  State<ApplicationDetailPanel> createState() => _ApplicationDetailPanelState();
+  ConsumerState<ApplicationDetailPanel> createState() => _ApplicationDetailPanelState();
 }
 
-class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
+class _ApplicationDetailPanelState extends ConsumerState<ApplicationDetailPanel> {
   final _noteController = TextEditingController();
   bool _noteSaving = false;
   String? _localStatus;
@@ -128,7 +129,7 @@ class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
     final inq = widget.inquiry;
     if (inq == null) return;
     setState(() => _localStatus = status);
-    await AdmissionsLocalData.updateInquiry(inq.id, (current) => current.copyWith(
+    await ref.read(admissionsRepositoryProvider).updateInquiry(inq.id, (current) => current.copyWith(
           status: status,
           activeStatus: status == 'enrolled' || status == 'declined' ? 2 : 1,
           followUpDate: widget.today,
@@ -152,7 +153,7 @@ class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
       _docSavingKey = docKey;
     });
     final serialized = updated.entries.map((e) => '${e.key}:${e.value}').join(',');
-    await AdmissionsLocalData.updateInquiry(inq.id, (c) => c.copyWith(documentsStatus: serialized));
+    await ref.read(admissionsRepositoryProvider).updateInquiry(inq.id, (c) => c.copyWith(documentsStatus: serialized));
     if (mounted) setState(() => _docSavingKey = null);
     widget.onReload();
   }
@@ -166,7 +167,7 @@ class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
     final timestamp = '${now.day}/${now.month}/${now.year}, ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final entry = '[$timestamp] $text';
     final updated = _localNotes.isNotEmpty ? '$_localNotes\n$entry' : entry;
-    await AdmissionsLocalData.updateInquiry(inq.id, (c) => c.copyWith(note: updated));
+    await ref.read(admissionsRepositoryProvider).updateInquiry(inq.id, (c) => c.copyWith(note: updated));
     if (mounted) {
       setState(() {
         _localNotes = updated;
@@ -193,7 +194,10 @@ class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
           alignment: Alignment.centerRight,
           child: GestureDetector(
             onTap: () {},
-            child: Container(
+            // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
               width: double.infinity,
               height: double.infinity,
               constraints: const BoxConstraints(maxWidth: 480),
@@ -386,6 +390,7 @@ class _ApplicationDetailPanelState extends State<ApplicationDetailPanel> {
                   ],
                 ),
               ),
+            ),
             ),
           ),
         ),

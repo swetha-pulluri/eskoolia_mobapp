@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/kpi_card.dart';
@@ -107,7 +108,42 @@ class SuperAdminDashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboard = ref.watch(schoolTenancyDashboardProvider);
+    final dashboardAsync = ref.watch(schoolTenancyDashboardProvider);
+
+    if (dashboardAsync.isLoading && !dashboardAsync.hasValue) {
+      return const SchoolTenancyLayout(
+        currentPath: '/super-admin/dashboard',
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (dashboardAsync.hasError && !dashboardAsync.hasValue) {
+      return SchoolTenancyLayout(
+        currentPath: '/super-admin/dashboard',
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'Failed to load dashboard data.\n${dashboardAsync.error}',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.pageSubtitle,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final dashboard = dashboardAsync.value!;
+
+    // Matches web's `effectiveMrr`/`mrrTrend` fallbacks (see
+    // super-admin/dashboard/page.tsx): when there's no current-month invoice
+    // MRR yet, fall back to the sum of plan MRR; render "—" instead of "0.0%"
+    // when there's no month-over-month trend to show.
+    final planMrrTotal = dashboard.planBreakdown.fold<double>(0.0, (sum, p) => sum + p.mrr);
+    final effectiveMrr = dashboard.mrr.current > 0 ? dashboard.mrr.current : planMrrTotal;
+    final mrrTrendText = dashboard.mrr.trend != 0
+        ? '${dashboard.mrr.trend > 0 ? '+' : ''}${dashboard.mrr.trend.toStringAsFixed(1)}%'
+        : '—';
 
     return SchoolTenancyLayout(
       currentPath: '/super-admin/dashboard',
@@ -155,6 +191,27 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                     Row(
                       children: [
                         OutlinedButton.icon(
+                          onPressed: dashboardAsync.isLoading
+                              ? null
+                              : () => ref.invalidate(schoolTenancyDashboardProvider),
+                          icon: dashboardAsync.isLoading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.refresh, size: 14),
+                          label: const Text('Refresh'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: const BorderSide(color: AppColors.borderPrimary),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            textStyle: AppTextStyles.buttonSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
                           onPressed: () {},
                           icon: const Icon(Icons.download, size: 14),
                           label: const Text('Export'),
@@ -168,7 +225,7 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () => context.go('/super-admin/schools'),
                           icon: const Icon(Icons.add, size: 14),
                           label: const Text('Add school'),
                           style: ElevatedButton.styleFrom(
@@ -187,14 +244,9 @@ class SuperAdminDashboardPage extends ConsumerWidget {
               ),
 
               // KPI CARDS
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.1,
-                children: [
+              KpiCardGrid(
+                spacing: 16,
+                cards: [
                   KpiCard(
                     label: 'Total Schools',
                     value: '${dashboard.totalSchools}',
@@ -202,7 +254,9 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                     sparklineColor: const Color(0xFF5836E0),
                     trend: '● ${dashboard.activeSchools} active',
                     trendColor: AppColors.successGreen,
-                    footnote: 'Pan-India',
+                    footnote: dashboard.stateBreakdown.isNotEmpty
+                        ? dashboard.stateBreakdown.map((s) => s.state).join(' · ')
+                        : 'Pan-India',
                   ),
                   KpiCard(
                     label: 'Students Served',
@@ -211,24 +265,26 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                     sparklineColor: const Color(0xFF0E9F6E),
                     trend: '${dashboard.activeStudents} active',
                     trendColor: AppColors.successGreen,
-                    footnote: '${dashboard.totalStaff} staff',
+                    footnote: '${dashboard.totalStudents} total · ${dashboard.totalStaff} staff',
                   ),
                   KpiCard(
                     label: 'Monthly Recurring',
-                    value: _formatINR(dashboard.mrr.current),
+                    value: _formatINR(effectiveMrr),
                     sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
                     sparklineColor: const Color(0xFF0369A1),
-                    trend: '${dashboard.mrr.trend.toStringAsFixed(1)}%',
+                    trend: mrrTrendText,
                     trendColor: AppColors.successGreen,
-                    footnote: 'GST collected · ${_formatINR(dashboard.mrr.current * 0.18)}',
+                    footnote: 'GST collected this month · ${_formatINR(effectiveMrr * 0.18)}',
                   ),
                   KpiCard(
                     label: 'Needs Attention',
                     value: '${dashboard.alertCount}',
                     sparklineData: const [14, 11, 13, 9, 12, 8, 10, 7, 9, 6, 8, 5, 7, 4],
                     sparklineColor: const Color(0xFFE0463A),
-                    trend: '— All clear',
-                    trendColor: AppColors.textTertiary,
+                    trend: dashboard.alertCount > 0
+                        ? '${dashboard.overdueCount} billing · ${dashboard.blockedCount} blocked'
+                        : '— All clear',
+                    trendColor: dashboard.alertCount > 0 ? AppColors.dangerRed : AppColors.textTertiary,
                     footnote: 'Open across all tenants',
                   ),
                 ],
@@ -240,7 +296,9 @@ class SuperAdminDashboardPage extends ConsumerWidget {
               _buildSectionCard(
                 title: 'Schools by board',
                 subtitle: 'Affiliation mix across active tenants',
-                child: Column(
+                child: dashboard.boardBreakdown.isEmpty
+                    ? _buildEmptyMessage('No schools provisioned yet.')
+                    : Column(
                   children: [
                     ...dashboard.boardBreakdown.map((board) {
                       return Padding(
@@ -312,7 +370,9 @@ class SuperAdminDashboardPage extends ConsumerWidget {
               _buildSectionCard(
                 title: 'Geographic distribution',
                 subtitle: 'Schools by Indian state',
-                child: Column(
+                child: dashboard.stateBreakdown.isEmpty
+                    ? _buildEmptyMessage('No geographic data yet.')
+                    : Column(
                   children: [
                     ...dashboard.stateBreakdown.map((state) {
                       final maxCount = dashboard.stateBreakdown
@@ -388,11 +448,13 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '${dashboard.mrr.trend.toStringAsFixed(1)}% MoM',
+                    '$mrrTrendText MoM',
                     style: AppTextStyles.kpiTrend(color: const Color(0xFF15803D)),
                   ),
                 ),
-                child: Column(
+                child: dashboard.planBreakdown.isEmpty
+                    ? _buildEmptyMessage('No plan data yet.')
+                    : Column(
                   children: [
                     ...dashboard.planBreakdown.map((plan) {
                       final maxMrr = dashboard.planBreakdown
@@ -437,7 +499,7 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                 title: 'Recent activity',
                 subtitle: 'Cross-tenant audit events',
                 trailing: GestureDetector(
-                  onTap: () {},
+                  onTap: () => context.go('/super-admin/audit'),
                   child: Text(
                     'View all →',
                     style: AppTextStyles.buttonSmall.copyWith(
@@ -446,7 +508,9 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                child: Column(
+                child: dashboard.recentEvents.isEmpty
+                    ? _buildEmptyMessage('No recent activity.')
+                    : Column(
                   children: [
                     ...dashboard.recentEvents.take(5).map((event) {
                       return Padding(
@@ -492,6 +556,19 @@ class SuperAdminDashboardPage extends ConsumerWidget {
           ),
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyMessage(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 13, color: AppColors.textTertiary),
+        ),
       ),
     );
   }

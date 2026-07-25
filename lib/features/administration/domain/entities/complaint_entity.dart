@@ -1,7 +1,16 @@
 import 'picked_attachment.dart';
 
 /// Complaint entry — mirrors backend `ComplaintEntry` /
-/// `/api/v1/admissions/complaints/`.
+/// `/api/v1/admissions/complaints/` as it is implemented by the
+/// currently-deployed `main` branch code: `complaint_type`/
+/// `complaint_source` are write-only `CharField`s resolved server-side
+/// (`ComplaintEntrySerializer._resolve_setup_name`) against
+/// `AdminSetupEntry` rows of `type="2"`/`type="3"`, then exposed for
+/// display as `complaint_type_name`/`complaint_source_name`.
+/// `complaintTypeId`/`complaintSourceId` hold the selected `AdminSetupEntry`
+/// id as a string (matching `ComplaintPanel.tsx`'s own `String(row.id)`
+/// dropdown value) purely so they bind directly to
+/// `AdminDropdownField<String>`, not because the wire format is a string.
 class ComplaintEntity {
   final int? id;
   final String complaintBy;
@@ -50,7 +59,7 @@ class ComplaintEntity {
       phone: json['phone'] as String?,
       date: json['date'] as String? ?? '',
       actionTaken: json['action_taken'] as String?,
-      assigned: json['assigned'] as String?,
+      assigned: json['assigned_to_name'] as String?,
       description: json['description'] as String?,
       fileUrl: json['file_url'] as String?,
       createdByName: json['created_by_name'] as String?,
@@ -58,6 +67,16 @@ class ComplaintEntity {
     );
   }
 
+  /// `complaint_type`/`complaint_source` are write-only `CharField`s on the
+  /// real (`main`) `ComplaintEntrySerializer`, resolved against
+  /// `AdminSetupEntry` when the value is numeric — sent as the selected
+  /// entry's id (matching `ComplaintPanel.tsx`'s own
+  /// `formData.append("complaint_type", complaintType.trim())` where
+  /// `complaintType` is the dropdown's `String(row.id)` value). `assigned`
+  /// IS sent — confirmed directly against `ComplaintPanel.tsx`
+  /// (`formData.append("assigned", assigned.trim())`), unlike an earlier,
+  /// incorrect assumption based on `origin/demo`'s web, which is not the
+  /// branch actually deployed here.
   Map<String, dynamic> toJson() {
     return {
       'complaint_by': complaintBy,
@@ -66,7 +85,7 @@ class ComplaintEntity {
       if (phone != null && phone!.isNotEmpty) 'phone': phone,
       'date': date,
       if (actionTaken != null) 'action_taken': actionTaken,
-      if (assigned != null) 'assigned': assigned,
+      'assigned': assigned ?? '',
       if (description != null) 'description': description,
     };
   }

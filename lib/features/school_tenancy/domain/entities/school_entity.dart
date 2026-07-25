@@ -59,6 +59,34 @@ class SchoolEntity {
   });
 }
 
+/// Result of provisioning a new school (mirrors web's `ProvisionSchoolResponse`).
+class ProvisionSchoolResultEntity {
+  final String tenantId;
+  final String status;
+  final String? adminUsername;
+  final String? adminPassword;
+
+  const ProvisionSchoolResultEntity({
+    required this.tenantId,
+    required this.status,
+    this.adminUsername,
+    this.adminPassword,
+  });
+}
+
+/// Impersonation handoff result (mirrors web's `ImpersonateResponse`).
+class ImpersonateResultEntity {
+  final String tenantId;
+  final String username;
+  final String handoffUrl;
+
+  const ImpersonateResultEntity({
+    required this.tenantId,
+    required this.username,
+    required this.handoffUrl,
+  });
+}
+
 /// Paginated Response
 class PaginatedSchoolsEntity {
   final int count;

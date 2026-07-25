@@ -4,14 +4,17 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/phone_call_entity.dart';
 import '../providers/administration_provider.dart';
 import '../widgets/admin_form_fields.dart';
-import '../widgets/admin_section_card.dart';
 import '../widgets/admin_data_table.dart';
 import '../widgets/admin_confirm_dialog.dart';
-import '../widgets/admin_breadcrumb_header.dart';
-import '../widgets/web_button.dart';
+import '../widgets/admin_section_card.dart';
+import '../widgets/admin_stepper_shell.dart';
 
-/// Phone Calls — converted from web `PhoneCallLogPanel.tsx`.
-/// Sub-tab of Communication Hub.
+/// Phone Calls — Communication Hub. Data contract verified against
+/// `main`'s real `PhoneCallLogPanel.tsx` (the branch actually served by the
+/// running frontend dev server). The stepper nav/card shell (3-step
+/// numbered nav) matches `origin/demo`'s redesigned layout, not `main`'s
+/// plain panel — a known, disclosed visual difference, out of scope for
+/// this pass.
 class PhoneCallsScreen extends ConsumerStatefulWidget {
   const PhoneCallsScreen({super.key});
 
@@ -19,23 +22,33 @@ class PhoneCallsScreen extends ConsumerStatefulWidget {
   ConsumerState<PhoneCallsScreen> createState() => _PhoneCallsScreenState();
 }
 
-enum _SortKey { name, phone, date, nextFollowUpDate, callDuration, callType }
-
 class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _durationCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
-  final _searchCtrl = TextEditingController();
+  final _filterSearchCtrl = TextEditingController();
 
-  DateTime? _fromDate = DateTime.now();
-  DateTime? _toDate;
+  final _addKey = GlobalKey();
+  final _filterKey = GlobalKey();
+  final _listKey = GlobalKey();
+
+  int _activeTab = 0;
+  bool _filterOpen = false;
+  String? _filterCallType;
+  DateTime? _filterDate;
+  List<String> _filterChips = [];
+  String _search = '';
+  String? _typeFilterValue;
+  String? _dateFilterValue;
+
+  DateTime? _date = DateTime.now();
+  DateTime? _followUpDate;
   String _callType = 'I';
   int? _editingId;
-
-  _SortKey _sortKey = _SortKey.date;
-  bool _sortAsc = false;
+  String _sortKey = 'date';
+  bool? _sortAsc;
 
   @override
   void dispose() {
@@ -43,8 +56,19 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
     _phoneCtrl.dispose();
     _durationCtrl.dispose();
     _descriptionCtrl.dispose();
-    _searchCtrl.dispose();
+    _filterSearchCtrl.dispose();
     super.dispose();
+  }
+
+  void _scrollToTab(int index) {
+    setState(() => _activeTab = index);
+    if (index == 1) setState(() => _filterOpen = true);
+    final key = index == 0 ? _addKey : (index == 1 ? _filterKey : _listKey);
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+      final ctx = key.currentContext;
+      if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 250), curve: Curves.easeInOut);
+    });
   }
 
   void _resetForm() {
@@ -54,8 +78,8 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
     _durationCtrl.clear();
     _descriptionCtrl.clear();
     setState(() {
-      _fromDate = DateTime.now();
-      _toDate = null;
+      _date = DateTime.now();
+      _followUpDate = null;
       _callType = 'I';
       _editingId = null;
     });
@@ -66,35 +90,23 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
       _editingId = c.id;
       _nameCtrl.text = c.name;
       _phoneCtrl.text = c.phone;
-      _fromDate = DateTime.tryParse(c.date);
-      _toDate = c.nextFollowUpDate != null ? DateTime.tryParse(c.nextFollowUpDate!) : null;
+      _date = DateTime.tryParse(c.date);
+      _followUpDate = c.nextFollowUpDate != null ? DateTime.tryParse(c.nextFollowUpDate!) : null;
       _durationCtrl.text = c.callDuration ?? '';
       _descriptionCtrl.text = c.description ?? '';
       _callType = c.callType;
     });
+    _scrollToTab(0);
   }
 
-  String _fmtDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
-  void _toggleSort(_SortKey key) {
-    setState(() {
-      if (_sortKey == key) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortKey = key;
-        _sortAsc = true;
-      }
-    });
-  }
+  String _fmtDate(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   Future<void> _submit() async {
-    if (_fromDate == null) {
-      _showFieldError('From Date is required.');
-      return;
-    }
-    if (_toDate != null && _toDate!.isBefore(_fromDate!)) {
-      _showFieldError('To Date cannot be before From Date.');
+    if (_date == null) return;
+    if (_followUpDate != null && _followUpDate!.isBefore(_date!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Follow-up date cannot be before the call date.'), backgroundColor: AppColors.dangerRed),
+      );
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -102,8 +114,8 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
     final call = PhoneCallEntity(
       name: _nameCtrl.text.trim(),
       phone: _phoneCtrl.text.trim(),
-      date: _fmtDate(_fromDate!),
-      nextFollowUpDate: _toDate != null ? _fmtDate(_toDate!) : null,
+      date: _fmtDate(_date!),
+      nextFollowUpDate: _followUpDate != null ? _fmtDate(_followUpDate!) : null,
       callDuration: _durationCtrl.text.trim().isEmpty ? null : _durationCtrl.text.trim(),
       description: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
       callType: _callType,
@@ -114,161 +126,242 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
 
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_editingId == null ? 'Phone call log added successfully.' : 'Phone call log updated successfully.')),
-      );
       _resetForm();
+      _scrollToTab(2);
     }
   }
 
-  void _showFieldError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: AppColors.dangerRed));
+  void _applyFilters() {
+    setState(() {
+      _search = _filterSearchCtrl.text.trim();
+      _typeFilterValue = _filterCallType;
+      _dateFilterValue = _filterDate == null ? null : _fmtDate(_filterDate!);
+      _filterChips = [
+        if (_search.isNotEmpty) 'Search: $_search',
+        if (_filterCallType != null) 'Type: ${_filterCallType == 'I' ? 'Incoming' : 'Outgoing'}',
+        if (_filterDate != null) 'Date: ${_fmtDate(_filterDate!)}',
+      ];
+      _filterOpen = false;
+    });
+  }
+
+  void _clearFilters() {
+    _filterSearchCtrl.clear();
+    setState(() {
+      _filterCallType = null;
+      _filterDate = null;
+      _search = '';
+      _typeFilterValue = null;
+      _dateFilterValue = null;
+      _filterChips = [];
+    });
+  }
+
+  void _removeChip(String chip) {
+    if (chip.startsWith('Search:')) _filterSearchCtrl.clear();
+    if (chip.startsWith('Type:')) _filterCallType = null;
+    if (chip.startsWith('Date:')) _filterDate = null;
+    _applyFilters();
+  }
+
+  void _toggleSort(String key) {
+    setState(() {
+      if (_sortKey == key) {
+        _sortAsc = _sortAsc == true ? false : true;
+      } else {
+        _sortKey = key;
+        _sortAsc = true;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(phoneCallListProvider);
     final isSaving = state.savingId != null;
-    final arrow = _sortAsc ? '▲' : '▼';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AdminBreadcrumbHeader(title: 'Phone Call Log'),
-          AdminSectionCard(
-            title: _editingId == null ? 'Add Phone Call' : 'Edit Phone Call',
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AdminTextField(
-                    label: 'Name',
-                    required: true,
-                    controller: _nameCtrl,
-                    maxLength: 100,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return 'Name is required.';
-                      if (value.length < 2) return 'Name must be at least 2 characters.';
-                      if (!RegExp(r"^[A-Za-z0-9\s\-'.,()]+$").hasMatch(value)) return 'Invalid characters in Name.';
-                      return null;
-                    },
-                  ),
-                  AdminTextField(
-                    label: 'Phone',
-                    required: true,
-                    controller: _phoneCtrl,
-                    hint: 'e.g. 9876543210 or +919876543210',
-                    keyboardType: TextInputType.phone,
-                    maxLength: 13,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return 'Phone is required.';
-                      if (!RegExp(r'^\+?\d{10,12}$').hasMatch(value)) return 'Phone number must be 10-12 digits.';
-                      return null;
-                    },
-                  ),
-                  AdminDateField(
-                    label: 'From Date',
-                    required: true,
-                    value: _fromDate,
-                    lastDate: DateTime.now(),
-                    onChanged: (d) => setState(() {
-                      _fromDate = d;
-                      if (_toDate != null && d != null && _toDate!.isBefore(d)) _toDate = d;
-                    }),
-                  ),
-                  AdminDateField(
-                    label: 'To Date',
-                    value: _toDate,
-                    firstDate: _fromDate,
-                    lastDate: DateTime.now(),
-                    onChanged: (d) => setState(() => _toDate = d),
-                  ),
-                  AdminTextField(
-                    label: 'Call Duration (HH:MM:SS)',
-                    controller: _durationCtrl,
-                    hint: 'HH:MM:SS',
-                    maxLength: 8,
-                    validator: (v) {
-                      final value = v?.trim() ?? '';
-                      if (value.isEmpty) return null;
-                      if (!RegExp(r'^([0-9]{1,2}):([0-5][0-9]):([0-5][0-9])$').hasMatch(value)) {
-                        return 'Enter duration in HH:MM:SS format (e.g., 00:10:00).';
-                      }
-                      return null;
-                    },
-                  ),
-                  AdminTextField(
-                    label: 'Description',
-                    controller: _descriptionCtrl,
-                    maxLines: 3,
-                    maxLength: 500,
-                    counterBuilder: (n) => '$n / 500 characters',
-                  ),
-                  AdminRadioGroup<String>(
-                    label: 'Call Type',
-                    value: _callType,
-                    options: const [('I', 'Incoming'), ('O', 'Outgoing')],
-                    onChanged: (v) => setState(() => _callType = v ?? 'I'),
-                  ),
-                  Row(
+          AdminStepperNav(
+            activeIndex: _activeTab,
+            steps: [
+              AdminStep(number: '01', icon: Icons.add, label: _editingId == null ? 'Add Phone Call' : 'Edit Phone Call'),
+              const AdminStep(number: '02', icon: Icons.filter_alt_outlined, label: 'Smart Filter'),
+              const AdminStep(number: '03', icon: Icons.description_outlined, label: 'Call Logs'),
+            ],
+            onTap: _scrollToTab,
+          ),
+          KeyedSubtree(
+            key: _addKey,
+            child: AdminStepFormCard(
+              title: _editingId == null ? 'Log New Phone Call' : 'Edit Phone Call Details',
+              subtitle: 'Fields marked with * are mandatory. Keep records of important incoming and outgoing calls.',
+              editingBadgeText: _editingId == null ? null : 'Editing Log: ${_nameCtrl.text}',
+              isEditing: _editingId != null,
+              saving: isSaving,
+              onReset: _resetForm,
+              onSave: _submit,
+              footerHelperText: 'All records are securely saved into the communication log module.',
+              fields: [
+                Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      WebButton(
-                        label: isSaving ? 'Saving...' : (_editingId == null ? 'Save' : 'Update'),
-                        onPressed: isSaving ? null : _submit,
+                      AdminTextField(
+                        label: 'Caller Name',
+                        required: true,
+                        controller: _nameCtrl,
+                        hint: 'Enter name',
+                        maxLength: 100,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Name is required.';
+                          if (value.length < 2) return 'Name must be at least 2 characters.';
+                          if (!RegExp(r"^[A-Za-z0-9\s\-'.,()]+$").hasMatch(value)) return 'Invalid characters in Name.';
+                          return null;
+                        },
                       ),
-                      if (_editingId != null) ...[
-                        const SizedBox(width: 8),
-                        WebButton(label: 'Cancel', color: const Color(0xFF6B7280), onPressed: _resetForm),
-                      ],
+                      AdminTextField(
+                        label: 'Phone No.',
+                        required: true,
+                        controller: _phoneCtrl,
+                        hint: 'e.g. +919876543210',
+                        keyboardType: TextInputType.phone,
+                        maxLength: 13,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Phone is required.';
+                          if (!RegExp(r'^\+?\d{10,12}$').hasMatch(value)) return 'Phone number must be 10-12 digits.';
+                          return null;
+                        },
+                      ),
+                      AdminDropdownField<String>(
+                        label: 'Call Type',
+                        required: true,
+                        value: _callType,
+                        hint: 'Select Call Type',
+                        items: const [
+                          DropdownMenuItem(value: 'I', child: Text('Incoming')),
+                          DropdownMenuItem(value: 'O', child: Text('Outgoing')),
+                        ],
+                        onChanged: (v) => setState(() => _callType = v ?? 'I'),
+                      ),
+                      AdminDateField(
+                        label: 'Date',
+                        required: true,
+                        value: _date,
+                        lastDate: DateTime.now(),
+                        onChanged: (d) => setState(() {
+                          _date = d;
+                          if (_followUpDate != null && d != null && _followUpDate!.isBefore(d)) _followUpDate = d;
+                        }),
+                      ),
+                      AdminDateField(
+                        label: 'Follow-up Date',
+                        value: _followUpDate,
+                        firstDate: _date,
+                        lastDate: DateTime.now(),
+                        onChanged: (d) => setState(() => _followUpDate = d),
+                      ),
+                      AdminTextField(
+                        label: 'Call Duration',
+                        required: true,
+                        controller: _durationCtrl,
+                        hint: 'HH:MM:SS',
+                        maxLength: 8,
+                        validator: (v) {
+                          final value = v?.trim() ?? '';
+                          if (value.isEmpty) return 'Call Duration is required.';
+                          if (!RegExp(r'^([0-9]{1,2}):([0-5][0-9]):([0-5][0-9])$').hasMatch(value)) {
+                            return 'Enter duration in HH:MM:SS format (e.g., 00:10:00).';
+                          }
+                          return null;
+                        },
+                      ),
+                      AdminTextField(
+                        label: 'Description',
+                        controller: _descriptionCtrl,
+                        hint: 'Brief summary of the call',
+                        maxLines: 3,
+                        maxLength: 500,
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          AdminSectionCard(
-            title: 'Phone Call List',
-            trailing: SizedBox(
-              width: 250,
-              child: TextField(
-                controller: _searchCtrl,
-                decoration: const InputDecoration(hintText: 'Quick search', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),
-                onChanged: (v) => ref.read(phoneCallListProvider.notifier).setSearch(v),
-              ),
-            ),
-            child: Column(
-              children: [
-                if (state.error != null) const AdminMessageBanner(error: 'Unable to load phone call logs.'),
-                AdminDataTable(
-                  isLoading: state.isLoading,
-                  emptyText: 'No phone calls found.',
-                  zebraStripe: true,
-                  columns: [
-                    AdminColumn('Name', width: 110, onTap: () => _toggleSort(_SortKey.name), sortArrow: _sortKey == _SortKey.name ? arrow : ''),
-                    AdminColumn('Phone', width: 100, onTap: () => _toggleSort(_SortKey.phone), sortArrow: _sortKey == _SortKey.phone ? arrow : ''),
-                    AdminColumn('From', width: 90, onTap: () => _toggleSort(_SortKey.date), sortArrow: _sortKey == _SortKey.date ? arrow : ''),
-                    AdminColumn('To', width: 90, onTap: () => _toggleSort(_SortKey.nextFollowUpDate), sortArrow: _sortKey == _SortKey.nextFollowUpDate ? arrow : ''),
-                    AdminColumn('Duration', width: 80, onTap: () => _toggleSort(_SortKey.callDuration), sortArrow: _sortKey == _SortKey.callDuration ? arrow : ''),
-                    const AdminColumn('Description', width: 100),
-                    AdminColumn('Type', width: 80, onTap: () => _toggleSort(_SortKey.callType), sortArrow: _sortKey == _SortKey.callType ? arrow : ''),
-                    const AdminColumn('Actions', width: 90),
+          KeyedSubtree(
+            key: _filterKey,
+            child: AdminSmartFilterSection(
+              stepNumber: '02',
+              subtitle: 'Find call logs easily by search, type, or date.',
+              open: _filterOpen,
+              onToggle: () => setState(() => _filterOpen = !_filterOpen),
+              chips: _filterChips,
+              onRemoveChip: _removeChip,
+              onClearAll: _clearFilters,
+              onApply: _applyFilters,
+              onClear: _clearFilters,
+              fields: [
+                AdminTextField(label: 'Search', controller: _filterSearchCtrl, hint: 'Name, Phone...'),
+                AdminDropdownField<String>(
+                  label: 'Call Type',
+                  value: _filterCallType,
+                  hint: 'All Types',
+                  items: const [
+                    DropdownMenuItem(value: 'I', child: Text('Incoming')),
+                    DropdownMenuItem(value: 'O', child: Text('Outgoing')),
                   ],
-                  rows: _buildRows(state),
+                  onChanged: (v) => setState(() => _filterCallType = v),
                 ),
-                AdminPaginationBar(
-                  page: state.page,
-                  pageSize: state.pageSize,
-                  totalCount: state.totalCount,
-                  onPageChange: (p) => ref.read(phoneCallListProvider.notifier).setPage(p),
-                  onPageSizeChange: (s) => ref.read(phoneCallListProvider.notifier).setPageSize(s),
-                  pageSizeOptions: const [10, 25, 50],
-                  pageSizeSuffix: ' / page',
-                  showPageNumbers: true,
+                AdminDateField(label: 'Date', value: _filterDate, onChanged: (d) => setState(() => _filterDate = d)),
+              ],
+            ),
+          ),
+          KeyedSubtree(
+            key: _listKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AdminBrowseHeading(stepNumber: '03', title: 'Browse Call Logs'),
+                Container(
+                  decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      if (state.error != null) const AdminMessageBanner(error: 'Unable to load phone call logs.'),
+                      AdminDataTable(
+                        isLoading: state.isLoading,
+                        emptyText: 'No phone call records found matching criteria.',
+                        columns: [
+                          const AdminColumn('SL', width: 36),
+                          AdminColumn('Name', width: 110, onTap: () => _toggleSort('name'), sortArrow: _sortKey == 'name' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          const AdminColumn('Phone', width: 100),
+                          const AdminColumn('Type', width: 80),
+                          AdminColumn('Date', width: 95, onTap: () => _toggleSort('date'), sortArrow: _sortKey == 'date' ? (_sortAsc == false ? '↓' : '↑') : ''),
+                          const AdminColumn('Duration', width: 80),
+                          const AdminColumn('Follow-up', width: 90),
+                          const AdminColumn('Actions', width: 90),
+                        ],
+                        rows: _buildRows(state),
+                      ),
+                      AdminPaginationBar(
+                        page: state.page,
+                        pageSize: state.pageSize,
+                        totalCount: state.totalCount,
+                        onPageChange: (p) => ref.read(phoneCallListProvider.notifier).setPage(p),
+                        onPageSizeChange: (s) => ref.read(phoneCallListProvider.notifier).setPageSize(s),
+                        pageSizeOptions: const [5, 10, 20, 30, 40, 50],
+                        summaryStyle: PaginationSummaryStyle.pageOfTotal,
+                        chevronStyle: true,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -280,48 +373,38 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
 
   List<List<Widget>> _buildRows(dynamic state) {
     final notifier = ref.read(phoneCallListProvider.notifier);
-    final visible = notifier.filtered((c, q) =>
-        c.name.toLowerCase().contains(q) ||
-        c.phone.toLowerCase().contains(q) ||
-        (c.description ?? '').toLowerCase().contains(q));
+    final visible = notifier.filtered((c, q) => c.name.toLowerCase().contains(q) || c.phone.toLowerCase().contains(q));
 
-    visible.sort((a, b) {
-      final mult = _sortAsc ? 1 : -1;
-      switch (_sortKey) {
-        case _SortKey.name:
-          return a.name.compareTo(b.name) * mult;
-        case _SortKey.phone:
-          return a.phone.compareTo(b.phone) * mult;
-        case _SortKey.date:
-          return a.date.compareTo(b.date) * mult;
-        case _SortKey.nextFollowUpDate:
-          return (a.nextFollowUpDate ?? '').compareTo(b.nextFollowUpDate ?? '') * mult;
-        case _SortKey.callDuration:
-          return (a.callDuration ?? '').compareTo(b.callDuration ?? '') * mult;
-        case _SortKey.callType:
-          return a.callType.compareTo(b.callType) * mult;
-      }
+    var filtered = visible;
+    if (_typeFilterValue != null) filtered = filtered.where((c) => c.callType == _typeFilterValue).toList();
+    if (_dateFilterValue != null) filtered = filtered.where((c) => c.date == _dateFilterValue).toList();
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      filtered = filtered.where((c) => c.name.toLowerCase().contains(q) || c.phone.toLowerCase().contains(q)).toList();
+    }
+
+    // Only Name/Date are sortable on web — Type has no click handler there.
+    final asc = _sortAsc ?? false;
+    filtered.sort((a, b) {
+      final mult = asc ? 1 : -1;
+      return _sortKey == 'name' ? a.name.compareTo(b.name) * mult : a.date.compareTo(b.date) * mult;
     });
 
-    return List.generate(visible.length, (index) {
-      final c = visible[index];
+    return List.generate(filtered.length, (index) {
+      final c = filtered[index];
       return [
-        Text(c.name, style: const TextStyle(fontSize: 12.5)),
-        Text(c.phone, style: const TextStyle(fontSize: 12.5)),
-        Text(c.date, style: const TextStyle(fontSize: 12.5)),
-        Text(c.nextFollowUpDate ?? '-', style: const TextStyle(fontSize: 12.5)),
-        Text(c.callDuration ?? '-', style: const TextStyle(fontSize: 12.5)),
-        Text(c.description ?? '-', style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
-        Text(c.callType == 'I' ? 'Incoming' : 'Outgoing', style: const TextStyle(fontSize: 12.5)),
-        AdminRowActions(
+        Text('${(state.page - 1) * state.pageSize + index + 1}', style: const TextStyle(fontSize: 12.5)),
+        Text(c.name, style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+        _naText(c.phone),
+        Text(c.callType == 'I' ? 'Incoming' : 'Outgoing', style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+        Text(c.date, style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis),
+        _naText(c.callDuration),
+        _naText(c.nextFollowUpDate),
+        AdminIconActionButtons(
           onEdit: () => _loadForEdit(c),
           isDeleting: state.deletingId == c.id,
           onDelete: () async {
-            final confirmed = await showAdminConfirmDialog(
-              context,
-              message: 'Are you sure you want to delete this phone call log? This action cannot be undone.',
-              confirmLabel: 'Delete',
-            );
+            final confirmed = await showAdminConfirmDialog(context, message: 'Are you sure you want to delete this phone call log? This action cannot be undone.');
             if (confirmed && c.id != null) {
               await ref.read(phoneCallListProvider.notifier).remove(c.id!);
             }
@@ -329,5 +412,12 @@ class _PhoneCallsScreenState extends ConsumerState<PhoneCallsScreen> {
         ),
       ];
     });
+  }
+
+  Widget _naText(String? value) {
+    if (value == null || value.trim().isEmpty || value.trim() == '-') {
+      return const Text('N/A', style: TextStyle(fontSize: 12.5, fontStyle: FontStyle.italic, color: AppColors.textTertiary));
+    }
+    return Text(value, style: const TextStyle(fontSize: 12.5), overflow: TextOverflow.ellipsis);
   }
 }

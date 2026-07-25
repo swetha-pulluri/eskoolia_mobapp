@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/inquiry_entity.dart';
 import '../../domain/entities/school_class_entity.dart';
 import '../providers/admissions_provider.dart';
-import '../providers/admissions_local_data.dart';
 import '../widgets/admissions_layout.dart';
 import '../widgets/morning_brief.dart';
 import '../widgets/class_portfolio_grid.dart';
@@ -22,18 +21,22 @@ String _healthStatus(int enrolled, int capacity, int overdueCount) {
   return 'healthy';
 }
 
-/// Admissions Command Center — converted from `AdmissionsCommandCenter.tsx`.
-/// Orchestrates Morning Brief → Class Portfolio → Class Workspace, plus the
-/// New/Edit Enquiry, Log Contact, Call Flow, WhatsApp Composer modals and
-/// the post-create AI Tip popup.
+/// Admissions Command Center — converted from `AdmissionsCommandCenter.tsx`,
+/// now wired to the real backend (`/api/v1/admissions/inquiries/`,
+/// `/api/v1/core/classes/`, `/api/v1/admissions/admin-setups/`). Orchestrates
+/// Morning Brief → Class Portfolio → Class Workspace, plus the New/Edit
+/// Enquiry, Log Contact, Call Flow, WhatsApp Composer (incl. AI Compose)
+/// modals and the post-create AI Tip popup.
 ///
-/// Not reproduced: the Broadcast modal and Document Checklist modal, and
-/// the WhatsApp Composer's "AI Compose" button. All three are unreachable
-/// dead code in the real web app too — their only trigger buttons are
-/// commented out there (`{/* <button onClick={...Broadcast...} /> */}`)
-/// or (AI Compose) require a live AI backend this offline module doesn't
-/// have. Building unreachable UI would add surface area with zero
-/// corresponding web behavior to match.
+/// Not reproduced: the Broadcast modal and the second, orphaned Document
+/// Checklist modal (`showDocModal`) in `AdmissionsCommandCenter.tsx` — both
+/// are unreachable dead code in the real web app too (their only trigger
+/// buttons are commented out / never set `true` anywhere). Building
+/// unreachable UI would add surface area with zero corresponding web
+/// behavior to match. The duplicate-inquiry/sibling detection banner and
+/// `/merge/` action inside `ApplicationDetailPanel.tsx` (distinct from the
+/// New Enquiry form's own duplicate check, which IS built) are also not
+/// yet ported — a disclosed gap, not a silent omission.
 class AdmissionsCommandCenterPage extends ConsumerStatefulWidget {
   const AdmissionsCommandCenterPage({super.key});
 
@@ -79,6 +82,7 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'New Enquiry',
       pageBuilder: (dialogContext, a1, a2) => EnquiryFormModal(
         editing: editing,
         classes: classes,
@@ -114,6 +118,7 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'Log Contact Update',
       pageBuilder: (dialogContext, a1, a2) => LogContactModal(
         inquiry: inq,
         today: _today,
@@ -134,6 +139,7 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'Call Flow',
       pageBuilder: (dialogContext, a1, a2) => CallFlowModal(
         inquiry: inq,
         today: _today,
@@ -156,6 +162,7 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'WhatsApp Composer',
       pageBuilder: (dialogContext, a1, a2) => WhatsAppComposerModal(
         inquiry: inq,
         onClose: () => Navigator.of(dialogContext).maybePop(),
@@ -255,13 +262,13 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
                           onReload: _reload,
                           forcedStage: _forcedStage,
                           classConfig: selectedClassConfig,
-                          onInlineStageMove: (id, stage) => AdmissionsLocalData.updateInquiry(
+                          onInlineStageMove: (id, stage) => ref.read(admissionsRepositoryProvider).updateInquiry(
                             id,
                             (c) => c.copyWith(status: stage, activeStatus: stage == 'enrolled' || stage == 'declined' ? 2 : 1),
                           ),
                           onBulkMoveStage: (ids, stage) async {
                             for (final id in ids) {
-                              await AdmissionsLocalData.updateInquiry(
+                              await ref.read(admissionsRepositoryProvider).updateInquiry(
                                 id,
                                 (c) => c.copyWith(status: stage, activeStatus: stage == 'enrolled' || stage == 'declined' ? 2 : 1),
                               );
@@ -269,12 +276,12 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
                           },
                           onBulkAssign: (ids, name) async {
                             for (final id in ids) {
-                              await AdmissionsLocalData.updateInquiry(id, (c) => c.copyWith(assigned: name));
+                              await ref.read(admissionsRepositoryProvider).updateInquiry(id, (c) => c.copyWith(assigned: name));
                             }
                           },
                           onBulkDelete: (ids) async {
                             for (final id in ids) {
-                              await AdmissionsLocalData.deleteInquiry(id);
+                              await ref.read(admissionsRepositoryProvider).deleteInquiry(id);
                             }
                           },
                         ),

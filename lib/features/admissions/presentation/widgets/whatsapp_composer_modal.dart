@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/inquiry_entity.dart';
+import 'ai_message_composer_modal.dart';
 
 List<String> generateWhatsAppMessages(InquiryEntity inq) {
   final firstName = inq.fullName.trim().split(RegExp(r'\s+')).firstOrNull ?? 'there';
@@ -14,14 +17,14 @@ List<String> generateWhatsAppMessages(InquiryEntity inq) {
 
 /// WhatsApp Composer — converted from `AdmissionsCommandCenter.tsx`'s
 /// "WHATSAPP MODAL". Three pre-written templates, an editable message
-/// body, copy-to-clipboard, and "Open WhatsApp" (which also logs a
-/// `whatsapp_sent` contact update, matching web's `sendWADirect`).
-///
-/// The web version also has an "AI Compose" button that hands off to a
-/// live AI backend endpoint (`AIMessageComposer`) — omitted here since
-/// this module has no backend/AI integration (same "no backend calls"
-/// architecture as the rest of Admissions).
-class WhatsAppComposerModal extends StatefulWidget {
+/// body, copy-to-clipboard, and "Open WhatsApp" (a `https://wa.me/91{phone}`
+/// deep link, matching web's `sendWADirect` — there is no backend WhatsApp
+/// send API, web itself only ever opens this link), which also logs a
+/// `whatsapp_sent` contact update. "AI Compose" hands off to
+/// [AiMessageComposerModal] (`/api/v1/admissions/ai/generate/` +
+/// `/actions/{channel}/` — see that file for the real, currently-broken
+/// backend behavior this faithfully reproduces).
+class WhatsAppComposerModal extends ConsumerStatefulWidget {
   final InquiryEntity inquiry;
   final VoidCallback onClose;
   final VoidCallback onSent;
@@ -34,10 +37,10 @@ class WhatsAppComposerModal extends StatefulWidget {
   });
 
   @override
-  State<WhatsAppComposerModal> createState() => _WhatsAppComposerModalState();
+  ConsumerState<WhatsAppComposerModal> createState() => _WhatsAppComposerModalState();
 }
 
-class _WhatsAppComposerModalState extends State<WhatsAppComposerModal> {
+class _WhatsAppComposerModalState extends ConsumerState<WhatsAppComposerModal> {
   late final List<String> _messages = generateWhatsAppMessages(widget.inquiry);
   int _selected = 0;
   late final _editedController = TextEditingController(text: _messages.first);
@@ -60,9 +63,34 @@ class _WhatsAppComposerModalState extends State<WhatsAppComposerModal> {
     });
   }
 
-  void _send() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening WhatsApp…')));
+  Future<void> _send() async {
+    final phone = widget.inquiry.phone.trim();
+    final uri = Uri.parse('https://wa.me/91$phone?text=${Uri.encodeComponent(_editedController.text)}');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to open WhatsApp.')));
+      return;
+    }
     widget.onSent();
+  }
+
+  void _openAiCompose() {
+    widget.onClose();
+    showGeneralDialog<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierLabel: 'AI Compose',
+      pageBuilder: (dialogContext, a1, a2) => AiMessageComposerModal(
+        inquiry: widget.inquiry,
+        onClose: () => Navigator.of(dialogContext).maybePop(),
+        onSent: () {
+          Navigator.of(dialogContext).maybePop();
+          widget.onSent();
+        },
+      ),
+    );
   }
 
   @override
@@ -75,7 +103,10 @@ class _WhatsAppComposerModalState extends State<WhatsAppComposerModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
             constraints: const BoxConstraints(maxWidth: 540, maxHeight: 620),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             clipBehavior: Clip.antiAlias,
@@ -88,6 +119,11 @@ class _WhatsAppComposerModalState extends State<WhatsAppComposerModal> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text('WhatsApp Composer — ${widget.inquiry.fullName}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white), overflow: TextOverflow.ellipsis),
+                  ),
+                  TextButton.icon(
+                    onPressed: _openAiCompose,
+                    icon: const Icon(Icons.auto_awesome, size: 14, color: Colors.white),
+                    label: const Text('AI Compose', style: TextStyle(fontSize: 12, color: Colors.white)),
                   ),
                   IconButton(onPressed: widget.onClose, icon: const Icon(Icons.close, size: 18, color: Colors.white)),
                 ]),
@@ -154,6 +190,7 @@ class _WhatsAppComposerModalState extends State<WhatsAppComposerModal> {
                 ),
               ),
             ]),
+            ),
           ),
         ),
       ),

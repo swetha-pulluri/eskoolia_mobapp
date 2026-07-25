@@ -148,6 +148,12 @@ class AdminPaginationBar extends StatelessWidget {
   /// ("10") on Visitor Book/Complaint/Admin Setup but "10 / page" on Phone
   /// Call Log/Postal Receive/Postal Dispatch.
   final String pageSizeSuffix;
+  /// The redesigned "numbered stepper" screens (Visitor Book, Complaints,
+  /// Phone Calls, Postal Receive/Dispatch) all use bare `‹`/`›` chevron
+  /// buttons instead of "Previous"/"Next" labels, a "Page size:" label
+  /// (with colon), and show no page-number text at all between the
+  /// chevrons. Set true to switch to that variant.
+  final bool chevronStyle;
 
   const AdminPaginationBar({
     super.key,
@@ -162,6 +168,7 @@ class AdminPaginationBar extends StatelessWidget {
     this.previousColor = const Color(0xFF64748B),
     this.nextColor = const Color(0xFF64748B),
     this.pageSizeSuffix = '',
+    this.chevronStyle = false,
   });
 
   @override
@@ -172,6 +179,51 @@ class AdminPaginationBar extends StatelessWidget {
     final summaryText = summaryStyle == PaginationSummaryStyle.pageOfTotal
         ? 'Showing page $page of $totalPages ($totalCount total records)'
         : 'Showing $start-$end of $totalCount records';
+
+    if (chevronStyle) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(summaryText, style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Page size:', style: TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+                const SizedBox(width: 6),
+                DropdownButton<int>(
+                  value: pageSize,
+                  underline: const SizedBox(),
+                  style: const TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                  items: pageSizeOptions.map((s) => DropdownMenuItem(value: s, child: Text('$s'))).toList(),
+                  onChanged: (v) {
+                    if (v != null) onPageSizeChange(v);
+                  },
+                ),
+              ],
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: page > 1 ? () => onPageChange(page - 1) : null,
+                  icon: const Icon(Icons.chevron_left, size: 20),
+                  visualDensity: VisualDensity.compact,
+                ),
+                IconButton(
+                  onPressed: page < totalPages ? () => onPageChange(page + 1) : null,
+                  icon: const Icon(Icons.chevron_right, size: 20),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),

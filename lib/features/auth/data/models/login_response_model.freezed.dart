@@ -12,7 +12,8 @@ part of 'login_response_model.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 LoginResponseModel _$LoginResponseModelFromJson(Map<String, dynamic> json) {
   return _LoginResponseModel.fromJson(json);
@@ -28,8 +29,12 @@ mixin _$LoginResponseModel {
   bool get is_super_admin => throw _privateConstructorUsedError;
   String get portal_type => throw _privateConstructorUsedError;
 
+  /// Serializes this LoginResponseModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-  @JsonKey(ignore: true)
+
+  /// Create a copy of LoginResponseModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $LoginResponseModelCopyWith<LoginResponseModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -37,17 +42,19 @@ mixin _$LoginResponseModel {
 /// @nodoc
 abstract class $LoginResponseModelCopyWith<$Res> {
   factory $LoginResponseModelCopyWith(
-          LoginResponseModel value, $Res Function(LoginResponseModel) then) =
-      _$LoginResponseModelCopyWithImpl<$Res, LoginResponseModel>;
+    LoginResponseModel value,
+    $Res Function(LoginResponseModel) then,
+  ) = _$LoginResponseModelCopyWithImpl<$Res, LoginResponseModel>;
   @useResult
-  $Res call(
-      {String access,
-      String refresh,
-      bool must_change_password,
-      String? school_code,
-      String? tenant_id,
-      bool is_super_admin,
-      String portal_type});
+  $Res call({
+    String access,
+    String refresh,
+    bool must_change_password,
+    String? school_code,
+    String? tenant_id,
+    bool is_super_admin,
+    String portal_type,
+  });
 }
 
 /// @nodoc
@@ -60,6 +67,8 @@ class _$LoginResponseModelCopyWithImpl<$Res, $Val extends LoginResponseModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of LoginResponseModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -71,65 +80,73 @@ class _$LoginResponseModelCopyWithImpl<$Res, $Val extends LoginResponseModel>
     Object? is_super_admin = null,
     Object? portal_type = null,
   }) {
-    return _then(_value.copyWith(
-      access: null == access
-          ? _value.access
-          : access // ignore: cast_nullable_to_non_nullable
-              as String,
-      refresh: null == refresh
-          ? _value.refresh
-          : refresh // ignore: cast_nullable_to_non_nullable
-              as String,
-      must_change_password: null == must_change_password
-          ? _value.must_change_password
-          : must_change_password // ignore: cast_nullable_to_non_nullable
-              as bool,
-      school_code: freezed == school_code
-          ? _value.school_code
-          : school_code // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tenant_id: freezed == tenant_id
-          ? _value.tenant_id
-          : tenant_id // ignore: cast_nullable_to_non_nullable
-              as String?,
-      is_super_admin: null == is_super_admin
-          ? _value.is_super_admin
-          : is_super_admin // ignore: cast_nullable_to_non_nullable
-              as bool,
-      portal_type: null == portal_type
-          ? _value.portal_type
-          : portal_type // ignore: cast_nullable_to_non_nullable
-              as String,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            access: null == access
+                ? _value.access
+                : access // ignore: cast_nullable_to_non_nullable
+                      as String,
+            refresh: null == refresh
+                ? _value.refresh
+                : refresh // ignore: cast_nullable_to_non_nullable
+                      as String,
+            must_change_password: null == must_change_password
+                ? _value.must_change_password
+                : must_change_password // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            school_code: freezed == school_code
+                ? _value.school_code
+                : school_code // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            tenant_id: freezed == tenant_id
+                ? _value.tenant_id
+                : tenant_id // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            is_super_admin: null == is_super_admin
+                ? _value.is_super_admin
+                : is_super_admin // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            portal_type: null == portal_type
+                ? _value.portal_type
+                : portal_type // ignore: cast_nullable_to_non_nullable
+                      as String,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$LoginResponseModelImplCopyWith<$Res>
     implements $LoginResponseModelCopyWith<$Res> {
-  factory _$$LoginResponseModelImplCopyWith(_$LoginResponseModelImpl value,
-          $Res Function(_$LoginResponseModelImpl) then) =
-      __$$LoginResponseModelImplCopyWithImpl<$Res>;
+  factory _$$LoginResponseModelImplCopyWith(
+    _$LoginResponseModelImpl value,
+    $Res Function(_$LoginResponseModelImpl) then,
+  ) = __$$LoginResponseModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String access,
-      String refresh,
-      bool must_change_password,
-      String? school_code,
-      String? tenant_id,
-      bool is_super_admin,
-      String portal_type});
+  $Res call({
+    String access,
+    String refresh,
+    bool must_change_password,
+    String? school_code,
+    String? tenant_id,
+    bool is_super_admin,
+    String portal_type,
+  });
 }
 
 /// @nodoc
 class __$$LoginResponseModelImplCopyWithImpl<$Res>
     extends _$LoginResponseModelCopyWithImpl<$Res, _$LoginResponseModelImpl>
     implements _$$LoginResponseModelImplCopyWith<$Res> {
-  __$$LoginResponseModelImplCopyWithImpl(_$LoginResponseModelImpl _value,
-      $Res Function(_$LoginResponseModelImpl) _then)
-      : super(_value, _then);
+  __$$LoginResponseModelImplCopyWithImpl(
+    _$LoginResponseModelImpl _value,
+    $Res Function(_$LoginResponseModelImpl) _then,
+  ) : super(_value, _then);
 
+  /// Create a copy of LoginResponseModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -141,50 +158,53 @@ class __$$LoginResponseModelImplCopyWithImpl<$Res>
     Object? is_super_admin = null,
     Object? portal_type = null,
   }) {
-    return _then(_$LoginResponseModelImpl(
-      access: null == access
-          ? _value.access
-          : access // ignore: cast_nullable_to_non_nullable
-              as String,
-      refresh: null == refresh
-          ? _value.refresh
-          : refresh // ignore: cast_nullable_to_non_nullable
-              as String,
-      must_change_password: null == must_change_password
-          ? _value.must_change_password
-          : must_change_password // ignore: cast_nullable_to_non_nullable
-              as bool,
-      school_code: freezed == school_code
-          ? _value.school_code
-          : school_code // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tenant_id: freezed == tenant_id
-          ? _value.tenant_id
-          : tenant_id // ignore: cast_nullable_to_non_nullable
-              as String?,
-      is_super_admin: null == is_super_admin
-          ? _value.is_super_admin
-          : is_super_admin // ignore: cast_nullable_to_non_nullable
-              as bool,
-      portal_type: null == portal_type
-          ? _value.portal_type
-          : portal_type // ignore: cast_nullable_to_non_nullable
-              as String,
-    ));
+    return _then(
+      _$LoginResponseModelImpl(
+        access: null == access
+            ? _value.access
+            : access // ignore: cast_nullable_to_non_nullable
+                  as String,
+        refresh: null == refresh
+            ? _value.refresh
+            : refresh // ignore: cast_nullable_to_non_nullable
+                  as String,
+        must_change_password: null == must_change_password
+            ? _value.must_change_password
+            : must_change_password // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        school_code: freezed == school_code
+            ? _value.school_code
+            : school_code // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        tenant_id: freezed == tenant_id
+            ? _value.tenant_id
+            : tenant_id // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        is_super_admin: null == is_super_admin
+            ? _value.is_super_admin
+            : is_super_admin // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        portal_type: null == portal_type
+            ? _value.portal_type
+            : portal_type // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$LoginResponseModelImpl implements _LoginResponseModel {
-  const _$LoginResponseModelImpl(
-      {required this.access,
-      required this.refresh,
-      this.must_change_password = false,
-      this.school_code,
-      this.tenant_id,
-      this.is_super_admin = false,
-      this.portal_type = 'admin'});
+  const _$LoginResponseModelImpl({
+    required this.access,
+    required this.refresh,
+    this.must_change_password = false,
+    this.school_code,
+    this.tenant_id,
+    this.is_super_admin = false,
+    this.portal_type = 'admin',
+  });
 
   factory _$LoginResponseModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$LoginResponseModelImplFromJson(json);
@@ -231,42 +251,46 @@ class _$LoginResponseModelImpl implements _LoginResponseModel {
                 other.portal_type == portal_type));
   }
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      access,
-      refresh,
-      must_change_password,
-      school_code,
-      tenant_id,
-      is_super_admin,
-      portal_type);
+    runtimeType,
+    access,
+    refresh,
+    must_change_password,
+    school_code,
+    tenant_id,
+    is_super_admin,
+    portal_type,
+  );
 
-  @JsonKey(ignore: true)
+  /// Create a copy of LoginResponseModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$LoginResponseModelImplCopyWith<_$LoginResponseModelImpl> get copyWith =>
       __$$LoginResponseModelImplCopyWithImpl<_$LoginResponseModelImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$LoginResponseModelImplToJson(
-      this,
-    );
+    return _$$LoginResponseModelImplToJson(this);
   }
 }
 
 abstract class _LoginResponseModel implements LoginResponseModel {
-  const factory _LoginResponseModel(
-      {required final String access,
-      required final String refresh,
-      final bool must_change_password,
-      final String? school_code,
-      final String? tenant_id,
-      final bool is_super_admin,
-      final String portal_type}) = _$LoginResponseModelImpl;
+  const factory _LoginResponseModel({
+    required final String access,
+    required final String refresh,
+    final bool must_change_password,
+    final String? school_code,
+    final String? tenant_id,
+    final bool is_super_admin,
+    final String portal_type,
+  }) = _$LoginResponseModelImpl;
 
   factory _LoginResponseModel.fromJson(Map<String, dynamic> json) =
       _$LoginResponseModelImpl.fromJson;
@@ -285,8 +309,11 @@ abstract class _LoginResponseModel implements LoginResponseModel {
   bool get is_super_admin;
   @override
   String get portal_type;
+
+  /// Create a copy of LoginResponseModel
+  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$LoginResponseModelImplCopyWith<_$LoginResponseModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

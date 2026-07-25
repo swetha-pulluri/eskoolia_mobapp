@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/id_card_entity.dart';
 import '../../domain/entities/role_entity.dart';
 import '../providers/administration_provider.dart';
+import '../utils/document_print_helper.dart';
 import '../widgets/admin_form_fields.dart';
 import '../widgets/admin_section_card.dart';
 import '../widgets/admin_breadcrumb_header.dart';
@@ -10,10 +11,11 @@ import '../widgets/web_button.dart';
 
 /// ID Cards — Generate & Print — converted from web `GenerateIdCardPanel.tsx`.
 /// Sub-tab of Documents Studio ("ID Cards" main tab / "Generate & Print" sub-tab).
-/// Note: web opens a native browser print popup for the generated cards —
-/// there is no mobile equivalent, so "Print Selected" here shows the same
-/// success/validation text the web itself shows rather than opening a print
-/// dialog.
+/// Note: web opens a native browser print popup (`window.open()` +
+/// `popup.print()`) built from the same template + recipient data; mobile
+/// has no browser popup, so "Print Selected" builds a real PDF from that
+/// same data instead and hands it to the native print/share sheet
+/// (`document_print_helper.dart`).
 class GenerateIdCardScreen extends ConsumerStatefulWidget {
   const GenerateIdCardScreen({super.key});
 
@@ -31,6 +33,7 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
   Set<int> _selectedIds = {};
   String? _message;
   bool _isError = false;
+  bool _printing = false;
 
   @override
   void dispose() {
@@ -81,7 +84,7 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
     });
   }
 
-  void _printSelected() {
+  Future<void> _printSelected(List<IdCardTemplateEntity> templates, List<RecipientEntity> recipients, bool isStudent) async {
     if (_templateId == null) {
       setState(() {
         _isError = true;
@@ -96,10 +99,41 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
       });
       return;
     }
+    final template = templates.where((t) => t.id == _templateId).firstOrNull;
+    if (template == null) {
+      setState(() {
+        _isError = true;
+        _message = 'Please select an ID card template.';
+      });
+      return;
+    }
+    final selected = recipients.where((r) => _selectedIds.contains(r.id)).toList();
     setState(() {
+      _printing = true;
       _isError = false;
-      _message = 'Print view opened for selected ID cards.';
+      _message = null;
     });
+    try {
+      await printIdCards(
+        recipients: selected,
+        template: template,
+        isStudentRole: isStudent,
+        gridGapPx: double.tryParse(_gridGapCtrl.text.trim()) ?? 12,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isError = false;
+        _message = 'Print view opened for selected ID cards.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isError = true;
+        _message = 'Unable to generate ID cards: $e';
+      });
+    } finally {
+      if (mounted) setState(() => _printing = false);
+    }
   }
 
   @override
@@ -107,14 +141,14 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
     final rolesAsync = ref.watch(rolesProvider);
     final classesAsync = ref.watch(classesProvider);
     final sectionsAsync = ref.watch(sectionsProvider);
-    final recipientsAsync = ref.watch(recipientsProvider);
-    final templatesState = ref.watch(idCardTemplateListProvider);
+    final recipientsAsync = ref.watch(recipientsProvider((roleId: _roleId, classId: _classId, sectionId: _sectionId)));
+    final templatesAsync = ref.watch(idCardGenerateTemplatesProvider);
 
     final roles = rolesAsync.maybeWhen(data: (r) => r, orElse: () => const <RoleEntity>[]);
     final classes = classesAsync.maybeWhen(data: (c) => c, orElse: () => const <ClassEntity>[]);
     final allSections = sectionsAsync.maybeWhen(data: (s) => s, orElse: () => const <SectionEntity>[]);
     final allRecipients = recipientsAsync.maybeWhen(data: (r) => r, orElse: () => const <RecipientEntity>[]);
-    final templates = templatesState.items;
+    final templates = templatesAsync.maybeWhen(data: (t) => t, orElse: () => const <IdCardTemplateEntity>[]);
 
     final isStudent = _isStudentRole(roles);
     final sections = _classId == null ? allSections : allSections.where((s) => s.classId == _classId).toList();
@@ -135,6 +169,19 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (rolesAsync.hasError || classesAsync.hasError || sectionsAsync.hasError || templatesAsync.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AdminMessageBanner(
+                      error: 'Unable to load setup data: '
+                          '${rolesAsync.error ?? classesAsync.error ?? sectionsAsync.error ?? templatesAsync.error}',
+                    ),
+                  ),
+                if (recipientsAsync.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: AdminMessageBanner(error: 'Unable to load recipients: ${recipientsAsync.error}'),
+                  ),
                 AdminDropdownField<int>(
                   label: 'Role',
                   value: _roleId,
@@ -187,7 +234,12 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
                   children: [
                     WebButton(label: 'Search', onPressed: () => _search(roles)),
                     const SizedBox(width: 8),
-                    WebButton(label: 'Print Selected', color: const Color(0xFF0F766E), onPressed: _printSelected),
+                    WebButton(
+                      label: _printing ? 'Generating...' : 'Print Selected',
+                      color: const Color(0xFF0F766E),
+                      disabled: _printing,
+                      onPressed: () => _printSelected(availableTemplates, recipients, isStudent),
+                    ),
                   ],
                 ),
               ],

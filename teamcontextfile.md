@@ -802,86 +802,568 @@ sets, so no functionality overlapped — the merge conflicts were all in shared 
 
 ---
 
-## Date: 2026-07-22 (Wednesday)
+## DAILY UPDATE
 
-Developer: Swetha
-Git Branch: feature/login-screen / Main
-
-Completed Work:
-- Extended the Student module with new sub-pages beyond Enroll & List: Student Categories,
-  Deleted, Disabled, Unassigned, Export, Promotion, and Multi Subject Assignment
-- Built the domain/data/repository layers backing each new sub-page (category, subject-assignment,
-  and promotion repositories, models, and remote datasources)
-- Reworked core student domain models (`student_data`, `school_class`, `student_record_audit`) and
-  the student list provider/state/notifier to support the new sub-pages
-- Added the shared `student_module_sub_nav`, `student_pager_footer`, and `student_subpage_header`
-  widgets used across the new Student sub-pages
-- Registered all new Student sub-module routes in `app_router.dart` and added the matching API
-  endpoints in `api_constants.dart`
-
----
-
-## Date: 2026-07-23 (Thursday)
-
-Developer: Swetha
-Git Branch: feature/login-screen / Main
-
-Completed Work:
-- Added the Student Groups feature (domain model, repository, remote datasource, and the Student
-  Groups page/widgets)
-- Started the new **Academics** module, matching the web frontend's Academics sub-nav (Foundation,
-  Staff Assignment, plus Timetable/Planning Studio/Reports left as "Soon"-badged placeholders to
-  match `COMING_SOON_PATHS`)
-- Built the Academics Foundation Setup flow: domain entities (class, section, room, subject,
-  holiday) and its step-by-step wizard pages (Academic Year, Classes, Rooms, Sections, Subjects)
-- Built the Academics Staff Assignment feature: domain entities, repository/datasource layer, the
-  Staff Assignment page with Workload and Audit Log tabs, and supporting dialogs/widgets
-- Registered the new Academics routes (`/academics/core-setup`, `/academics/staff-workspace`) in
-  `app_router.dart`
-
----
-
-## Date: 2026-07-24 (Friday)
-
-Developer: Swetha
+Name: Archana
+Date: July 23, 2026
 Git Branch: Main
 
-Completed Work:
-- Started and built out the new **Fees** module end-to-end, converting three screens from the web
-  frontend (`frontend/components/fees/*`) one at a time, each strictly matched against its literal
-  source rather than redesigned:
-  - **Fees Home** (`/fees/payments`): summary/KPI cards, task queue, live payment feed, and audit
-    trail cards, fully wired to the real backend (no mock data).
-  - **Fee Configuration** (`/fees/configuration`): all 5 tabs — Fee Groups, Fee Types, Fee
-    Schedules, Concession Rules, Late Fee Rules — with full CRUD, shared style/button/dropdown
-    helpers, and the help modal.
-  - **Fee Assignment** (`/fees/fee-assignment`): student roster grouped by class with
-    filters/tabs/stats, the Assign/Edit Fee dialog (per-fee-type create-or-update, matching the
-    source's `confirmAssign` exactly), Bulk Assign dialog (loops individual creates client-side —
-    confirmed via backend research that no bulk-assign endpoint exists), Change Payment Plan dialog
-    (confirmed cosmetic-only in the source, no backend persistence), and the Info dialog.
-- Traced backend behavior directly from `apps/fees` rather than guessing: the assignment endpoint
-  upserts on `(academic_year, student, fees_type)`, uses a **bare** DRF error envelope (unlike
-  several sibling fees endpoints, which wrap errors in `{success, message, errors}`), and
-  `FeeAssignment.status` is a server-computed property, never client-settable.
-- Found and fixed several real rendering crashes and layout bugs, each only visible with realistic
-  (non-empty) data rather than an empty/unauthenticated backend — a recurring lesson this module
-  reinforced repeatedly:
-  - A `Border` with non-uniform side colors combined with `borderRadius` crashing Fees Home's KPI
-    and task-queue cards.
-  - `RenderFlex` overflow in Fee Configuration's table "Actions" columns (4 tabs) — two side-by-side
-    buttons didn't fit a phone width; restacked vertically.
-  - A `Container(color:, decoration:)` crash in Fee Assignment's student roster row (Flutter
-    disallows setting both at once).
-  - A 32px `RenderFlex` overflow on every roster table row — the row `Container`'s own horizontal
-    padding wasn't accounted for in the fixed table width; fixed by including it in the width
-    calculation.
-  - A `FaModalFooter` (`Cancel` + a long primary-button label like "Confirm Plan Switch"/"Assign to
-    Unassigned") overflowing on narrow widths — switched its `Row` to a `Wrap`.
-  - A genuine startup crash (`Bad state: No element`, visible as a full red error screen for a few
-    seconds on first opening Fee Assignment): the YEAR filter dropdown looked up a label via an
-    unguarded `firstWhere` before the academic-years API call had resolved. Fixed with the file's
-    existing `.firstOrNull` safe-lookup pattern.
-- Verified throughout with `flutter analyze` (clean each pass) and headless Chrome/Playwright
-  checks — including fake-repository provider overrides and small isolated widget harnesses built
-  specifically to reproduce layout bugs that don't show up against empty/fast-resolving data.
+Work Done Today:
+
+1. Connected the entire **Administration** module to the real backend. On 20 July the module's
+   API integration had been deliberately stripped out per instruction and replaced with
+   `AdministrationLocalData` (in-memory placeholder data), with the real repository/datasource
+   left untouched underneath specifically so it could be reconnected later — that reconnection is
+   what this session completed.
+2. Re-inspected the web frontend (`components/administration/*.tsx`) and the backend
+   (`apps/admissions`, `apps/students`) for every sub-module before changing anything, using 4
+   parallel research passes (Communication Hub, Postal Management, System Config, Documents
+   Studio) to verify the existing Flutter screens against the literal web/backend source rather
+   than assuming the earlier local-data-backed UI already matched.
+3. Fixed real bugs found during that verification, all inside `eskoolia-mobapp` only:
+   - The backend wraps every create/update response as `{"success","message","data"}` (not a bare
+     record) — added a shared `_unwrap()` helper in `administration_remote_datasource.dart` so
+     every create/update call parses the real nested record instead of an empty one.
+   - Purpose / Complaint Type / Complaint Source are returned by the backend as the resolved
+     **name** string, never the numeric id — Visitor Book's and Complaints' Edit forms were
+     preselecting nothing in those dropdowns; added id-or-name dual-match resolution (mirrors
+     web's own `editRow`/`edit()` workaround for the same ambiguity).
+   - Complaint attachments, and Postal Received/Dispatched attachments, were being silently
+     dropped (sent as plain JSON with no file field) — switched both to multipart `file_upload`,
+     matching Visitor Book's existing correct pattern.
+   - Added the missing "View existing file" link on Postal Received/Dispatched edit forms, and
+     the missing CSV Export button on Postal Dispatch (web has a client-side CSV export; Flutter
+     had none).
+   - Student Categories: added the backend's `summary/`, `check-name/`, `bulk-status/`,
+     `bulk-delete/` endpoints and `search`/`attention` query params (none were wired). Reworked
+     the delete flow — the real API never annotates `students_count` on list/CRUD responses (a
+     backend limitation, also present on web), so the old "pre-check the count, branch the
+     dialog" logic could never actually trigger; changed it to attempt the delete and react to the
+     backend's actual "assigned to students" error with the same Deactivate-instead escape hatch.
+   - Admin Setup: added surfacing of the backend's delete-dependency-block message (e.g. "Cannot
+     delete 'X'. It is used in: ...") and the missing per-type page-size selector (5/10/25/50).
+4. Rewired `administration_provider.dart` so Communication Hub, Postal Management, and System
+   Config all read/write through the real `AdministrationRepository` instead of
+   `AdministrationLocalData` — no screen file needed to change for these.
+5. Built out **Documents Studio** (Certificates, ID Cards) from scratch — this part had zero
+   backend wiring at all before today, not even unwired real endpoints. Verified first that the
+   backend genuinely has a complete, working implementation (`IdCardTemplate`/
+   `CertificateTemplate` models, full CRUD viewsets, `generate-setup`/`recipients` actions,
+   RBAC-gated) despite the web project's own internal task tracker claiming otherwise (confirmed
+   that tracker is stale). Added: `fromJson`/`toJson` to `IdCardTemplateEntity`/
+   `CertificateTemplateEntity` (including the backend's own `pading_left` field-name typo,
+   reproduced verbatim so saves actually hit the right field), `ClassEntity`/`SectionEntity`/
+   `RecipientEntity.fromJson`, and full datasource/repository methods for both templates'
+   CRUD + `generate-setup` + `recipients`, plus a `getRoles()` call to
+   `/api/v1/access-control/roles/`. Rewired `rolesProvider`/`classesProvider`/`sectionsProvider`
+   (shared, since both document types' `generate-setup` return identical roles/classes/sections)
+   and turned `recipientsProvider` into a `.family` provider keyed by (role, class, section) since
+   the real endpoint requires a `role` query param — updated both Generate & Print screens'
+   provider call sites accordingly (the one Documents Studio screen change this needed).
+6. Replaced every fake file-upload tap handler (`onTap: () => setState(() => _name = 'literal
+   filename.jpg')`) in Certificates and ID Cards' Design Template forms with real `file_picker`
+   picks + multipart upload wired through to the backend's actual field names (ID Card's 4 fields
+   non-obviously map "Background Image (Front)" → `background_upload`, "Background Image (Back)"
+   → `profile_upload`, matching a real naming quirk in the web source itself, not a Flutter bug).
+7. Deleted `administration_local_data.dart` entirely once nothing referenced it any longer, and
+   corrected a stale doc comment in `administration_provider.dart` that still claimed Documents
+   Studio was local-data-backed.
+8. Ran `flutter analyze` (0 errors — same pre-existing info-level lints as always) and a full
+   `flutter build web --release` (succeeded) after every group of changes.
+9. Confirmed that only files inside `eskoolia-mobapp` were modified and no web frontend or
+   backend files were changed at any point. Not committed or pushed.
+
+---
+
+## DAILY UPDATE
+
+Name: Archana
+Date: July 23, 2026
+Git Branch: Main
+
+Work Done Today:
+
+1. Made a critical discovery while re-verifying Visitor Book against fresh screenshots the user
+   provided: the web frontend/backend checked out on `main` — the branch every prior Administration
+   session (including all of today's earlier work) had verified against — is stale. The real,
+   currently-shipped web app lives on `origin/demo` (byte-identical to `origin/mobile` and
+   `origin/BugFix`), which contains an "Administration module UI Modernization & Standardization"
+   pass that never made it back to `main`. Found this by grepping all branches for UI text visible
+   in the user's screenshots ("Editing Visitor:", "Browse Visitor List") — 14 branches matched;
+   `main` did not.
+2. Re-verified, screen by screen, against this actual authoritative source (reading the real
+   `.tsx` files via `git show origin/demo:...`, plus the corresponding backend
+   `apps/admissions`/`apps/students` files, which also differ from `main`):
+   - **Visitor Book, Complaints, Phone Calls, Postal Receive, Postal Dispatch**: all redesigned
+     around a shared 3-step numbered nav (`01 Add/Edit` → `02 Smart Filter` → `03 Browse List`),
+     new card titles/subtitles, an "Editing X: {value}" chip in edit mode, relabeled fields
+     (e.g. Phone Call's "Name"/"From Date"/"To Date" → "Caller Name"/"Date"/"Follow-up Date",
+     Call Type switched from radio buttons to a dropdown), a collapsible Smart Filter section,
+     icon-button (pencil/trash) row actions replacing text Edit/Delete buttons, and a
+     "Confirm Delete" modal with a circular red trash-icon badge.
+   - **Admin Setup**: a simpler 2-step nav (no Smart Filter), validation relaxed to just
+     "type selected + name not empty" (server-side min-length/meaningless-text checks were
+     dropped too), and — confirmed directly from source — the redesigned list has no pagination
+     controls at all, a real, reproducible limitation of the current web app itself, not
+     something to "fix" while matching it.
+   - **Complaints' backend model changed**: Complaint Type/Source are now real FK lookup tables
+     (`ComplaintType`/`ComplaintSource`, new `/complaint-types/`/`/complaint-sources/` endpoints)
+     replacing the old admin-setup type=2/3 entries entirely.
+   - **Complaints/Phone Calls/Postal Receive/Postal Dispatch/ID Cards all fetch their list
+     endpoint with zero query params** — not even `page`/`page_size` — so the real web app only
+     ever shows the backend's default first page (10 records), with all further
+     search/filter/sort/pagination happening client-side over that fixed, capped set. Confirmed
+     this is real (not a guess) by reading `ApiPageNumberPagination.page_size = 10` directly.
+     Reproduced this faithfully rather than "improving" it, since the task was to match web
+     exactly — flagged clearly in code comments as a known, confirmed characteristic of the
+     current web app.
+   - **ID Cards**: kept its own distinct two-column layout (not the stepper — this panel had a
+     separate, earlier bug-fix pass rather than the same modernization), but gained live image
+     thumbnail previews on all 4 file uploads and dropped the old CSV-style pagination.
+   - Confirmed **Certificates, Generate Certificate, and Generate ID Card panels are unchanged**
+     (byte-identical to `main`), so no rebuild was needed there.
+3. Rebuilt, in full: `visitor_book_screen.dart`, `complaints_screen.dart`, `phone_calls_screen.dart`,
+   `postal_receive_screen.dart`, `postal_dispatch_screen.dart`, `admin_setup_screen.dart`, plus a
+   backend-contract-driven polish pass on `id_cards_screen.dart` (image previews, removed
+   pagination, restored the "Example: Teacher ID Card, Student ID Card, etc." helper line).
+4. Built a new shared widget set (`admin_stepper_shell.dart`: `AdminStepperNav`,
+   `AdminStepFormCard`, `AdminSmartFilterSection`, `AdminBrowseHeading`) so the 6 stepper-based
+   screens share one faithful implementation of the nav/card/filter/heading shell instead of each
+   reinventing it, and extended `admin_confirm_dialog.dart`/`admin_data_table.dart`'s
+   `AdminPaginationBar` (new chevron-only pagination variant) and `admin_form_fields.dart`'s
+   `AdminFileField` (inline image-preview support) to match the redesign's exact visual style.
+5. Backend wiring changes to support the above: added `search`/`purpose`/`date` query params to
+   Visitor Book's real, server-side-filtered endpoint; added `getComplaintTypes()`/
+   `getComplaintSources()` datasource methods against the new FK tables; switched
+   Complaints/Phone Calls/Postal Receive/Postal Dispatch/ID Cards to the real "no query params"
+   fetch the web app itself uses.
+6. Deleted `admin_badges.dart` (the old complaint-type/source colored-badge widget) and
+   `AdminRadioGroup` once both became fully unused after the rebuild — the redesigned web shows
+   plain text for complaint type/source (not colored badges) and a Call Type dropdown (not radios).
+7. Ran `flutter analyze` (0 errors, same pre-existing info-level lints throughout) and a full
+   `flutter build web --release` (succeeded) after completing the rebuild.
+8. Confirmed that only files inside `eskoolia-mobapp` were modified — all frontend/backend
+   inspection was done read-only via `git show` against `origin/demo`, never touching the checked-
+   out working tree of the reference repo. Not committed or pushed.
+
+---
+
+## DAILY UPDATE
+
+Name: Archana
+Date: July 23, 2026
+Git Branch: Main
+
+Work Done Today (continued):
+
+1. Made a second critical discovery, this time about the **backend**: probed the live server
+   directly (`curl` against `localhost:8000`, unauthenticated — 401 means a route exists, 404 means
+   it genuinely doesn't) to root-cause a fresh batch of reported bugs (Complaint Type/Source
+   dropdowns not clickable, Complaints failing to load/save, Purpose dropdown data mismatched).
+   Confirmed `/api/v1/admissions/complaint-types/`, `/complaint-sources/`, and `/staff-lookup/` —
+   the three standalone routes the earlier `origin/demo`-based Complaints rebuild depended on —
+   **do not exist on the deployed backend** (404), while every other route touched by today's
+   earlier rebuild (visitors, admin-setups, postal, phone-call-logs, id-card-templates +
+   generate-setup + recipients, certificate-templates + generate-setup + recipients,
+   access-control/roles, students/categories + summary/check-name/bulk-status/bulk-delete) does
+   exist. Conclusion: the deployed backend is the older (`main`-equivalent) schema for Complaints
+   specifically — `complaint_type`/`complaint_source` are plain `AdminSetupEntry`-backed
+   `CharField`s (resolved to the setup's name server-side), not the new dedicated
+   `ComplaintType`/`ComplaintSource` FK tables — even though the deployed frontend shell for
+   Complaints is the newer stepper redesign. Reverted `ComplaintEntity`/the datasource to target
+   this actually-working contract instead.
+2. Fixed the real root cause behind several "not loading" reports: a recurring error-swallowing
+   bug where a screen checked `items.isEmpty` (or defaulted an errored `FutureProvider` to `const
+   []` via `.maybeWhen(orElse: ...)`) **before** checking whether the fetch had actually failed —
+   so a genuine backend error silently rendered as "No entries yet." / "No roles available." with
+   the real error message never shown anywhere. Found and fixed this pattern in: Admin Setup's
+   Browse accordion (System Config), and the Roles fetch on ID Cards / Certificates / both
+   Generate & Print screens (Documents Studio) — all now show the actual error text when a fetch
+   fails, instead of a misleading "empty" state.
+3. **Visitor Book** — Purpose dropdown: switched from a server-side `type=1`-filtered fetch (which
+   returned different/more complete data than the real web ever shows) to the exact same
+   unfiltered `/api/v1/admissions/admin-setups/` fetch the real `VisitorBookPanel.tsx` makes,
+   client-filtered for type "1" — now genuinely identical to web, including web's own real
+   limitation (only the backend's first 5 setup entries across all types are ever visible).
+4. **Complaints** — fixed end to end:
+   - Complaint Type/Source dropdowns now source from the same shared unfiltered admin-setups
+     fetch (type "2"/"3"), fixing "not clickable" (previously always empty because the endpoint
+     they called 404's).
+   - Save button: reverted the entity's `toJson()` to send `complaint_type`/`complaint_source` as
+     plain id/name strings (not parsed ints) and restored `assigned` to the payload (the real
+     deployed backend persists it as a plain field; the newer FK-based schema that drops it isn't
+     what's deployed).
+   - Fixed a live id-vs-name comparison bug in the Smart Filter and sort/display logic — the
+     backend always returns these two fields resolved to the setup's **name**, so filtering/
+     sorting/display now resolves the filter dropdown's selected id to that same name before
+     comparing, instead of comparing an id against a name (which could never match).
+   - "Browse Complaint shows Unable to load": the list card was showing a hardcoded generic string
+     instead of the real backend error for every failure — now shows the actual message so any
+     remaining issue is diagnosable instead of hidden.
+   - Added the missing "Attachment" field label above the file picker (added a reusable `label`
+     parameter to the shared `AdminFileField` widget for this).
+5. **Documents Studio**:
+   - ID Card List's Edit button: it was actually updating the form state correctly, but the form
+     card sits above the list in this screen's single scrolling column with no scroll-to-view — so
+     tapping Edit on a row further down the list silently updated state off-screen with no visible
+     change, reading as "not working." Added a scroll-to-form-section jump, matching the pattern
+     already used on the redesigned stepper screens.
+   - Re-verified Generate & Print (ID Cards) end to end — found no actual hardcoded/dummy values
+     anywhere (every dropdown/list already sourced from a real provider); the "dummy data"
+     impression traced back to the same roles-fetch error-swallowing bug (#2 above), now fixed.
+   - Certificate Design Template's Applicable Role dropdown: found it was wired to the ID Card
+     module's shared `generate-setup` roles list, but the real `CertificatePanel.tsx` sources its
+     role picker from a completely different endpoint, `/api/v1/access-control/roles/`, called
+     directly — confirmed by re-reading the literal web source rather than assuming shared data
+     was safe to reuse. Split into dedicated `certificateRolesProvider` (`getRoles()`, already built
+     in an earlier session but never wired to any screen) and, for full correctness, gave
+     Certificate's own Generate & Print screen its own `certificate-templates/generate-setup/`-
+     backed roles/classes/sections/recipients providers instead of sharing ID Card's — both real,
+     working, previously-unused endpoints from earlier Documents Studio backend work.
+6. **System Config** — Admin Setup Browse list: same error-swallowing bug as above (item #2); the
+   endpoint itself (`/admin-setups/?type=&page=&page_size=`) was already correctly wired and
+   confirmed live, so once the real error (if any) is visible this should now either show data or
+   a diagnosable message instead of a silent, misleading empty state.
+7. Ran `flutter analyze` (0 errors, only pre-existing/expected info-level lints) and a full
+   `flutter build web --release` (succeeded) after all fixes.
+8. Confirmed that only files inside `eskoolia-mobapp` were modified; all backend verification was
+   read-only (`git show` against reference commits, plus unauthenticated `curl` probes against the
+   already-running local backend to check route existence — no data was created, modified, or
+   deleted on the backend). Not committed or pushed.
+
+---
+
+Name: Archana
+Date: July 23, 2026 (later same day)
+Git Branch: Main
+
+## CORRECTION to item #1 above — the unauthenticated route-probing conclusion was wrong
+
+Went back into the Complaints bugs with direct, read-only database inspection instead of
+`curl` route-probing, because probing alone can't distinguish "route doesn't exist" from "route
+exists but the code behind it is broken." Findings:
+
+1. **The 404s for `/complaint-types/`, `/complaint-sources/`, `/staff-lookup/` were real, but they
+   only prove those routes aren't registered in `main`'s `urls.py` — they say nothing about which
+   Complaint schema the actual database is in.** Queried the live Neon Postgres database directly
+   (read-only: `information_schema.columns`, real row counts) and found `complaint_entries` has
+   **already been migrated** to `origin/demo`'s FK-based design: `complaint_type_id`,
+   `complaint_source_id`, `assigned_to_id` columns exist; the old `assigned` column does **not**
+   exist at all; dedicated `complaint_types`/`complaint_sources` tables exist with real per-school
+   seed data (5 types / 6 sources for school id 1, etc). `django_migrations` confirms
+   `0013_complaint_master_data`, `0014_update_complaint_entry_fkeys`,
+   `0015_fix_complaint_entry_text_to_fk` are marked applied — but those three migration files
+   **do not exist on disk in the `main` branch checkout** (only on `origin/demo`/`origin/BugFix`).
+   Conclusion: someone ran `demo`'s Complaint migrations against the shared dev database directly,
+   but `demo`'s corresponding model/serializer/view code was never merged into `main`. The database
+   and the `main` branch's backend code are now permanently out of sync for this one table.
+2. **Directly reproduced the "Browse Complaints HTTP 500"**: replayed `main`'s real
+   `ComplaintEntrySerializer` against a real `complaint_entries` row (in-process, read-only, no
+   writes) and got `psycopg2.errors.UndefinedColumn: column complaint_entries.assigned does not
+   exist`, uncaught, → Django 500. This fires on every single list/retrieve, and on create/update
+   too (the INSERT/UPDATE statement also references the missing `assigned` column) — it is a
+   **backend-only defect** with the local database's migration state vs. `main`'s code; no
+   Flutter-side change can route around a server that throws before returning a response. This
+   needs a backend fix: either merge `demo`'s Complaint model/serializer/views/urls into `main` (it
+   already matches the live schema and has real seed data), or write a corrective migration to
+   restore `assigned` / revert the FK columns if `main`'s design is preferred instead.
+3. Reverted today's earlier "keep Complaints on the AdminSetupEntry/CharField contract" decision
+   (item #1/#4 above) — that was based on the incomplete route-probing evidence and is now known to
+   be wrong. Rebuilt Complaints' data layer against `origin/demo`'s actual, live-schema-matching
+   contract:
+   - New `ComplaintLookupEntity` (`id`, `name`, `description`, `isActive`) plus
+     `getComplaintTypes()`/`getComplaintSources()` on the datasource/repository, hitting the real
+     dedicated `/api/v1/admissions/complaint-types/` and `/complaint-sources/` endpoints (not
+     Admin Setup entries at all for these two — confirmed via `origin/demo`'s
+     `ComplaintTypeListView`/`ComplaintSourceListView`/serializers). Passed `page_size=100`
+     explicitly (the server's own max) rather than relying on the unstated default, to avoid a
+     repeat of the pagination-starvation bug described in #4 below.
+   - `ComplaintEntity.toJson()` now sends `complaint_type`/`complaint_source` as real integer FK
+     ids (parsed from the dropdown's string value), matching `origin/demo`'s
+     `ComplaintEntrySerializer`/`ComplaintPanel.tsx` (`parseInt(complaintType)`), not the old
+     name-resolving `CharField` contract.
+   - `assigned`/`assigned_to` is deliberately **not** sent in the create/update payload — checked
+     `origin/demo`'s real `ComplaintPanel.tsx` and its "Assigned To" field is captured in local
+     state but never included in the submit payload either (a pre-existing gap in the reference
+     web itself, not something to silently "fix" while trying to match it exactly). The read side
+     still maps `assigned_to_name` from the GET response for display.
+   - Phone validation corrected to `origin/demo`'s real client rule, `/^[6-9]\d{9}$/` ("Please
+     enter a valid 10-digit mobile number"), replacing the looser digits-only check that was
+     copied from `main`'s older `ComplaintPanel.tsx` reference.
+   - Added a visible validation banner on Save when the form is incomplete (missing Type/Source/
+     required fields) — previously the Save button silently no-op'd with zero feedback, which is
+     very plausibly what "Save button not connected to backend" actually looked like to a user.
+4. **Separately fixed a real, confirmed pagination-starvation bug** affecting Visitor Book's
+   Purpose dropdown (which *does* still correctly source from Admin Setup entries — that part
+   of the schema is untouched): `AdminSetupEntryViewSet` paginates at `page_size=5` by default,
+   and `AdminSetupEntry.Meta.ordering = ['type', 'name']` sorts type "1" (Purpose) first. Any
+   school with 5+ Purpose entries fills the *entire* unfiltered page with Purpose rows alone,
+   starving out any other type entirely — confirmed against real data (school id 1: 6 Purpose /
+   7 Complaint Type / 6 Source entries; the old unfiltered fetch returned only 5, all Purpose).
+   Fixed by switching `purposeOptionsProvider` to the already-existing, server-side type-filtered
+   `getAdminSetups(type: '1', pageSize: 50)` instead of the shared unfiltered fetch. Removed the
+   now-dead `getAllAdminSetupsForDropdowns()` from all three layers.
+5. Ran `flutter analyze` (0 errors, only pre-existing info-level lints) and `flutter build web
+   --release` (succeeded) after all changes.
+6. Confirmed no files outside `eskoolia_mobapp` were modified and no git operations were
+   performed. All backend investigation was read-only Django ORM/raw-SQL queries against the
+   shared dev database (real school/complaint/admin-setup data was read, never written) plus
+   `git show origin/demo:...`/`git show origin/BugFix:...` for read-only reference-code
+   comparison. One `get_or_create()` call during initial troubleshooting hit an unrelated
+   not-null constraint and was automatically rolled back by Django's atomic transaction before any
+   row was persisted — verified afterward (`School.objects.filter(code='DEBUGTEST').exists()` →
+   `False`) and the throwaway script was deleted immediately.
+
+---
+
+Name: Archana
+Date: July 23, 2026 (later same day, third pass)
+Git Branch: Main
+
+## Full Administration re-audit: two systemic, non-code root causes found + real Documents Studio fixes
+
+Went through Visitor Book, Complaints, Documents Studio, and System Config again end to end,
+this time also directly exercising the real DRF views (via `rest_framework.test.force_authenticate`,
+read-only) instead of just reading serializer code, to see exactly what a real authenticated request
+returns. Two big, systemic findings that explain most of the remaining "dropdown data mismatch" /
+"not loading" reports and are **not fixable from `eskoolia_mobapp`**:
+
+1. **Superuser test accounts see every tenant's data merged together, by design.** Several
+   `get_queryset()`s (`AdminSetupEntryViewSet`, `IdCardTemplateViewSet.generate_setup`,
+   `CertificateTemplateViewSet.generate_setup`, etc.) skip the `school_id` filter entirely when
+   `request.user.is_superuser`. Confirmed directly: the `admin` account (school_id=1, but
+   `is_superuser=True`) sees 249 roles / 143 classes / 302 sections merged from every school in the
+   database when calling `id-card-templates/generate-setup/`, vs. the handful that belong to school
+   1 alone. This is exactly what produced the earlier "Purpose dropdown has duplicate/extra values"
+   report — those were real rows from schools 49/71/91, not a Flutter bug (see previous entry). Any
+   Administration screen tested while logged in as a superuser will show this same merged-tenant
+   data for every dropdown that ultimately reads from one of these `generate_setup`-style actions.
+   **Fix needed on the account side, not in code:** test with a normal, school-scoped account.
+2. **The only role with any Administration permission (`Principal`, school 1) has nobody assigned
+   to it.** Checked a real, non-superuser account (`swetha`, school 1, role `Teacher`): her 35
+   permission codes contain zero `admin_section.*` codes. Every `AdminSectionRBACMixin`-protected
+   endpoint (Visitor Book, Complaints, Admin Setup, Postal, Phone Calls, ID Card/Certificate
+   templates — all of them) returns a real `403 Permission Denied` for this account, confirmed via
+   `force_authenticate` + the actual view. This is indistinguishable, from either web or Flutter,
+   from "not loading"/"failing" — it's the same server-side check either app hits. Verified Flutter
+   already surfaces the real `error.message` from this response (`dio_client.dart`'s
+   `_extractErrorMessage`) rather than swallowing it, so no code change was needed there — just
+   flagging that whoever tests Complaints/Admin Setup/etc. needs an account whose role actually has
+   `admin_section.*` permissions granted (via Roles & Permissions), or a superuser (which then hits
+   finding #1 instead).
+
+Also re-confirmed the `complaint_entries.assigned` column-missing defect from the previous entry is
+still present (`ComplaintEntrySerializer` still throws `UndefinedColumn` against live data) — no
+change on the backend side since last time; Complaints' Browse/Save will keep failing until that's
+fixed on the backend, independent of anything in this app.
+
+### Real fixes made this pass (Documents Studio — dispatched a research subagent first to map every
+web/backend/Flutter file involved before touching code):
+
+1. **ID Card Design Template's role source was wrong.** `IdCardPanel.tsx` calls
+   `/api/v1/access-control/roles/` first and only falls back to `generate-setup`'s roles if that
+   comes back empty; `id_cards_screen.dart` was always using the `generate-setup` roles only (never
+   the direct endpoint). Added `idCardDesignRolesProvider` with that exact primary+fallback order,
+   used only by `id_cards_screen.dart` — left `rolesProvider` (`generate-setup`-based) untouched
+   since that one's still correct for `generate_id_card_screen.dart`'s own role dropdown per
+   `GenerateIdCardPanel.tsx`.
+2. **Both Generate & Print screens sourced their Template dropdown from the wrong endpoint.**
+   `GenerateIdCardPanel.tsx`/`GenerateCertificatePanel.tsx` populate their Template dropdown from
+   `generate-setup`'s own embedded, unpaginated `templates` array — Flutter was using the separate,
+   paginated CRUD list endpoints (`idCardTemplateListProvider`/`certificateTemplateListProvider`,
+   default `page_size=10`) instead, which would silently truncate for any school with more than 10
+   templates. Added `templates` (raw JSON) to `DocumentGenerateSetup`, plus
+   `idCardGenerateTemplatesProvider`/`certificateGenerateTemplatesProvider` reading from it, and
+   switched both Generate & Print screens over.
+3. **ID Card recipients endpoint truncates past 10 students per class — inherited from web
+   unmodified, fixed proactively anyway.** `IdCardTemplateViewSet.recipients`' student-role branch
+   paginates server-side at the default `page_size=10`; neither web nor the previous Flutter code
+   ever requested more. Added an explicit `page_size=100` to `getIdCardRecipients` (the server's own
+   `max_page_size`) — this is a deliberate, disclosed deviation from literal web parity, matching
+   the same defensive pattern used earlier for the Admin Setup pagination-starvation bug.
+4. **"Generate & Print is still using dummy data" — this one was real.** Confirmed via the
+   subagent's line-level read of both `GenerateIdCardPanel.tsx`/`GenerateCertificatePanel.tsx`:
+   clicking Print on web builds a real HTML document from the selected template's background/logo/
+   signature images and the selected recipients' actual fields, then opens a browser print popup.
+   The Flutter screens' `_printSelected()` did none of that — just flipped a canned success string
+   with no real template/recipient data ever touched. Added `pdf: ^3.11.1` + `printing: ^5.13.1`
+   and a new `document_print_helper.dart` that builds an actual PDF from the real selected template
+   + real selected recipients (same fields as web: Admission/Class/Roll/Gender/DOB for the Student
+   role on ID cards; placeholder-substituted `body` text — same alias groups as
+   `replacePlaceholders()` in `GenerateCertificatePanel.tsx` — plus background image and Class/
+   Section/Date/Signature footer for certificates), then hands it to `Printing.layoutPdf()` — the
+   native print/share dialog, the practical mobile equivalent of web's `window.print()` (and on the
+   Flutter Web target this app actually runs on, `printing` itself opens the browser's native print
+   dialog too). Added the previously-unparsed `pl_width`/`pl_height` fields to `IdCardTemplateEntity`
+   (needed for real card sizing; `CertificateTemplateEntity` already had everything needed).
+5. System Config's Admin Setup Browse: re-verified the backend serializer directly against live
+   data (no crash, 26 real rows for school 1) and re-read `origin/demo`'s real `AdminSetupPanel.tsx`
+   — confirmed its "5 items per type, no pagination controls at all" behavior (declared `setGroupPage`/
+   `setGroupPageSize` state that's never actually wired to any button) is a genuine, intentional web
+   limitation that Flutter's `admin_setup_screen.dart` already matches correctly. No code change
+   needed here; any remaining "not loading" report on this screen for a specific account is most
+   likely finding #2 above (permission gap), not a code bug.
+
+`flutter analyze`: 0 errors (only pre-existing info-level lints). `flutter build web --release`:
+succeeded. No files outside `eskoolia_mobapp` modified (pubspec.yaml dependency additions are
+inside the app); no git operations performed. All backend investigation this pass was read-only
+(`force_authenticate` against real views, plain `.filter()`/`.values()`/raw `SELECT` queries) —
+nothing was created, updated, or deleted on the shared database.
+   `False`) and the throwaway script was deleted immediately.
+
+---
+
+Name: Archana
+Date: July 24, 2026
+Git Branch: Main
+
+## Admissions module: connected to the real backend, plus two confirmed-and-fixed regressions
+
+Continued from the earlier local-data-only Admissions build. Before writing code, inspected the
+real backend (`apps/admissions`, `apps/core`) and the real web frontend — confirmed the running
+frontend dev server serves this checkout's `main` branch (not `origin/demo`, which an earlier
+Administration session had wrongly assumed was authoritative).
+
+### Backend integration built
+- New `admissions_remote_datasource.dart` / `admissions_repository.dart` / `_impl.dart`, plus
+  `fromJson`/`toJson` on `InquiryEntity`, `SchoolClassEntity`/`SectionEntity`, `AnalyticsDataEntity`.
+- Command Center: inquiries/classes/sources/references now load from
+  `/api/v1/admissions/inquiries/`, `/api/v1/core/classes/`, `/api/v1/admissions/admin-setups/?type=3|4`.
+  New Enquiry, Edit, Log Contact, Call outcome, inline/bulk stage-move, bulk assign/delete, and
+  seat-capacity editing now write to the real backend instead of an in-memory array.
+- Fixed two features that were previously fake stubs: "Open WhatsApp" now actually opens a
+  `wa.me` deep link (used to just show a snackbar); built real **AI Compose**
+  (`ai_message_composer_modal.dart`, `/api/v1/admissions/ai/generate/` +
+  `/inquiries/{id}/actions/{channel}/`) — this was skipped entirely before.
+- Analytics now calls the real `/api/v1/admissions/analytics/overview/`. Marketing was already
+  correct (verified its 15 templates/2 campaigns/2 events are copied verbatim from web's own
+  hardcoded constants — web makes zero API calls there).
+- Real, disclosed backend defects found (not fixable here): `admin_section.admission_query.*`
+  permission codes don't exist in the `Permission` table (403s for every non-superuser); the
+  `merge`/`actions/*` custom routes have no permission code at all (403s for *everyone*,
+  including superusers); `/ai/generate/` always 500s (wrong method signature in
+  `AIMessageService.generate()`); `/bulk/`/`/consent/` always 500 (`AuditLog.objects.create(user=...)`
+  — the model field is `actor`).
+
+### Regression #1 — "Classes repeated, Nursery appears repeatedly, counts wrong, seats wrong"
+User-reported and reproduced directly against the live backend: `ClassViewSet`/
+`AdmissionInquiryViewSet`/`AdminSetupEntryViewSet.get_queryset()` all skip the `school_id` filter
+entirely when `request.user.is_superuser` — confirmed the actual test account is a superuser, and
+its unfiltered `/api/v1/core/classes/?page_size=100` fetch returned every school's classes merged
+(school 1's own 15 classes buried among 143 total, "Nursery"/"Grade 1"/etc. each repeated ~10-12x).
+Also discovered client-side re-scoping to the account's own school naively wasn't enough on its
+own: filtering just the first 100-row page still only recovered 10 of school 1's 15 classes,
+because other schools' rows (sorted globally) crowd out the tail end. Fixed both parts:
+- Added `schoolId` to `InquiryEntity`/`SchoolClassEntity`/`AdminSetupEntity` (parsed from each
+  response's own `school` field) and to `UserEntity`/`UserModel` (was already parsed from
+  `/auth/me/` but never exposed past the data layer).
+- Added `currentSchoolIdProvider` (from `authNotifierProvider`) and re-scope
+  `inquiriesProvider`/`schoolClassesProvider`/`admissionSourcesProvider`/`admissionReferencesProvider`
+  to it client-side — a no-op for already-scoped non-superuser accounts, a real fix for superusers.
+- Added `_fetchAllPages()` to the datasource, looping `page=1,2,3...` until every row is collected
+  (`ApiPageNumberPagination.max_page_size = 100` hard-caps any single request), so the re-scope
+  filter has the complete dataset to filter from. Verified directly: after this fix, filtering the
+  superuser account's full 143-row fetch down to school 1 recovers exactly its real 15 classes,
+  zero duplicates. Analytics' own aggregation endpoint can't be fixed this way (it returns
+  pre-aggregated numbers, not raw rows) — disclosed as a remaining backend-only limitation there.
+
+### Regression #2 — "New Enquiry not working" / "Marketing no buttons working"
+Could not log in to the real running app to test live (no test credentials available, and would
+not reset a real account's password without authorization) — instead wrote a throwaway Flutter
+widget test (`flutter test`, provider overrides for canned data, no network/login needed) to
+actually tap the buttons and observe real exceptions. This surfaced two real, confirmed bugs
+affecting **every single modal in the Admissions module** (9 `showGeneralDialog` call sites total):
+1. Every call passed `barrierDismissible: true` with no `barrierLabel` — Flutter's own hard
+   assertion (`!barrierDismissible || barrierLabel != null`) throws immediately on tap. This
+   assertion only fires in debug mode (stripped in `--release` builds), which is exactly why this
+   was invisible to `flutter build web --release` verification the whole time, yet broke every
+   button for anyone running the app via `flutter run` (debug/hot-reload) — the way it's actually
+   being tested. Fixed by adding a `barrierLabel` to all 9 calls (New Enquiry, Log Contact, Call
+   Flow, WhatsApp Composer, AI Compose, Application Detail Panel, New Campaign, Edit Campaign,
+   Template Preview).
+2. Every one of those same 9 modals' content had **no `Material` widget ancestor** —
+   `showGeneralDialog`'s `pageBuilder` content is pushed outside any `Scaffold`/`Material`
+   (unlike `showDialog`, which wraps content in `Dialog`/`Material` automatically). Confirmed via
+   the same widget test: every `TextField`/`DropdownButton`/bare `InkWell` inside these modals
+   threw "No Material widget found" the instant it tried to build. Fixed by wrapping each modal's
+   root content in `Material(type: MaterialType.transparency, child: ...)`.
+Re-ran the widget test after both fixes: New Enquiry modal now opens with real content ("Quick
+Add", "Parent / Guardian" fields, date quick-chips all present, zero exceptions). Marketing's New
+Campaign, Edit Campaign, and Template Preview modals all confirmed opening with real content too,
+zero exceptions. Deleted the throwaway test file afterward (not part of the permanent suite).
+
+`flutter analyze`: 0 errors (same 58 pre-existing info-level lints as always). `flutter build web
+--release`: succeeded. No files outside `eskoolia_mobapp` modified (added `share_plus` for real
+CSV export on Class Workspace + Analytics, replacing another fake stub that only showed a toast
+without actually exporting anything); no git operations performed.
+
+
+## Attendance module: Student Attendance connected to the real backend
+
+Inspected the real backend (`apps/attendance`, `apps/core`) and the real web frontend before
+writing code. The real page's source is gutted to a `ComingSoon` stub on `main`'s current
+`page.tsx` ("encoding issues" comment) — recovered the actual implementation from git history
+(commit `b03a1c9f`), same as an earlier session already had, and re-verified the two files that
+received real bugfixes since (`ClassAccordionGrid.tsx`, `MonthlyReport.tsx`) against current HEAD.
+
+### Backend integration built
+New `attendance_remote_datasource.dart` / `attendance_repository.dart` / `_impl.dart`, plus
+`fromJson` on every entity. Wired to the real endpoints:
+- Classes/sections: `/api/v1/core/classes/` (nested sections).
+- Dashboard: `/student-attendance/daily-summary/` (KPI cards), `/student-attendance/class-summary/`
+  (per-class present/absent/late/% tiles, merged onto `ClassInfoEntity`).
+- Daily grid: `POST .../student-search/` (fetch), `POST .../store/` (mark — single-student and
+  bulk/mark-all all go through this one real endpoint; confirmed its "full coverage" validation
+  only requires every id in `id[]` to have a status in `attendance{}`, not that the whole roster be
+  resent every call, so per-action incremental saves are valid and match web's own behavior).
+- Monthly Report: `.../report/` (student summary table, only when Class+Section both selected,
+  matching web), `.../report-insights/` (top absent/late reason cards), plus the bare list endpoint
+  for week-by-week donut cards computed client-side — matches web's own documented workaround
+  (its comment explains the backend's own week-numbering doesn't align to calendar boundaries).
+- Download Sample / Export / Import: `.../download-sample/`, `.../export/`, `POST .../bulk-store/`
+  (multipart) — all previously fake/toast-only, now real, handed to the native share/save sheet.
+- Unlock Editing dialog: previously accepted *any* non-empty password (weaker than web); now
+  re-verifies the real password via a direct `POST /api/v1/auth/login/` call (matching web's own
+  "password re-entry theater" exactly — it never touches `is_locked` either, just a client flag),
+  calling the auth datasource directly so the verification never overwrites the real session's
+  stored tokens.
+
+### Real, disclosed backend defects/limitations found (not fixable here)
+- `student_info.student_attendance_import.view`, `student_info.subject_wise_attendance.view`,
+  `student_info.subject_wise_attendance_report.view` don't exist in the `Permission` table (same
+  bug class found repeatedly elsewhere in this codebase) — Import and the entire Subject Attendance
+  feature (a separate tab, out of scope for this pass anyway) are permanently 403 for non-superusers.
+- No RTE-compliance field exists anywhere server-side — matches web's own honest behavior exactly
+  (its `rte_at_risk`/`rte_pct` are read from backend fields that don't exist, so they're always 0/
+  null in production; the RTE alert banner correspondingly never fires on web either).
+- The real `store/` endpoint has no way to clear a status back to "unmarked" (every submitted id
+  needs a real P/A/L status) — "Reset" was scoped down to "reload this section fresh from the
+  server" instead of attempting a destructive clear-all-marks the backend doesn't actually support.
+- The Academic Year dropdown in the page header is decorative on web itself (confirmed directly —
+  its value is never passed into any data-fetching call) — reproduced faithfully, not a Flutter gap.
+- The header's Section filter dropdown is hardcoded to `['A','B','C']` on web itself (confirmed) —
+  a real, disclosed web limitation, not something to "fix" while matching it.
+
+### Real bug found and fixed via a widget test (no login credentials available for live testing)
+Every data row in the attendance grid threw a real `RenderFlex overflowed by 3.0 pixels` — its
+`Container` used a `Border.left` (3px) for the selected/late color indicator, which deflates a
+`Container`'s child layout width by the border's own thickness, while the header row (no such
+border) used the same total column width unshrunk. Fixed by moving the color indicator to a
+`Positioned` overlay in a `Stack` instead of a layout-affecting border, so every row gets its full
+declared width regardless of highlight state. Confirmed fixed: re-ran the same widget test
+(canned-data provider override, no network/login needed) — class expand → real student-search
+results render, Sign In tap → real `store/` call with zero exceptions, Monthly Report Generate →
+real report-insights data renders, zero `RenderFlex`/`Material` exceptions anywhere. Deleted the
+throwaway test file afterward.
+
+### Known, disclosed scope reductions (not silent gaps)
+- The Import dialog still uses the parent page's `/core/classes/`-sourced class list rather than
+  the dedicated `GET .../student-attendance/import/` criteria-form endpoint (added to the
+  repository as `getImportClasses()` but not yet wired into the dialog) — functionally equivalent
+  (same real classes either way) but not byte-for-byte matching web's own separate fetch.
+- Subject Attendance (a different tab from Student Attendance) was not touched this pass — the
+  user's request was scoped to Student Attendance specifically.
+
+`flutter analyze`: 0 errors (same pre-existing info-level lints as always, none new). `flutter
+build web --release`: succeeded. No files outside `eskoolia_mobapp` modified (pubspec.yaml already
+had `share_plus` from the Admissions pass, reused here); no git operations performed.

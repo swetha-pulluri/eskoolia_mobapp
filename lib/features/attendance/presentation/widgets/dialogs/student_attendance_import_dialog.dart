@@ -1,16 +1,15 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../domain/entities/attendance_entities.dart';
+import '../../providers/attendance_provider.dart';
 
 /// Student Attendance Import Dialog — converted from web
 /// `attendance/student/components/StudentAttendanceImportDialog.tsx`.
-/// Web posts the file to `/api/v1/attendance/student-attendance/
-/// bulk-store/` and validates rows against the real database; this module
-/// has no backend, so "Download Sample" falls back to a confirmation
-/// toast (same pattern already used for CSV/XLSX exports elsewhere in
-/// this app) and "Confirm Import" simulates the progress bar + success
-/// banner locally rather than actually parsing/storing rows.
-class StudentAttendanceImportDialog extends StatefulWidget {
+/// "Download Sample" and "Confirm Import" now call the real
+/// `GET .../download-sample/` and `POST .../bulk-store/` endpoints.
+class StudentAttendanceImportDialog extends ConsumerStatefulWidget {
   final bool open;
   final List<ClassInfoEntity> classes;
   final VoidCallback onClose;
@@ -20,10 +19,10 @@ class StudentAttendanceImportDialog extends StatefulWidget {
   const StudentAttendanceImportDialog({super.key, required this.open, required this.classes, required this.onClose, required this.onNotify, this.onImported});
 
   @override
-  State<StudentAttendanceImportDialog> createState() => _StudentAttendanceImportDialogState();
+  ConsumerState<StudentAttendanceImportDialog> createState() => _StudentAttendanceImportDialogState();
 }
 
-class _StudentAttendanceImportDialogState extends State<StudentAttendanceImportDialog> {
+class _StudentAttendanceImportDialogState extends ConsumerState<StudentAttendanceImportDialog> {
   int? _classId;
   int? _sectionId;
   late String _date = _todayIso();
@@ -45,7 +44,7 @@ class _StudentAttendanceImportDialogState extends State<StudentAttendanceImportD
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'xlsx', 'xls']);
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'xlsx', 'xls'], withData: true);
     if (result != null && result.files.isNotEmpty) {
       setState(() {
         _file = result.files.first;
@@ -54,8 +53,14 @@ class _StudentAttendanceImportDialogState extends State<StudentAttendanceImportD
     }
   }
 
-  void _downloadSample() {
-    widget.onNotify('Sample attendance template downloaded.', 'success');
+  Future<void> _downloadSample() async {
+    try {
+      final bytes = await ref.read(attendanceRepositoryProvider).downloadSample();
+      await Share.shareXFiles([XFile.fromData(bytes, name: 'student_attendance_sheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      widget.onNotify('Sample attendance template downloaded.', 'success');
+    } catch (e) {
+      widget.onNotify('Unable to download sample: $e', 'error');
+    }
   }
 
   Map<String, String> _validate() {
@@ -68,31 +73,51 @@ class _StudentAttendanceImportDialogState extends State<StudentAttendanceImportD
   }
 
   Future<void> _confirmImport() async {
+    final file = _file;
+    if (file == null || file.bytes == null || _classId == null || _sectionId == null) return;
     setState(() {
       _saving = true;
-      _progress = 0.2;
+      _progress = 0.3;
     });
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    setState(() => _progress = 0.55);
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    setState(() => _progress = 0.85);
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    setState(() => _progress = 1);
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _progress = 0;
-      _confirmOpen = false;
-    });
-    widget.onNotify('Import completed for the selected section.', 'success');
-    if (widget.onImported != null && _classId != null && _sectionId != null) {
-      widget.onImported!(classId: _classId!, sectionId: _sectionId!, date: _date, imported: 0);
+    try {
+      final result = await ref.read(attendanceRepositoryProvider).bulkImport(
+            classId: _classId!,
+            sectionId: _sectionId!,
+            attendanceDate: _date,
+            fileBytes: file.bytes!,
+            fileName: file.name,
+          );
+      if (!mounted) return;
+      setState(() => _progress = 1);
+      final data = (result['data'] as Map<String, dynamic>?) ?? const {};
+      final imported = (data['imported'] as num?)?.toInt() ?? (result['imported_count'] as num?)?.toInt() ?? 0;
+      final failed = (data['failed'] as num?)?.toInt() ?? (result['failed_count'] as num?)?.toInt() ?? 0;
+      final success = result['success'] != false;
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _progress = 0;
+        _confirmOpen = false;
+      });
+      widget.onNotify(
+        success
+            ? (failed > 0 ? '$imported record(s) imported, $failed failed.' : 'Successfully imported $imported attendance record(s).')
+            : (result['message'] as String? ?? 'Import failed.'),
+        success ? 'success' : 'error',
+      );
+      if (success && imported > 0 && widget.onImported != null) {
+        widget.onImported!(classId: _classId!, sectionId: _sectionId!, date: _date, imported: imported);
+      }
+      if (success) widget.onClose();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _progress = 0;
+      });
+      widget.onNotify('Import failed: $e', 'error');
     }
-    widget.onClose();
   }
 
   @override

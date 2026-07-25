@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/campaign_entity.dart';
 import '../../domain/entities/message_template_entity.dart';
+import '../../domain/entities/marketing_event_entity.dart';
 import '../providers/admissions_local_data.dart';
 import '../widgets/admissions_layout.dart';
 import '../widgets/campaign_modals.dart';
+import '../widgets/event_modals.dart';
 
 const Map<String, ({Color color, String emoji})> kCategoryStyles = {
   'Welcome': (color: Color(0xFF3B82F6), emoji: '👋'),
@@ -35,6 +37,7 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
   String _templateTab = 'whatsapp';
   String _searchQ = '';
   int _nextCampaignId = 100;
+  int _nextEventId = 100;
 
   List<MessageTemplateEntity> get _filteredTemplates => AdmissionsLocalData.templates.where((t) {
         if (t.channel != _templateTab) return false;
@@ -48,6 +51,7 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'New Campaign',
       pageBuilder: (dialogContext, a1, a2) => NewCampaignModal(
         nextId: _nextCampaignId++,
         onClose: () => Navigator.of(dialogContext).maybePop(),
@@ -64,6 +68,7 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'Edit Campaign',
       pageBuilder: (dialogContext, a1, a2) => CampaignEditModal(campaign: c, onClose: () => Navigator.of(dialogContext).maybePop()),
     );
   }
@@ -77,7 +82,62 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
       context: context,
       barrierColor: Colors.transparent,
       barrierDismissible: true,
+      barrierLabel: 'Template Preview',
       pageBuilder: (dialogContext, a1, a2) => TemplatePreviewModal(template: t, onClose: () => Navigator.of(dialogContext).maybePop()),
+    );
+  }
+
+  void _viewReport(CampaignEntity c) {
+    showGeneralDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierLabel: 'Campaign Report',
+      pageBuilder: (dialogContext, a1, a2) => CampaignReportModal(campaign: c, onClose: () => Navigator.of(dialogContext).maybePop()),
+    );
+  }
+
+  void _openNewEvent() {
+    showGeneralDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierLabel: 'New Event',
+      pageBuilder: (dialogContext, a1, a2) => NewEventModal(
+        nextId: _nextEventId++,
+        onClose: () => Navigator.of(dialogContext).maybePop(),
+        onSave: (ev) {
+          Navigator.of(dialogContext).maybePop();
+          setState(() => AdmissionsLocalData.events.insert(0, ev));
+        },
+      ),
+    );
+  }
+
+  void _manageRsvps(MarketingEventEntity ev) {
+    showGeneralDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierLabel: 'Manage RSVPs',
+      pageBuilder: (dialogContext, a1, a2) => ManageRsvpsModal(
+        event: ev,
+        onClose: () => Navigator.of(dialogContext).maybePop(),
+        onSave: (rsvp) {
+          Navigator.of(dialogContext).maybePop();
+          setState(() {
+            final i = AdmissionsLocalData.events.indexWhere((e) => e.id == ev.id);
+            if (i != -1) AdmissionsLocalData.events[i] = ev.copyWith(rsvp: rsvp);
+          });
+        },
+      ),
+    );
+  }
+
+  void _sendReminder(MarketingEventEntity ev) {
+    final pending = (ev.capacity - ev.rsvp).clamp(0, ev.capacity);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Reminder sent to ${ev.rsvp} confirmed RSVP${ev.rsvp == 1 ? '' : 's'} for "${ev.name}"${pending > 0 ? ' · $pending seat${pending == 1 ? '' : 's'} still open' : ''}.')),
     );
   }
 
@@ -260,7 +320,7 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
                       const SizedBox(width: 8),
                       if (c.status == 'sent')
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () => _viewReport(c),
                           style: ElevatedButton.styleFrom(backgroundColor: kMarketingBlue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), textStyle: const TextStyle(fontSize: 12)),
                           child: const Text('View Report'),
                         ),
@@ -489,7 +549,7 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
               const SizedBox(width: 8),
               const Expanded(child: Text('Events Manager', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF111111)))),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _openNewEvent,
                 icon: const Icon(Icons.add, size: 12),
                 label: const Text('New Event'),
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0EA5E9), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600)),
@@ -515,12 +575,12 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
                       const SizedBox(height: 8),
                       Wrap(spacing: 8, children: [
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () => _manageRsvps(ev),
                           style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF374151), side: const BorderSide(color: Color(0xFFE5E7EB)), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), textStyle: const TextStyle(fontSize: 11.5)),
                           child: const Text('Manage RSVPs'),
                         ),
                         OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () => _sendReminder(ev),
                           style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF1D4ED8), backgroundColor: const Color(0xFFEFF6FF), side: const BorderSide(color: Color(0xFFBFDBFE)), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), textStyle: const TextStyle(fontSize: 11.5)),
                           child: const Text('Send Reminder'),
                         ),

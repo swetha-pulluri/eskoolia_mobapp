@@ -1,11 +1,42 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/entities/inquiry_entity.dart';
 import '../../domain/entities/school_class_entity.dart';
 import 'application_row.dart';
 import 'application_detail_panel.dart';
 import 'bulk_action_bar.dart';
 import 'template_picker.dart';
+
+/// Matches `ClassWorkspace.tsx`'s own `exportCSV()` exactly — same headers,
+/// same column order, same quoting. Mobile has no `Blob` + `<a download>`,
+/// so this hands the built CSV to the native share/save sheet instead
+/// (`Share.shareXFiles`) — the practical mobile equivalent of a browser
+/// download.
+String _buildInquiriesCsv(List<InquiryEntity> rows) {
+  String quote(String v) => '"${v.replaceAll('"', '""')}"';
+  final headers = ['Name', 'Phone', 'Email', 'Class', 'Stage', 'Source', 'Assigned', 'Query Date', 'Follow-up'];
+  final lines = rows.map((i) => [
+        quote(i.fullName),
+        quote(i.phone),
+        quote(i.email),
+        quote(i.classNameResolved ?? ''),
+        quote(i.status),
+        quote(i.sourceName ?? ''),
+        quote(i.assigned),
+        quote(i.queryDate ?? ''),
+        quote(i.nextFollowUpDate ?? ''),
+      ].join(','));
+  return [headers.join(','), ...lines].join('\n');
+}
+
+Future<void> _exportInquiriesCsv(List<InquiryEntity> rows, String filename) async {
+  final csv = _buildInquiriesCsv(rows);
+  final bytes = Uint8List.fromList(utf8.encode(csv));
+  await Share.shareXFiles([XFile.fromData(bytes, name: filename, mimeType: 'text/csv')]);
+}
 
 const int kWorkspacePageSize = 25;
 
@@ -91,6 +122,9 @@ class ClassWorkspace extends StatefulWidget {
 
 class _ClassWorkspaceState extends State<ClassWorkspace> {
   String _activeStage = 'all';
+  // Selected but never applied to `_classFiltered` — matches the real web
+  // `ClassWorkspace.tsx` exactly, which flags this as a TODO: `ApiInquiry`
+  // has no `section` field server-side, so there's nothing to filter by.
   String _selectedSection = 'all';
   String _debouncedSearch = '';
   int _page = 1;
@@ -177,6 +211,7 @@ class _ClassWorkspaceState extends State<ClassWorkspace> {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
+      barrierLabel: 'Application Detail',
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (dialogContext, anim1, anim2) => ApplicationDetailPanel(
@@ -331,23 +366,38 @@ class _ClassWorkspaceState extends State<ClassWorkspace> {
         // Section header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(4)),
-                child: const Text('03', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6B7280))),
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(4)),
+                      child: const Text('03', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6B7280))),
+                    ),
+                    const Text('Class Workspace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+                    const Text('·', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+                    Text(_className, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF4F46E5))),
+                    if (sections.length > 1) _sectionDropdown(sections),
+                  ],
+                ),
               ),
-              const Text('Class Workspace', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
-              const Text('·', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
-              Text(_className, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF4F46E5))),
-              if (sections.length > 1) _sectionDropdown(sections),
-              const Spacer(),
+              const SizedBox(width: 8),
               OutlinedButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  final rows = filtered;
+                  final filename = '${_className.replaceAll(RegExp(r'\s+'), '_')}_inquiries.csv';
+                  try {
+                    await _exportInquiriesCsv(rows, filename);
+                  } catch (_) {
+                    _showToast('Export failed.');
+                    return;
+                  }
                   _showToast('Export completed successfully.');
                 },
                 icon: const Icon(Icons.download_outlined, size: 13),

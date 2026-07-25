@@ -222,24 +222,36 @@ class AttendanceTableRow extends StatelessWidget {
       leftBorder = const Color(0xFFC2264E);
     }
 
-    return Container(
-      decoration: BoxDecoration(color: rowBg, border: Border(bottom: const BorderSide(color: Color(0xFFF4F4F8)), left: BorderSide(color: leftBorder, width: 3))),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _cell(AttendanceTableColumns.checkbox, Checkbox(value: isSelected, onChanged: readOnly ? null : (v) => onSelect(v ?? false), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
-          _cell(AttendanceTableColumns.pupil, _pupilCell()),
-          _cell(AttendanceTableColumns.rollNo, Text(s.rollNo.isEmpty ? '—' : s.rollNo, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF5A5E70)))),
-          _cell(AttendanceTableColumns.absent, Center(child: _absentToggle(isAbsent, absentToggleLocked))),
-          _cell(AttendanceTableColumns.arrival, _arrivalCell()),
-          _cell(AttendanceTableColumns.signIn, _signInCell(hasActiveSignIn, canSignIn)),
-          _cell(AttendanceTableColumns.signOut, _signOutCell()),
-          _cell(AttendanceTableColumns.pickup, _pickupCell()),
-          _cell(AttendanceTableColumns.lunch, Center(child: _lunchToggle(canToggleLunch))),
-          _cell(AttendanceTableColumns.notes, Center(child: _notesCell())),
-          _cell(AttendanceTableColumns.actions, _actionsCell()),
-        ],
-      ),
+    // The colored left indicator is painted via a `Positioned` overlay
+    // rather than a `Border.left` on this `Container`: a decoration border
+    // deflates its child's available width by the border's own thickness,
+    // which made every data row exactly 3px narrower than the header row
+    // above it (both meant to share the same `AttendanceTableColumns.total`
+    // width) — a real, reproducible `RenderFlex overflowed by 3.0 pixels`
+    // on every row, confirmed via a widget test.
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(color: rowBg, border: const Border(bottom: BorderSide(color: Color(0xFFF4F4F8)))),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _cell(AttendanceTableColumns.checkbox, Checkbox(value: isSelected, onChanged: readOnly ? null : (v) => onSelect(v ?? false), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+              _cell(AttendanceTableColumns.pupil, _pupilCell()),
+              _cell(AttendanceTableColumns.rollNo, Text(s.rollNo.isEmpty ? '—' : s.rollNo, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF5A5E70)))),
+              _cell(AttendanceTableColumns.absent, Center(child: _absentToggle(isAbsent, absentToggleLocked))),
+              _cell(AttendanceTableColumns.arrival, _arrivalCell()),
+              _cell(AttendanceTableColumns.signIn, _signInCell(hasActiveSignIn, canSignIn)),
+              _cell(AttendanceTableColumns.signOut, _signOutCell()),
+              _cell(AttendanceTableColumns.pickup, _pickupCell()),
+              _cell(AttendanceTableColumns.lunch, Center(child: _lunchToggle(canToggleLunch))),
+              _cell(AttendanceTableColumns.notes, Center(child: _notesCell())),
+              _cell(AttendanceTableColumns.actions, _actionsCell()),
+            ],
+          ),
+        ),
+        if (leftBorder != Colors.transparent) Positioned(left: 0, top: 0, bottom: 1, child: Container(width: 3, color: leftBorder)),
+      ],
     );
   }
 

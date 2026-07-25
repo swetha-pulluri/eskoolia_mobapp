@@ -9,6 +9,11 @@ class PolicyEntity {
   final List<String>? options;
   final bool isToggle;
   final bool isOverridable;
+  /// The backend's own `default_value` for this key (`SuperAdminPolicy.default_value`),
+  /// already returned by the real `GET /policies/` response — used to build
+  /// the "Reset to defaults" Quick Action's PATCH payload without inventing
+  /// any value client-side.
+  final dynamic defaultValue;
 
   const PolicyEntity({
     required this.key,
@@ -20,6 +25,7 @@ class PolicyEntity {
     this.options,
     this.isToggle = false,
     this.isOverridable = true,
+    this.defaultValue,
   });
 }
 

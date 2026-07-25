@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/inquiry_entity.dart';
 import '../../domain/entities/school_class_entity.dart';
 import '../../../administration/domain/entities/admin_setup_entity.dart';
-import '../providers/admissions_local_data.dart';
+import '../providers/admissions_provider.dart';
 
 const Color kAdmIndigo = Color(0xFF4F46E5);
 
@@ -19,7 +20,7 @@ bool _isValidPhone(String v) => RegExp(r'^[6-9]\d{9}$').hasMatch(v);
 /// or a Full 3-step wizard (Parent/Guardian → Child Details → Preferences)
 /// for edits or when the user switches to "📋 Full". Includes the web's
 /// duplicate-phone detection + merge-into-existing flow on Quick Add.
-class EnquiryFormModal extends StatefulWidget {
+class EnquiryFormModal extends ConsumerStatefulWidget {
   final InquiryEntity? editing;
   final List<SchoolClassEntity> classes;
   final List<AdminSetupEntity> sources;
@@ -44,10 +45,10 @@ class EnquiryFormModal extends StatefulWidget {
   });
 
   @override
-  State<EnquiryFormModal> createState() => _EnquiryFormModalState();
+  ConsumerState<EnquiryFormModal> createState() => _EnquiryFormModalState();
 }
 
-class _EnquiryFormModalState extends State<EnquiryFormModal> {
+class _EnquiryFormModalState extends ConsumerState<EnquiryFormModal> {
   bool get _editing => widget.editing != null;
   bool _quickAddMode = true;
   int _section = 0;
@@ -145,7 +146,7 @@ class _EnquiryFormModalState extends State<EnquiryFormModal> {
     setState(() => _saving = true);
     try {
       if (_editing) {
-        final updated = await AdmissionsLocalData.updateInquiry(widget.editing!.id, (c) => c.copyWith(
+        final updated = await ref.read(admissionsRepositoryProvider).updateInquiry(widget.editing!.id, (c) => c.copyWith(
               fullName: _fullName.text.trim(),
               phone: _phone.text.trim(),
               email: _email.text.trim(),
@@ -161,7 +162,7 @@ class _EnquiryFormModalState extends State<EnquiryFormModal> {
             ));
         widget.onSaved(updated, isNew: false);
       } else {
-        final created = await AdmissionsLocalData.createInquiry(InquiryEntity(
+        final created = await ref.read(admissionsRepositoryProvider).createInquiry(InquiryEntity(
           id: 0,
           fullName: _fullName.text.trim(),
           phone: _phone.text.trim(),
@@ -233,7 +234,7 @@ class _EnquiryFormModalState extends State<EnquiryFormModal> {
 
     setState(() => _saving = true);
     try {
-      final created = await AdmissionsLocalData.createInquiry(InquiryEntity(
+      final created = await ref.read(admissionsRepositoryProvider).createInquiry(InquiryEntity(
         id: 0,
         fullName: _fullName.text.trim(),
         phone: _phone.text.trim(),
@@ -260,7 +261,7 @@ class _EnquiryFormModalState extends State<EnquiryFormModal> {
     if (dup == null) return;
     setState(() => _dupMerging = true);
     try {
-      final updated = await AdmissionsLocalData.updateInquiry(dup.id, (c) => c.copyWith(
+      final updated = await ref.read(admissionsRepositoryProvider).updateInquiry(dup.id, (c) => c.copyWith(
             email: _email.text.trim().isNotEmpty ? _email.text.trim() : c.email,
             note: _note.text.trim().isNotEmpty ? (c.note.isNotEmpty ? '${c.note}\n[Merged] ${_note.text.trim()}' : _note.text.trim()) : c.note,
             nextFollowUpDate: _nextFollowUpDate,
@@ -297,18 +298,27 @@ class _EnquiryFormModalState extends State<EnquiryFormModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 680),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _header(),
-                if (showFull) _stepper(),
-                Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: showFull ? _fullFormSection() : _quickAddForm())),
-                _footer(showFull),
-              ],
+          // `Material` is required here: `showGeneralDialog`'s pageBuilder
+          // content is pushed outside any `Scaffold`/`Material` ancestor,
+          // so the `TextField`/`DropdownButtonFormField`/bare `InkWell`
+          // widgets below would otherwise throw "No Material widget
+          // found" (confirmed via a widget test) — every field in this
+          // form was silently broken without this.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 680),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _header(),
+                  if (showFull) _stepper(),
+                  Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20), child: showFull ? _fullFormSection() : _quickAddForm())),
+                  _footer(showFull),
+                ],
+              ),
             ),
           ),
         ),

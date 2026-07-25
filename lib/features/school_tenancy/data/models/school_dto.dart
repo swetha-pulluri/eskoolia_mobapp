@@ -23,7 +23,7 @@ class SchoolDto {
   final String storageRegion;
   
   @JsonKey(name: 'backup_retention')
-  final int backupRetention;
+  final int? backupRetention;
   
   @JsonKey(name: 'sso_method')
   final String ssoMethod;
@@ -116,7 +116,7 @@ class SchoolDto {
       subdomainUrl: subdomainUrl,
       shardRegion: shardRegion,
       storageRegion: storageRegion,
-      backupRetention: backupRetention,
+      backupRetention: backupRetention ?? 0,
       ssoMethod: ssoMethod,
       apiAccess: apiAccess,
       plan: plan,

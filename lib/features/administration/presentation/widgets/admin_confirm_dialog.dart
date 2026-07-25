@@ -1,65 +1,55 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'web_button.dart';
 
-/// Delete-confirmation dialog matching the web `ConfirmationModal`
-/// component — used by Complaints, Phone Call Log and the Postal panels:
-/// warning icon, title, message, Cancel + danger Confirm buttons.
+/// Delete-confirmation dialog matching the real, currently-shipped web
+/// design's shared delete modal (`VisitorBookPanel.module.css`'s
+/// `.backdrop`/`.modal`, reused verbatim by `ComplaintPanel.tsx`,
+/// `PhoneCallLogPanel.tsx`, `PostalReceivePanel.tsx`,
+/// `PostalDispatchPanel.tsx`): a circular red trash-icon badge, plain
+/// title "Confirm Delete", body message, Cancel + red "Delete" button.
 Future<bool> showAdminConfirmDialog(
   BuildContext context, {
   required String message,
   String title = 'Confirm Delete',
-  String confirmLabel = 'Yes, Delete',
+  String confirmLabel = 'Delete',
   String cancelLabel = 'Cancel',
 }) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: Row(
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 48,
+            height: 48,
             decoration: const BoxDecoration(color: AppColors.redSoft, shape: BoxShape.circle),
-            child: const Icon(Icons.warning_amber_rounded, color: AppColors.dangerRed, size: 20),
+            child: const Icon(Icons.delete_outline, color: AppColors.dangerRed, size: 22),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
         ],
       ),
-      content: Text(message, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+      content: Text(message, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary), textAlign: TextAlign.center),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(cancelLabel, style: const TextStyle(color: AppColors.textPrimary)),
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(foregroundColor: AppColors.textPrimary, side: const BorderSide(color: AppColors.borderPrimary)),
+            child: Text(cancelLabel),
+          ),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.dangerRed, foregroundColor: Colors.white),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(confirmLabel),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.dangerRed, foregroundColor: Colors.white, elevation: 0),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(confirmLabel),
+          ),
         ),
-      ],
-    ),
-  );
-  return result ?? false;
-}
-
-/// Visitor Book's own bespoke delete dialog — NOT the shared
-/// `ConfirmationModal`: no icon, plain title, `#475569` message text,
-/// grey `#94a3b8` Cancel + red `#dc2626` Delete filled buttons.
-Future<bool> showVisitorBookDeleteDialog(BuildContext context, {required String message}) async {
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      title: const Text('Confirm Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-      content: Text(message, style: const TextStyle(fontSize: 13, color: Color(0xFF475569))),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      actions: [
-        WebButton(label: 'Cancel', color: const Color(0xFF94A3B8), onPressed: () => Navigator.of(context).pop(false)),
-        WebButton(label: 'Delete', color: AppColors.dangerRed, onPressed: () => Navigator.of(context).pop(true)),
       ],
     ),
   );

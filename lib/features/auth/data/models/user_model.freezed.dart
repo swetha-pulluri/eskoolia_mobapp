@@ -12,7 +12,8 @@ part of 'user_model.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 UserModel _$UserModelFromJson(Map<String, dynamic> json) {
   return _UserModel.fromJson(json);
@@ -39,8 +40,12 @@ mixin _$UserModel {
   SchoolBrandingModel? get school_branding =>
       throw _privateConstructorUsedError;
 
+  /// Serializes this UserModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-  @JsonKey(ignore: true)
+
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $UserModelCopyWith<UserModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -50,24 +55,25 @@ abstract class $UserModelCopyWith<$Res> {
   factory $UserModelCopyWith(UserModel value, $Res Function(UserModel) then) =
       _$UserModelCopyWithImpl<$Res, UserModel>;
   @useResult
-  $Res call(
-      {int id,
-      String username,
-      String email,
-      String first_name,
-      String last_name,
-      int? school_id,
-      String? school_name,
-      String portal_type,
-      bool is_superuser,
-      bool is_school_admin,
-      List<int> role_ids,
-      List<String> role_names,
-      List<String> permission_codes,
-      bool must_change_password,
-      bool llm_enabled,
-      String? class_section,
-      SchoolBrandingModel? school_branding});
+  $Res call({
+    int id,
+    String username,
+    String email,
+    String first_name,
+    String last_name,
+    int? school_id,
+    String? school_name,
+    String portal_type,
+    bool is_superuser,
+    bool is_school_admin,
+    List<int> role_ids,
+    List<String> role_names,
+    List<String> permission_codes,
+    bool must_change_password,
+    bool llm_enabled,
+    String? class_section,
+    SchoolBrandingModel? school_branding,
+  });
 
   $SchoolBrandingModelCopyWith<$Res>? get school_branding;
 }
@@ -82,6 +88,8 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -103,78 +111,83 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
     Object? class_section = freezed,
     Object? school_branding = freezed,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      first_name: null == first_name
-          ? _value.first_name
-          : first_name // ignore: cast_nullable_to_non_nullable
-              as String,
-      last_name: null == last_name
-          ? _value.last_name
-          : last_name // ignore: cast_nullable_to_non_nullable
-              as String,
-      school_id: freezed == school_id
-          ? _value.school_id
-          : school_id // ignore: cast_nullable_to_non_nullable
-              as int?,
-      school_name: freezed == school_name
-          ? _value.school_name
-          : school_name // ignore: cast_nullable_to_non_nullable
-              as String?,
-      portal_type: null == portal_type
-          ? _value.portal_type
-          : portal_type // ignore: cast_nullable_to_non_nullable
-              as String,
-      is_superuser: null == is_superuser
-          ? _value.is_superuser
-          : is_superuser // ignore: cast_nullable_to_non_nullable
-              as bool,
-      is_school_admin: null == is_school_admin
-          ? _value.is_school_admin
-          : is_school_admin // ignore: cast_nullable_to_non_nullable
-              as bool,
-      role_ids: null == role_ids
-          ? _value.role_ids
-          : role_ids // ignore: cast_nullable_to_non_nullable
-              as List<int>,
-      role_names: null == role_names
-          ? _value.role_names
-          : role_names // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      permission_codes: null == permission_codes
-          ? _value.permission_codes
-          : permission_codes // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      must_change_password: null == must_change_password
-          ? _value.must_change_password
-          : must_change_password // ignore: cast_nullable_to_non_nullable
-              as bool,
-      llm_enabled: null == llm_enabled
-          ? _value.llm_enabled
-          : llm_enabled // ignore: cast_nullable_to_non_nullable
-              as bool,
-      class_section: freezed == class_section
-          ? _value.class_section
-          : class_section // ignore: cast_nullable_to_non_nullable
-              as String?,
-      school_branding: freezed == school_branding
-          ? _value.school_branding
-          : school_branding // ignore: cast_nullable_to_non_nullable
-              as SchoolBrandingModel?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as int,
+            username: null == username
+                ? _value.username
+                : username // ignore: cast_nullable_to_non_nullable
+                      as String,
+            email: null == email
+                ? _value.email
+                : email // ignore: cast_nullable_to_non_nullable
+                      as String,
+            first_name: null == first_name
+                ? _value.first_name
+                : first_name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            last_name: null == last_name
+                ? _value.last_name
+                : last_name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            school_id: freezed == school_id
+                ? _value.school_id
+                : school_id // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            school_name: freezed == school_name
+                ? _value.school_name
+                : school_name // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            portal_type: null == portal_type
+                ? _value.portal_type
+                : portal_type // ignore: cast_nullable_to_non_nullable
+                      as String,
+            is_superuser: null == is_superuser
+                ? _value.is_superuser
+                : is_superuser // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            is_school_admin: null == is_school_admin
+                ? _value.is_school_admin
+                : is_school_admin // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            role_ids: null == role_ids
+                ? _value.role_ids
+                : role_ids // ignore: cast_nullable_to_non_nullable
+                      as List<int>,
+            role_names: null == role_names
+                ? _value.role_names
+                : role_names // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            permission_codes: null == permission_codes
+                ? _value.permission_codes
+                : permission_codes // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            must_change_password: null == must_change_password
+                ? _value.must_change_password
+                : must_change_password // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            llm_enabled: null == llm_enabled
+                ? _value.llm_enabled
+                : llm_enabled // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            class_section: freezed == class_section
+                ? _value.class_section
+                : class_section // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            school_branding: freezed == school_branding
+                ? _value.school_branding
+                : school_branding // ignore: cast_nullable_to_non_nullable
+                      as SchoolBrandingModel?,
+          )
+          as $Val,
+    );
   }
 
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
   @override
   @pragma('vm:prefer-inline')
   $SchoolBrandingModelCopyWith<$Res>? get school_branding {
@@ -192,28 +205,30 @@ class _$UserModelCopyWithImpl<$Res, $Val extends UserModel>
 abstract class _$$UserModelImplCopyWith<$Res>
     implements $UserModelCopyWith<$Res> {
   factory _$$UserModelImplCopyWith(
-          _$UserModelImpl value, $Res Function(_$UserModelImpl) then) =
-      __$$UserModelImplCopyWithImpl<$Res>;
+    _$UserModelImpl value,
+    $Res Function(_$UserModelImpl) then,
+  ) = __$$UserModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {int id,
-      String username,
-      String email,
-      String first_name,
-      String last_name,
-      int? school_id,
-      String? school_name,
-      String portal_type,
-      bool is_superuser,
-      bool is_school_admin,
-      List<int> role_ids,
-      List<String> role_names,
-      List<String> permission_codes,
-      bool must_change_password,
-      bool llm_enabled,
-      String? class_section,
-      SchoolBrandingModel? school_branding});
+  $Res call({
+    int id,
+    String username,
+    String email,
+    String first_name,
+    String last_name,
+    int? school_id,
+    String? school_name,
+    String portal_type,
+    bool is_superuser,
+    bool is_school_admin,
+    List<int> role_ids,
+    List<String> role_names,
+    List<String> permission_codes,
+    bool must_change_password,
+    bool llm_enabled,
+    String? class_section,
+    SchoolBrandingModel? school_branding,
+  });
 
   @override
   $SchoolBrandingModelCopyWith<$Res>? get school_branding;
@@ -224,9 +239,12 @@ class __$$UserModelImplCopyWithImpl<$Res>
     extends _$UserModelCopyWithImpl<$Res, _$UserModelImpl>
     implements _$$UserModelImplCopyWith<$Res> {
   __$$UserModelImplCopyWithImpl(
-      _$UserModelImpl _value, $Res Function(_$UserModelImpl) _then)
-      : super(_value, _then);
+    _$UserModelImpl _value,
+    $Res Function(_$UserModelImpl) _then,
+  ) : super(_value, _then);
 
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -248,103 +266,105 @@ class __$$UserModelImplCopyWithImpl<$Res>
     Object? class_section = freezed,
     Object? school_branding = freezed,
   }) {
-    return _then(_$UserModelImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as int,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      first_name: null == first_name
-          ? _value.first_name
-          : first_name // ignore: cast_nullable_to_non_nullable
-              as String,
-      last_name: null == last_name
-          ? _value.last_name
-          : last_name // ignore: cast_nullable_to_non_nullable
-              as String,
-      school_id: freezed == school_id
-          ? _value.school_id
-          : school_id // ignore: cast_nullable_to_non_nullable
-              as int?,
-      school_name: freezed == school_name
-          ? _value.school_name
-          : school_name // ignore: cast_nullable_to_non_nullable
-              as String?,
-      portal_type: null == portal_type
-          ? _value.portal_type
-          : portal_type // ignore: cast_nullable_to_non_nullable
-              as String,
-      is_superuser: null == is_superuser
-          ? _value.is_superuser
-          : is_superuser // ignore: cast_nullable_to_non_nullable
-              as bool,
-      is_school_admin: null == is_school_admin
-          ? _value.is_school_admin
-          : is_school_admin // ignore: cast_nullable_to_non_nullable
-              as bool,
-      role_ids: null == role_ids
-          ? _value._role_ids
-          : role_ids // ignore: cast_nullable_to_non_nullable
-              as List<int>,
-      role_names: null == role_names
-          ? _value._role_names
-          : role_names // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      permission_codes: null == permission_codes
-          ? _value._permission_codes
-          : permission_codes // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      must_change_password: null == must_change_password
-          ? _value.must_change_password
-          : must_change_password // ignore: cast_nullable_to_non_nullable
-              as bool,
-      llm_enabled: null == llm_enabled
-          ? _value.llm_enabled
-          : llm_enabled // ignore: cast_nullable_to_non_nullable
-              as bool,
-      class_section: freezed == class_section
-          ? _value.class_section
-          : class_section // ignore: cast_nullable_to_non_nullable
-              as String?,
-      school_branding: freezed == school_branding
-          ? _value.school_branding
-          : school_branding // ignore: cast_nullable_to_non_nullable
-              as SchoolBrandingModel?,
-    ));
+    return _then(
+      _$UserModelImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as int,
+        username: null == username
+            ? _value.username
+            : username // ignore: cast_nullable_to_non_nullable
+                  as String,
+        email: null == email
+            ? _value.email
+            : email // ignore: cast_nullable_to_non_nullable
+                  as String,
+        first_name: null == first_name
+            ? _value.first_name
+            : first_name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        last_name: null == last_name
+            ? _value.last_name
+            : last_name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        school_id: freezed == school_id
+            ? _value.school_id
+            : school_id // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        school_name: freezed == school_name
+            ? _value.school_name
+            : school_name // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        portal_type: null == portal_type
+            ? _value.portal_type
+            : portal_type // ignore: cast_nullable_to_non_nullable
+                  as String,
+        is_superuser: null == is_superuser
+            ? _value.is_superuser
+            : is_superuser // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        is_school_admin: null == is_school_admin
+            ? _value.is_school_admin
+            : is_school_admin // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        role_ids: null == role_ids
+            ? _value._role_ids
+            : role_ids // ignore: cast_nullable_to_non_nullable
+                  as List<int>,
+        role_names: null == role_names
+            ? _value._role_names
+            : role_names // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        permission_codes: null == permission_codes
+            ? _value._permission_codes
+            : permission_codes // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        must_change_password: null == must_change_password
+            ? _value.must_change_password
+            : must_change_password // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        llm_enabled: null == llm_enabled
+            ? _value.llm_enabled
+            : llm_enabled // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        class_section: freezed == class_section
+            ? _value.class_section
+            : class_section // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        school_branding: freezed == school_branding
+            ? _value.school_branding
+            : school_branding // ignore: cast_nullable_to_non_nullable
+                  as SchoolBrandingModel?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$UserModelImpl implements _UserModel {
-  const _$UserModelImpl(
-      {required this.id,
-      required this.username,
-      required this.email,
-      this.first_name = '',
-      this.last_name = '',
-      this.school_id,
-      this.school_name,
-      this.portal_type = 'admin',
-      this.is_superuser = false,
-      this.is_school_admin = false,
-      final List<int> role_ids = const [],
-      final List<String> role_names = const [],
-      final List<String> permission_codes = const [],
-      this.must_change_password = false,
-      this.llm_enabled = true,
-      this.class_section,
-      this.school_branding})
-      : _role_ids = role_ids,
-        _role_names = role_names,
-        _permission_codes = permission_codes;
+  const _$UserModelImpl({
+    required this.id,
+    required this.username,
+    required this.email,
+    this.first_name = '',
+    this.last_name = '',
+    this.school_id,
+    this.school_name,
+    this.portal_type = 'admin',
+    this.is_superuser = false,
+    this.is_school_admin = false,
+    final List<int> role_ids = const [],
+    final List<String> role_names = const [],
+    final List<String> permission_codes = const [],
+    this.must_change_password = false,
+    this.llm_enabled = true,
+    this.class_section,
+    this.school_branding,
+  }) : _role_ids = role_ids,
+       _role_names = role_names,
+       _permission_codes = permission_codes;
 
   factory _$UserModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserModelImplFromJson(json);
@@ -442,10 +462,14 @@ class _$UserModelImpl implements _UserModel {
             (identical(other.is_school_admin, is_school_admin) ||
                 other.is_school_admin == is_school_admin) &&
             const DeepCollectionEquality().equals(other._role_ids, _role_ids) &&
-            const DeepCollectionEquality()
-                .equals(other._role_names, _role_names) &&
-            const DeepCollectionEquality()
-                .equals(other._permission_codes, _permission_codes) &&
+            const DeepCollectionEquality().equals(
+              other._role_names,
+              _role_names,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._permission_codes,
+              _permission_codes,
+            ) &&
             (identical(other.must_change_password, must_change_password) ||
                 other.must_change_password == must_change_password) &&
             (identical(other.llm_enabled, llm_enabled) ||
@@ -456,29 +480,32 @@ class _$UserModelImpl implements _UserModel {
                 other.school_branding == school_branding));
   }
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      username,
-      email,
-      first_name,
-      last_name,
-      school_id,
-      school_name,
-      portal_type,
-      is_superuser,
-      is_school_admin,
-      const DeepCollectionEquality().hash(_role_ids),
-      const DeepCollectionEquality().hash(_role_names),
-      const DeepCollectionEquality().hash(_permission_codes),
-      must_change_password,
-      llm_enabled,
-      class_section,
-      school_branding);
+    runtimeType,
+    id,
+    username,
+    email,
+    first_name,
+    last_name,
+    school_id,
+    school_name,
+    portal_type,
+    is_superuser,
+    is_school_admin,
+    const DeepCollectionEquality().hash(_role_ids),
+    const DeepCollectionEquality().hash(_role_names),
+    const DeepCollectionEquality().hash(_permission_codes),
+    must_change_password,
+    llm_enabled,
+    class_section,
+    school_branding,
+  );
 
-  @JsonKey(ignore: true)
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$UserModelImplCopyWith<_$UserModelImpl> get copyWith =>
@@ -486,31 +513,30 @@ class _$UserModelImpl implements _UserModel {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$UserModelImplToJson(
-      this,
-    );
+    return _$$UserModelImplToJson(this);
   }
 }
 
 abstract class _UserModel implements UserModel {
-  const factory _UserModel(
-      {required final int id,
-      required final String username,
-      required final String email,
-      final String first_name,
-      final String last_name,
-      final int? school_id,
-      final String? school_name,
-      final String portal_type,
-      final bool is_superuser,
-      final bool is_school_admin,
-      final List<int> role_ids,
-      final List<String> role_names,
-      final List<String> permission_codes,
-      final bool must_change_password,
-      final bool llm_enabled,
-      final String? class_section,
-      final SchoolBrandingModel? school_branding}) = _$UserModelImpl;
+  const factory _UserModel({
+    required final int id,
+    required final String username,
+    required final String email,
+    final String first_name,
+    final String last_name,
+    final int? school_id,
+    final String? school_name,
+    final String portal_type,
+    final bool is_superuser,
+    final bool is_school_admin,
+    final List<int> role_ids,
+    final List<String> role_names,
+    final List<String> permission_codes,
+    final bool must_change_password,
+    final bool llm_enabled,
+    final String? class_section,
+    final SchoolBrandingModel? school_branding,
+  }) = _$UserModelImpl;
 
   factory _UserModel.fromJson(Map<String, dynamic> json) =
       _$UserModelImpl.fromJson;
@@ -549,8 +575,11 @@ abstract class _UserModel implements UserModel {
   String? get class_section;
   @override
   SchoolBrandingModel? get school_branding;
+
+  /// Create a copy of UserModel
+  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$UserModelImplCopyWith<_$UserModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -565,8 +594,12 @@ mixin _$SchoolBrandingModel {
   String? get brand_color => throw _privateConstructorUsedError;
   String? get logo_url => throw _privateConstructorUsedError;
 
+  /// Serializes this SchoolBrandingModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-  @JsonKey(ignore: true)
+
+  /// Create a copy of SchoolBrandingModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   $SchoolBrandingModelCopyWith<SchoolBrandingModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -574,8 +607,9 @@ mixin _$SchoolBrandingModel {
 /// @nodoc
 abstract class $SchoolBrandingModelCopyWith<$Res> {
   factory $SchoolBrandingModelCopyWith(
-          SchoolBrandingModel value, $Res Function(SchoolBrandingModel) then) =
-      _$SchoolBrandingModelCopyWithImpl<$Res, SchoolBrandingModel>;
+    SchoolBrandingModel value,
+    $Res Function(SchoolBrandingModel) then,
+  ) = _$SchoolBrandingModelCopyWithImpl<$Res, SchoolBrandingModel>;
   @useResult
   $Res call({String? name, String? brand_color, String? logo_url});
 }
@@ -590,6 +624,8 @@ class _$SchoolBrandingModelCopyWithImpl<$Res, $Val extends SchoolBrandingModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
+  /// Create a copy of SchoolBrandingModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -597,29 +633,33 @@ class _$SchoolBrandingModelCopyWithImpl<$Res, $Val extends SchoolBrandingModel>
     Object? brand_color = freezed,
     Object? logo_url = freezed,
   }) {
-    return _then(_value.copyWith(
-      name: freezed == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String?,
-      brand_color: freezed == brand_color
-          ? _value.brand_color
-          : brand_color // ignore: cast_nullable_to_non_nullable
-              as String?,
-      logo_url: freezed == logo_url
-          ? _value.logo_url
-          : logo_url // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            name: freezed == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            brand_color: freezed == brand_color
+                ? _value.brand_color
+                : brand_color // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            logo_url: freezed == logo_url
+                ? _value.logo_url
+                : logo_url // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$SchoolBrandingModelImplCopyWith<$Res>
     implements $SchoolBrandingModelCopyWith<$Res> {
-  factory _$$SchoolBrandingModelImplCopyWith(_$SchoolBrandingModelImpl value,
-          $Res Function(_$SchoolBrandingModelImpl) then) =
-      __$$SchoolBrandingModelImplCopyWithImpl<$Res>;
+  factory _$$SchoolBrandingModelImplCopyWith(
+    _$SchoolBrandingModelImpl value,
+    $Res Function(_$SchoolBrandingModelImpl) then,
+  ) = __$$SchoolBrandingModelImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({String? name, String? brand_color, String? logo_url});
@@ -629,10 +669,13 @@ abstract class _$$SchoolBrandingModelImplCopyWith<$Res>
 class __$$SchoolBrandingModelImplCopyWithImpl<$Res>
     extends _$SchoolBrandingModelCopyWithImpl<$Res, _$SchoolBrandingModelImpl>
     implements _$$SchoolBrandingModelImplCopyWith<$Res> {
-  __$$SchoolBrandingModelImplCopyWithImpl(_$SchoolBrandingModelImpl _value,
-      $Res Function(_$SchoolBrandingModelImpl) _then)
-      : super(_value, _then);
+  __$$SchoolBrandingModelImplCopyWithImpl(
+    _$SchoolBrandingModelImpl _value,
+    $Res Function(_$SchoolBrandingModelImpl) _then,
+  ) : super(_value, _then);
 
+  /// Create a copy of SchoolBrandingModel
+  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -640,20 +683,22 @@ class __$$SchoolBrandingModelImplCopyWithImpl<$Res>
     Object? brand_color = freezed,
     Object? logo_url = freezed,
   }) {
-    return _then(_$SchoolBrandingModelImpl(
-      name: freezed == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String?,
-      brand_color: freezed == brand_color
-          ? _value.brand_color
-          : brand_color // ignore: cast_nullable_to_non_nullable
-              as String?,
-      logo_url: freezed == logo_url
-          ? _value.logo_url
-          : logo_url // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
+    return _then(
+      _$SchoolBrandingModelImpl(
+        name: freezed == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        brand_color: freezed == brand_color
+            ? _value.brand_color
+            : brand_color // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        logo_url: freezed == logo_url
+            ? _value.logo_url
+            : logo_url // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
   }
 }
 
@@ -689,30 +734,33 @@ class _$SchoolBrandingModelImpl implements _SchoolBrandingModel {
                 other.logo_url == logo_url));
   }
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(runtimeType, name, brand_color, logo_url);
 
-  @JsonKey(ignore: true)
+  /// Create a copy of SchoolBrandingModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
   _$$SchoolBrandingModelImplCopyWith<_$SchoolBrandingModelImpl> get copyWith =>
       __$$SchoolBrandingModelImplCopyWithImpl<_$SchoolBrandingModelImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SchoolBrandingModelImplToJson(
-      this,
-    );
+    return _$$SchoolBrandingModelImplToJson(this);
   }
 }
 
 abstract class _SchoolBrandingModel implements SchoolBrandingModel {
-  const factory _SchoolBrandingModel(
-      {final String? name,
-      final String? brand_color,
-      final String? logo_url}) = _$SchoolBrandingModelImpl;
+  const factory _SchoolBrandingModel({
+    final String? name,
+    final String? brand_color,
+    final String? logo_url,
+  }) = _$SchoolBrandingModelImpl;
 
   factory _SchoolBrandingModel.fromJson(Map<String, dynamic> json) =
       _$SchoolBrandingModelImpl.fromJson;
@@ -723,8 +771,11 @@ abstract class _SchoolBrandingModel implements SchoolBrandingModel {
   String? get brand_color;
   @override
   String? get logo_url;
+
+  /// Create a copy of SchoolBrandingModel
+  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   _$$SchoolBrandingModelImplCopyWith<_$SchoolBrandingModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

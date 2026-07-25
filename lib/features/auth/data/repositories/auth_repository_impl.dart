@@ -51,6 +51,7 @@ class AuthRepositoryImpl implements AuthRepository {
         email: userModel.email,
         firstName: userModel.first_name,
         lastName: userModel.last_name,
+        schoolId: userModel.school_id,
         schoolName: userModel.school_name,
         portalType: userModel.portal_type,
         isSuperuser: userModel.is_superuser,

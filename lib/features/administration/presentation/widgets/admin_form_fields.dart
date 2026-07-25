@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Shared Administration form field styling — a labeled text input with
@@ -254,6 +255,24 @@ class AdminFileField extends StatelessWidget {
   final String? errorText;
   final String placeholder;
   final String? helper;
+  /// Optional field label rendered above the picker (e.g. Complaints'
+  /// `<label htmlFor="c-attachment">Attachment</label>`). Omitted by
+  /// default since several web panels (Visitor Book, Postal) render this
+  /// as a bare, unlabeled `<input type="file">`.
+  final String? label;
+  /// When editing a record that already has a saved file and no new file
+  /// has been picked yet, shows a "View existing file" link above the
+  /// picker (matches web's `{editingId && fileUrl && <a>View existing
+  /// file</a>}`). Ignored when [previewBytes] or an image-capable
+  /// [existingFileUrl] is shown inline instead (ID Card / Certificate).
+  final String? existingFileUrl;
+  /// Newly-picked image bytes to preview inline — matches web's
+  /// `URL.createObjectURL(file)` live thumbnail (`IdCardPanel.tsx`).
+  final Uint8List? previewBytes;
+  /// True when [existingFileUrl] should be rendered as an inline image
+  /// thumbnail (with a "Current image · click to replace" caption)
+  /// instead of a plain "View existing file" link.
+  final bool previewExistingAsImage;
 
   const AdminFileField({
     super.key,
@@ -262,77 +281,75 @@ class AdminFileField extends StatelessWidget {
     this.errorText,
     this.placeholder = 'Choose file',
     this.helper,
+    this.existingFileUrl,
+    this.previewBytes,
+    this.previewExistingAsImage = false,
+    this.label,
   });
 
   @override
   Widget build(BuildContext context) {
+    final showImagePreview = previewBytes != null || (previewExistingAsImage && existingFileUrl != null && existingFileUrl!.isNotEmpty);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: onTap,
-            child: InputDecorator(
-              decoration: _fieldDecoration(errorText: errorText).copyWith(
-                prefixIcon: const Icon(Icons.attach_file, size: 18),
-              ),
-              child: Text(
-                fileName ?? placeholder,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: fileName == null ? AppColors.textTertiary : AppColors.textPrimary,
+          if (label != null) _FieldLabel(label: label!, required: false),
+          if (label != null) const SizedBox(height: 6),
+          if (!showImagePreview && fileName == null && existingFileUrl != null && existingFileUrl!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: InkWell(
+                onTap: () => launchUrl(Uri.parse(existingFileUrl!), mode: LaunchMode.externalApplication),
+                child: const Text(
+                  'View existing file',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.primaryPurple, decoration: TextDecoration.underline),
                 ),
               ),
             ),
+          InkWell(
+            onTap: onTap,
+            child: showImagePreview
+                ? Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: errorText != null ? AppColors.dangerRed : AppColors.borderPrimary),
+                    ),
+                    child: Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: previewBytes != null
+                              ? Image.memory(previewBytes!, height: 70, fit: BoxFit.contain)
+                              : Image.network(existingFileUrl!, height: 70, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 32, color: AppColors.textTertiary)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          fileName ?? 'Current image · click to replace',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  )
+                : InputDecorator(
+                    decoration: _fieldDecoration(errorText: errorText).copyWith(
+                      prefixIcon: const Icon(Icons.attach_file, size: 18),
+                    ),
+                    child: Text(
+                      fileName ?? placeholder,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: fileName == null ? AppColors.textTertiary : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
           ),
           if (helper != null) _FieldHelper(text: helper!),
-        ],
-      ),
-    );
-  }
-}
-
-/// Shared Administration radio group (e.g. Incoming/Outgoing call type).
-class AdminRadioGroup<T> extends StatelessWidget {
-  final String label;
-  final T value;
-  final List<(T value, String label)> options;
-  final ValueChanged<T?> onChanged;
-
-  const AdminRadioGroup({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _FieldLabel(label: label, required: false),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 16,
-            children: options.map((opt) {
-              return InkWell(
-                onTap: () => onChanged(opt.$1),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Radio<T>(value: opt.$1, groupValue: value, onChanged: onChanged),
-                    Text(opt.$2, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
         ],
       ),
     );

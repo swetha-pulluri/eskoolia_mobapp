@@ -12,6 +12,8 @@ class AuditEventEntity {
   final List<String>? affectedFields;
   final Map<String, dynamic>? beforeValues;
   final Map<String, dynamic>? afterValues;
+  final String status;
+  final String? errorMessage;
 
   const AuditEventEntity({
     required this.id,
@@ -26,6 +28,8 @@ class AuditEventEntity {
     this.affectedFields,
     this.beforeValues,
     this.afterValues,
+    required this.status,
+    this.errorMessage,
   });
 }
 

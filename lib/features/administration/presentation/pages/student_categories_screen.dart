@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/student_category_entity.dart';
 import '../providers/administration_provider.dart';
-import '../providers/administration_local_data.dart';
+import '../providers/administration_list_state.dart' show adminErrorMessage;
 import '../widgets/admin_form_fields.dart';
 import '../widgets/admin_section_card.dart';
 import '../widgets/admin_data_table.dart';
@@ -229,59 +229,18 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
     );
   }
 
-  /// Mirrors `DeleteCategoryModal.tsx` exactly — two literal copy/button
-  /// variants ("safe-delete" vs "conflict"), not an invented dialog.
+  /// Mirrors `DeleteCategoryModal.tsx`'s "safe-delete" confirmation. Unlike
+  /// web, this does NOT pre-branch on `c.studentsCount` — the real
+  /// `/api/v1/students/categories/{id}/` list/CRUD endpoints never
+  /// annotate `students_count` (`StudentCategoryViewSet.get_queryset`
+  /// only annotates it for the separate `attention` filter branch), so the
+  /// field is always missing/null from real data and a client pre-check
+  /// would silently skip web's "Cannot Delete Category" flow even for
+  /// categories that do have students. Instead: always attempt the delete,
+  /// and if the backend rejects it (`destroy()` returns 400 "Cannot delete
+  /// category as it is assigned to students"), show the conflict dialog
+  /// with the Deactivate escape hatch as a reactive follow-up.
   Future<void> _confirmDelete(StudentCategoryEntity c) async {
-    final hasStudents = (c.studentsCount ?? 0) > 0;
-
-    if (hasStudents) {
-      final action = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(8)),
-                child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(child: Text('Cannot Delete Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This category is currently assigned to ${c.studentsCount} ${c.studentsCount == 1 ? 'student' : 'students'}.',
-                style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
-              ),
-              const SizedBox(height: 8),
-              const Text('Deleting it may affect student records and reports.', style: TextStyle(fontSize: 13, color: Color(0xFF4B5563))),
-              const SizedBox(height: 8),
-              const Text('Please reassign students first or deactivate this category instead.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
-              onPressed: () => Navigator.of(context).pop('deactivate'),
-              child: const Text('Deactivate Category'),
-            ),
-          ],
-        ),
-      );
-      if (action == 'deactivate' && c.id != null) {
-        await AdministrationLocalData.setStudentCategoryStatus(c.id!, 'inactive');
-        ref.invalidate(studentCategoryListProvider);
-        ref.invalidate(studentCategorySummaryProvider);
-      }
-      return;
-    }
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -301,8 +260,6 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('This category has no assigned students.', style: TextStyle(fontSize: 13, color: Color(0xFF4B5563))),
-            const SizedBox(height: 8),
             Text.rich(
               TextSpan(
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF374151)),
@@ -327,8 +284,52 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
         ],
       ),
     );
-    if (confirmed == true && c.id != null) {
-      await ref.read(studentCategoryListProvider.notifier).remove(c.id!);
+    if (confirmed != true || c.id == null) return;
+
+    final notifier = ref.read(studentCategoryListProvider.notifier);
+    final ok = await notifier.remove(c.id!);
+    if (ok || !mounted) return;
+
+    final message = ref.read(studentCategoryListProvider).error ?? '';
+    if (!message.toLowerCase().contains('assigned to students')) return;
+
+    final action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: const Color(0xFFFEE2E2), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Cannot Delete Category', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message, style: const TextStyle(fontSize: 13, color: Color(0xFF374151))),
+            const SizedBox(height: 8),
+            const Text('Please reassign students first or deactivate this category instead.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF374151))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+            onPressed: () => Navigator.of(context).pop('deactivate'),
+            child: const Text('Deactivate Category'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'deactivate') {
+      await ref.read(studentCategoryListProvider.notifier).edit(c.id!, c.copyWith(status: 'inactive'));
+      ref.invalidate(studentCategorySummaryProvider);
     }
   }
 
@@ -341,8 +342,7 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
       confirmLabel: willDeactivate ? 'Deactivate' : 'Activate',
     );
     if (confirmed && c.id != null) {
-      await AdministrationLocalData.setStudentCategoryStatus(c.id!, nextStatus);
-      ref.invalidate(studentCategoryListProvider);
+      await ref.read(studentCategoryListProvider.notifier).edit(c.id!, c.copyWith(status: nextStatus));
       ref.invalidate(studentCategorySummaryProvider);
     }
   }
@@ -485,12 +485,19 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
       confirmLabel: nextStatus == 'active' ? 'Activate' : 'Deactivate',
     );
     if (!confirmed) return;
-    for (final id in _selectedIds) {
-      await AdministrationLocalData.setStudentCategoryStatus(id, nextStatus);
+    final repository = ref.read(administrationRepositoryProvider);
+    try {
+      await repository.bulkUpdateStudentCategoryStatus(_selectedIds.toList(), nextStatus);
+      ref.invalidate(studentCategoryListProvider);
+      ref.invalidate(studentCategorySummaryProvider);
+      setState(() => _selectedIds.clear());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(adminErrorMessage(e))),
+        );
+      }
     }
-    ref.invalidate(studentCategoryListProvider);
-    ref.invalidate(studentCategorySummaryProvider);
-    setState(() => _selectedIds.clear());
   }
 
   Future<void> _bulkDelete() async {
@@ -503,11 +510,21 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
       confirmLabel: 'Delete',
     );
     if (!confirmed) return;
-    final notifier = ref.read(studentCategoryListProvider.notifier);
-    for (final id in _selectedIds) {
-      await notifier.remove(id);
+    final repository = ref.read(administrationRepositoryProvider);
+    try {
+      // `bulk-delete` blocks the whole batch (400) if any selected
+      // category is assigned to students — matches backend semantics.
+      await repository.bulkDeleteStudentCategories(_selectedIds.toList());
+      ref.invalidate(studentCategoryListProvider);
+      ref.invalidate(studentCategorySummaryProvider);
+      setState(() => _selectedIds.clear());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(adminErrorMessage(e))),
+        );
+      }
     }
-    setState(() => _selectedIds.clear());
   }
 
   @override

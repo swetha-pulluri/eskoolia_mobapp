@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/inquiry_entity.dart';
-import '../providers/admissions_local_data.dart';
+import '../providers/admissions_provider.dart';
 import 'enquiry_form_modal.dart' show kAdmIndigo;
 
 const List<Map<String, String>> kLogOutcomes = [
@@ -26,7 +27,7 @@ String _statusForOutcome(String outcome, String fallbackStatus) {
 /// Log Contact Update — converted from `AdmissionsCommandCenter.tsx`'s
 /// "LOG MODAL". Records an outcome + optional note against an inquiry and
 /// advances its stage/follow-up date accordingly.
-class LogContactModal extends StatefulWidget {
+class LogContactModal extends ConsumerStatefulWidget {
   final InquiryEntity inquiry;
   final String today;
   final VoidCallback onClose;
@@ -45,10 +46,10 @@ class LogContactModal extends StatefulWidget {
   });
 
   @override
-  State<LogContactModal> createState() => _LogContactModalState();
+  ConsumerState<LogContactModal> createState() => _LogContactModalState();
 }
 
-class _LogContactModalState extends State<LogContactModal> {
+class _LogContactModalState extends ConsumerState<LogContactModal> {
   late String _outcome = widget.prefilledOutcome ?? '';
   late final _note = TextEditingController(text: widget.prefilledNote ?? '');
   late String _nextFollowUpDate = DateTime.parse(widget.today).add(const Duration(days: 2)).toIso8601String().substring(0, 10);
@@ -73,7 +74,7 @@ class _LogContactModalState extends State<LogContactModal> {
     final newStatus = _statusForOutcome(_outcome, widget.inquiry.status);
     setState(() => _saving = true);
     try {
-      await AdmissionsLocalData.updateInquiry(widget.inquiry.id, (c) => c.copyWith(
+      await ref.read(admissionsRepositoryProvider).updateInquiry(widget.inquiry.id, (c) => c.copyWith(
             note: c.note.isNotEmpty ? '${c.note}\n$logEntry' : logEntry,
             followUpDate: widget.today,
             nextFollowUpDate: _nextFollowUpDate,
@@ -96,7 +97,10 @@ class _LogContactModalState extends State<LogContactModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
             constraints: const BoxConstraints(maxWidth: 460),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
             clipBehavior: Clip.antiAlias,
@@ -181,6 +185,7 @@ class _LogContactModalState extends State<LogContactModal> {
                   ]),
                 ),
               ],
+            ),
             ),
           ),
         ),

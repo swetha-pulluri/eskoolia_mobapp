@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../auth/presentation/providers/auth_providers.dart';
+import '../../../../auth/data/models/login_request_model.dart';
 
 /// Unlock Edit Dialog — converted from web
-/// `attendance/student/components/UnlockEditDialog.tsx`. Web re-verifies
-/// the password against the real `/api/v1/auth/login/` endpoint; this
-/// module has no backend, so any non-empty password unlocks locally
-/// (same UI/flow, no real credential check — noted as a deliberate,
-/// disclosed simplification of pure backend-auth plumbing).
-class UnlockEditDialog extends StatefulWidget {
+/// `attendance/student/components/UnlockEditDialog.tsx`. Matches web's
+/// real behavior exactly: it does NOT touch `is_locked` on any attendance
+/// record and does NOT require superuser — it re-verifies the currently
+/// logged-in user's own password via a real `POST /api/v1/auth/login/`
+/// call (password re-entry, not privilege elevation), and if that
+/// succeeds, just flips a client-side "unlocked for this session" flag.
+/// Calls the auth datasource directly (not the repository/notifier) so
+/// this verification call never overwrites the real session's stored
+/// tokens — exactly mirroring how the real web page discards the
+/// re-login response instead of applying it.
+class UnlockEditDialog extends ConsumerStatefulWidget {
   final VoidCallback onUnlock;
   final VoidCallback onClose;
 
   const UnlockEditDialog({super.key, required this.onUnlock, required this.onClose});
 
   @override
-  State<UnlockEditDialog> createState() => _UnlockEditDialogState();
+  ConsumerState<UnlockEditDialog> createState() => _UnlockEditDialogState();
 }
 
-class _UnlockEditDialogState extends State<UnlockEditDialog> {
+class _UnlockEditDialogState extends ConsumerState<UnlockEditDialog> {
   final _controller = TextEditingController();
   String? _error;
   bool _loading = false;
@@ -32,14 +40,27 @@ class _UnlockEditDialogState extends State<UnlockEditDialog> {
       setState(() => _error = 'Please enter your password.');
       return;
     }
+    final username = ref.read(authNotifierProvider).whenOrNull(authenticated: (user) => user.username);
+    if (username == null) {
+      setState(() => _error = 'Your session has expired. Please log in again.');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    widget.onUnlock();
+    try {
+      await ref.read(authRemoteDataSourceProvider).login(LoginRequestModel(username: username, password: _controller.text));
+      if (!mounted) return;
+      setState(() => _loading = false);
+      widget.onUnlock();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Incorrect password. Please try again.';
+      });
+    }
   }
 
   @override

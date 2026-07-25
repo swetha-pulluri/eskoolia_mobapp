@@ -1,95 +1,25 @@
-import '../../domain/entities/inquiry_entity.dart';
-import '../../domain/entities/school_class_entity.dart';
 import '../../domain/entities/campaign_entity.dart';
 import '../../domain/entities/message_template_entity.dart';
 import '../../domain/entities/marketing_event_entity.dart';
-import '../../domain/entities/analytics_data_entity.dart';
-import '../../../administration/domain/entities/admin_setup_entity.dart';
 
 /// ========================================================================
-/// UI-ONLY LOCAL DATA STORE — Admissions module
+/// MARKETING STATIC CONTENT
 /// ========================================================================
-/// No backend/API calls are made for Admissions right now, consistent with
-/// the Administration module's established architecture in this project.
-///
-/// Inquiries / classes / sources / references start EMPTY — the real web
-/// `AdmissionsCommandCenter.tsx` fetches these from
-/// `/api/v1/admissions/inquiries/`, `/api/v1/core/classes/` and
-/// `/api/v1/admissions/admin-setups/`; there is no static demo data for
-/// these in the web source, so inventing rows would show data that doesn't
-/// exist in the web app. Each screen renders its own real, web-verified
-/// empty state instead.
-///
-/// Marketing is the one exception, and deliberately so: the actual web
-/// `AdmissionsMarketing.tsx` makes ZERO API calls — its two demo campaigns,
-/// all 15 message templates, and its two demo events are hardcoded
-/// literal constants in the web source itself (`DEMO_CAMPAIGNS`,
-/// `TEMPLATES`, and the inline events array). Reproducing those exact
-/// values here is not inventing data — it's copying the web's own real
-/// constants verbatim.
+/// Command Center and Analytics are now backend-integrated (see
+/// `admissions_repository_impl.dart`) — this file now holds only
+/// Marketing's content, and deliberately so: the real web
+/// `AdmissionsMarketing.tsx` makes ZERO API calls anywhere in the file
+/// (confirmed directly against source) — its two demo campaigns, all 15
+/// message templates, and its two demo events are hardcoded literal
+/// constants in the web source itself (`DEMO_CAMPAIGNS`, `TEMPLATES`, and
+/// the inline events array), and saving a new campaign there only ever
+/// mutates in-memory React state (lost on refresh) since there is no
+/// backing store to persist to. Reproducing those exact values here is
+/// not inventing data — it's copying the web's own real constants
+/// verbatim, and mirroring its own local-state-only "persistence".
 /// ========================================================================
 class AdmissionsLocalData {
   AdmissionsLocalData._();
-
-  // ─── Command Center: Inquiries / Classes / Sources / References ───────
-  static final List<InquiryEntity> _inquiries = [];
-  static final List<SchoolClassEntity> _classes = [];
-  static final List<AdminSetupEntity> _sources = [];
-  static final List<AdminSetupEntity> _references = [];
-
-  static Future<List<InquiryEntity>> getInquiries() async => List.of(_inquiries);
-  static Future<List<SchoolClassEntity>> getClasses() async => List.of(_classes);
-  static Future<List<AdminSetupEntity>> getSources() async => List.of(_sources);
-  static Future<List<AdminSetupEntity>> getReferences() async => List.of(_references);
-
-  static int _nextInquiryId() {
-    var max = 0;
-    for (final i in _inquiries) {
-      if (i.id > max) max = i.id;
-    }
-    return max + 1;
-  }
-
-  static Future<InquiryEntity> createInquiry(InquiryEntity draft) async {
-    final created = InquiryEntity(
-      id: _nextInquiryId(),
-      fullName: draft.fullName,
-      phone: draft.phone,
-      email: draft.email,
-      description: draft.description,
-      queryDate: draft.queryDate,
-      followUpDate: draft.followUpDate,
-      nextFollowUpDate: draft.nextFollowUpDate,
-      assigned: draft.assigned,
-      reference: draft.reference,
-      referenceName: _references.where((r) => r.id == draft.reference).map((r) => r.name).firstOrNull,
-      source: draft.source,
-      sourceName: _sources.where((s) => s.id == draft.source).map((s) => s.name).firstOrNull,
-      schoolClass: draft.schoolClass,
-      classNameResolved: _classes.where((c) => c.id == draft.schoolClass).map((c) => c.name).firstOrNull,
-      noOfChild: draft.noOfChild,
-      activeStatus: draft.activeStatus,
-      status: 'new',
-      note: draft.note,
-    );
-    _inquiries.insert(0, created);
-    return created;
-  }
-
-  static Future<InquiryEntity> updateInquiry(int id, InquiryEntity Function(InquiryEntity current) update) async {
-    final index = _inquiries.indexWhere((i) => i.id == id);
-    final updated = update(_inquiries[index]);
-    _inquiries[index] = updated;
-    return updated;
-  }
-
-  static Future<void> deleteInquiry(int id) async => _inquiries.removeWhere((i) => i.id == id);
-
-  /// Merge `absorbId` into `keepId` — mirrors web's
-  /// `POST /inquiries/{id}/merge/` (source record is deleted after merge).
-  static Future<void> mergeInquiries({required int keepId, required int absorbId}) async {
-    _inquiries.removeWhere((i) => i.id == absorbId);
-  }
 
   // ─── Marketing: Campaigns ───────────────────────────────────────────────
   // Verbatim from web's `DEMO_CAMPAIGNS` in AdmissionsMarketing.tsx.
@@ -320,104 +250,11 @@ class AdmissionsLocalData {
   ];
 
   // ─── Marketing: Events ──────────────────────────────────────────────────
-  // Verbatim from web's inline demo events array in AdmissionsMarketing.tsx.
-  static const List<MarketingEventEntity> events = [
-    MarketingEventEntity(name: 'Open House', date: '15 May 2026', time: '10:00 AM', rsvp: 14, capacity: 40),
-    MarketingEventEntity(name: 'Campus Tour', date: '22 May 2026', time: '11:00 AM', rsvp: 6, capacity: 20),
+  // Verbatim from web's inline demo events array in AdmissionsMarketing.tsx
+  // (mutable list, not const, so New Event / Manage RSVPs can add to and
+  // update it in place — same local-only-mock pattern as `campaigns` above).
+  static final List<MarketingEventEntity> events = [
+    const MarketingEventEntity(id: 'e1', name: 'Open House', date: '15 May 2026', time: '10:00 AM', rsvp: 14, capacity: 40),
+    const MarketingEventEntity(id: 'e2', name: 'Campus Tour', date: '22 May 2026', time: '11:00 AM', rsvp: 6, capacity: 20),
   ];
-
-  // ─── Analytics ──────────────────────────────────────────────────────────
-  /// Mirrors backend `GET /api/v1/admissions/analytics/overview/` — same
-  /// period filter (`month`/`quarter`/`year`/`all` on `query_date`) and the
-  /// same aggregations (by source, by grade, monthly trend, counsellor
-  /// leaderboard), just computed over the local in-memory `_inquiries`
-  /// instead of a DB queryset. `channelBreakdown` stays empty: the backend
-  /// computes it from `ContactLog` rows, and this module doesn't keep a
-  /// separate contact-log model — an honest data-model gap, not invented
-  /// data, and the web UI already hides that section when it's empty.
-  static Future<AnalyticsDataEntity> getAnalyticsOverview({required String period}) async {
-    final today = DateTime.now();
-    List<InquiryEntity> base = List.of(_inquiries);
-    if (period == 'month') {
-      final monthStart = DateTime(today.year, today.month, 1).toIso8601String().substring(0, 10);
-      base = base.where((i) => i.queryDate != null && i.queryDate!.compareTo(monthStart) >= 0).toList();
-    } else if (period == 'quarter') {
-      final cutoff = today.subtract(const Duration(days: 90)).toIso8601String().substring(0, 10);
-      base = base.where((i) => i.queryDate != null && i.queryDate!.compareTo(cutoff) >= 0).toList();
-    } else if (period == 'year') {
-      base = base.where((i) => i.queryDate != null && i.queryDate!.startsWith('${today.year}')).toList();
-    }
-
-    final total = base.length;
-    if (total == 0) return const AnalyticsDataEntity();
-    final contacted = base.where((i) => i.status != 'new').length;
-    final visited = base.where((i) => ['visited', 'enrolled', 'declined'].contains(i.status)).length;
-    final enrolled = base.where((i) => i.status == 'enrolled').length;
-    final declined = base.where((i) => i.status == 'declined').length;
-
-    final bySourceMap = <String?, List<int>>{}; // sourceName -> [count, enrolled]
-    for (final i in base) {
-      final key = i.sourceName;
-      final entry = bySourceMap.putIfAbsent(key, () => [0, 0]);
-      entry[0]++;
-      if (i.status == 'enrolled') entry[1]++;
-    }
-    final bySource = bySourceMap.entries.map((e) => SourceStat(sourceName: e.key, count: e.value[0], enrolled: e.value[1])).toList()
-      ..sort((a, b) => b.count.compareTo(a.count));
-    final bySourceTop10 = bySource.take(10).toList();
-
-    final byGradeMap = <String?, int>{};
-    for (final i in base) {
-      byGradeMap.update(i.classNameResolved, (v) => v + 1, ifAbsent: () => 1);
-    }
-    final byGrade = byGradeMap.entries.map((e) => GradeStat(gradeName: e.key, count: e.value)).toList()..sort((a, b) => b.count.compareTo(a.count));
-    final byGradeTop10 = byGrade.take(10).toList();
-
-    final sixMonthsAgo = today.subtract(const Duration(days: 180)).toIso8601String().substring(0, 10);
-    final monthlyMap = <String, List<int>>{}; // "YYYY-MM" -> [inquiries, enrolled]
-    for (final i in base) {
-      if (i.queryDate == null || i.queryDate!.compareTo(sixMonthsAgo) < 0) continue;
-      final monthKey = i.queryDate!.substring(0, 7);
-      final entry = monthlyMap.putIfAbsent(monthKey, () => [0, 0]);
-      entry[0]++;
-      if (i.status == 'enrolled') entry[1]++;
-    }
-    final monthlyTrend = monthlyMap.entries.map((e) => MonthlyTrendPoint(month: e.key, inquiries: e.value[0], enrolled: e.value[1])).toList()
-      ..sort((a, b) => a.month.compareTo(b.month));
-
-    final counsellorMap = <String, List<int>>{}; // assigned -> [total, enrolled, contacted]
-    for (final i in base) {
-      if (i.assigned.isEmpty) continue;
-      final entry = counsellorMap.putIfAbsent(i.assigned, () => [0, 0, 0]);
-      entry[0]++;
-      if (i.status == 'enrolled') entry[1]++;
-      if (i.status != 'new') entry[2]++;
-    }
-    final counsellorStats = counsellorMap.entries
-        .map((e) => CounsellorStat(
-              assigned: e.key,
-              total: e.value[0],
-              enrolled: e.value[1],
-              contacted: e.value[2],
-              conversionPct: e.value[0] == 0 ? 0 : (e.value[1] / e.value[0] * 100),
-            ))
-        .toList()
-      ..sort((a, b) => b.total.compareTo(a.total));
-    final counsellorTop8 = counsellorStats.take(8).toList();
-
-    return AnalyticsDataEntity(
-      total: total,
-      contacted: contacted,
-      visited: visited,
-      enrolled: enrolled,
-      declined: declined,
-      contactRatePct: total == 0 ? 0 : contacted / total * 100,
-      visitRatePct: total == 0 ? 0 : visited / total * 100,
-      enrollRatePct: total == 0 ? 0 : enrolled / total * 100,
-      monthlyTrend: monthlyTrend,
-      bySource: bySourceTop10,
-      byGrade: byGradeTop10,
-      counsellorStats: counsellorTop8,
-    );
-  }
 }

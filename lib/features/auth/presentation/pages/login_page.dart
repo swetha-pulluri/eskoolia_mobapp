@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../widgets/feature_card.dart';
@@ -76,8 +77,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
           initial: () {},
           loading: () {},
           authenticated: (user) {
-            // Navigate based on portal type
-            // TODO: Implement navigation to dashboard/home based on user.portalType
+            debugPrint('[LoginPage] authenticated -> navigating to /home (user: ${user.username}, portalType: ${user.portalType})');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -85,6 +85,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   backgroundColor: AppColors.airaTeal,
                 ),
               );
+              // Explicit navigation — do not rely solely on the router's
+              // redirect-on-rebuild side effect (see app_router.dart).
+              context.go('/home');
             }
           },
           unauthenticated: () {},

@@ -1,10 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../data/datasources/attendance_remote_datasource.dart';
+import '../../data/repositories/attendance_repository_impl.dart';
 import '../../domain/entities/attendance_entities.dart';
-import 'attendance_local_data.dart';
+import '../../domain/repositories/attendance_repository.dart';
 
 /// ========================================================================
-/// UI-ONLY PROVIDERS — Attendance module (no backend calls; see
-/// `attendance_local_data.dart` for the architectural rationale).
+/// DEPENDENCY INJECTION — real backend
+/// ========================================================================
+final attendanceRemoteDataSourceProvider = Provider<AttendanceRemoteDataSource>((ref) {
+  return AttendanceRemoteDataSource(ref.watch(dioClientProvider));
+});
+
+final attendanceRepositoryProvider = Provider<AttendanceRepository>((ref) {
+  return AttendanceRepositoryImpl(ref.watch(attendanceRemoteDataSourceProvider));
+});
+
+/// ========================================================================
+/// Student Attendance — wired to the real `AttendanceRepository`
+/// (`/api/v1/attendance/student-attendance/...`, `/api/v1/core/classes/`).
 /// ========================================================================
 
 final attendanceReloadProvider = StateProvider<int>((ref) => 0);
@@ -13,6 +27,10 @@ final selectedDateProvider = StateProvider<String>((ref) => _todayIso());
 
 /// Fixed literal default matching web's `useCurrentAcademicYear('2026-27')`
 /// fallback argument (the exact string passed in the historical source).
+/// Disclosed, real web limitation carried over faithfully: the header's
+/// Academic Year dropdown is never actually wired into any data-fetching
+/// call in the real web source either (confirmed directly) — it's
+/// decorative there too, not a Flutter-side omission.
 final academicYearProvider = StateProvider<String>((ref) => '2026-27');
 
 final levelFilterProvider = StateProvider<LevelFilter>((ref) => 'all');
@@ -34,9 +52,34 @@ final selectedRowsProvider = StateProvider<Map<String, Set<int>>>((ref) => {});
 
 final isEditUnlockedProvider = StateProvider<bool>((ref) => false);
 
-final classesProvider = FutureProvider.autoDispose<List<ClassInfoEntity>>((ref) {
+/// Classes + nested sections, from `/api/v1/core/classes/`, enriched with
+/// each class's live present/absent/late/overall% from
+/// `/student-attendance/class-summary/?date=...` (mirrors web's
+/// `useClasses`+`class-summary` merge, `hooks/useClasses.ts:241-244`).
+final classesProvider = FutureProvider.autoDispose<List<ClassInfoEntity>>((ref) async {
   ref.watch(attendanceReloadProvider);
-  return AttendanceLocalData.getClasses();
+  final date = ref.watch(selectedDateProvider);
+  final repository = ref.watch(attendanceRepositoryProvider);
+  final classes = await repository.getClasses();
+  List<ClassSummaryTileEntity> tiles;
+  try {
+    tiles = await repository.getClassSummary(date);
+  } catch (_) {
+    tiles = const [];
+  }
+  final byId = {for (final t in tiles) t.classId: t};
+  return classes.map((c) {
+    final t = byId[c.id];
+    if (t == null) return c;
+    return c.copyWith(totalPresent: t.present, totalSignedIn: t.signedIn, totalAbsent: t.absent, totalLate: t.late, overallPct: t.pct.round());
+  }).toList();
+});
+
+/// Daily KPI summary — `/student-attendance/daily-summary/?date=...`.
+final dailySummaryProvider = FutureProvider.autoDispose<KpiDataEntity>((ref) {
+  ref.watch(attendanceReloadProvider);
+  final date = ref.watch(selectedDateProvider);
+  return ref.watch(attendanceRepositoryProvider).getDailySummary(date);
 });
 
 class AttendanceStudentsState {
@@ -46,29 +89,81 @@ class AttendanceStudentsState {
 }
 
 class AttendanceStudentsNotifier extends StateNotifier<AttendanceStudentsState> {
-  AttendanceStudentsNotifier() : super(const AttendanceStudentsState());
+  final Ref _ref;
+  AttendanceStudentsNotifier(this._ref) : super(const AttendanceStudentsState());
+
+  AttendanceRepository get _repo => _ref.read(attendanceRepositoryProvider);
 
   Future<void> loadSection(int classId, int sectionId) async {
     final key = '$classId-$sectionId';
     state = AttendanceStudentsState(students: state.students, loading: {...state.loading, key: true});
-    final list = await AttendanceLocalData.getStudents(classId, sectionId);
-    state = AttendanceStudentsState(students: {...state.students, key: list}, loading: {...state.loading, key: false});
+    final date = _ref.read(selectedDateProvider);
+    try {
+      final list = await _repo.searchStudents(classId: classId, sectionId: sectionId, date: date);
+      state = AttendanceStudentsState(students: {...state.students, key: list}, loading: {...state.loading, key: false});
+    } catch (_) {
+      state = AttendanceStudentsState(students: state.students, loading: {...state.loading, key: false});
+      rethrow;
+    }
   }
 
-  void updateStudent(int classId, int sectionId, AttendanceStudentEntity updated) {
+  /// Applies [updated] optimistically, then persists that single student's
+  /// full current mark via `store/`. Throws on failure (caller shows the
+  /// real error) — the optimistic update is left in place either way,
+  /// matching web's own optimistic-update-then-fire pattern (it doesn't
+  /// roll back on failure either, it just surfaces a toast).
+  Future<void> updateStudent(int classId, int sectionId, AttendanceStudentEntity updated) async {
     final key = '$classId-$sectionId';
     final list = List<AttendanceStudentEntity>.of(state.students[key] ?? []);
     final idx = list.indexWhere((s) => s.id == updated.id);
     if (idx == -1) return;
     list[idx] = updated;
     state = AttendanceStudentsState(students: {...state.students, key: list}, loading: state.loading);
-    AttendanceLocalData.setStudents(classId, sectionId, list);
+    await _persistOne(classId, sectionId, updated);
+  }
+
+  Future<void> _persistOne(int classId, int sectionId, AttendanceStudentEntity s) async {
+    final date = _ref.read(selectedDateProvider);
+    await _repo.storeAttendance(
+      date: date,
+      classId: classId,
+      sectionId: sectionId,
+      ids: [s.id],
+      attendance: {s.id: attendanceTypeForStatus(s.status)},
+      note: {s.id: s.absentReason ?? ''},
+      arrivalTime: {s.id: s.arrivalTime ?? ''},
+      signInTime: {s.id: s.signInTime ?? ''},
+      signOutTime: {s.id: s.signOutTime ?? ''},
+      pickupTime: {s.id: s.pickupTime ?? ''},
+      pickupBy: {s.id: s.pickupBy ?? ''},
+      lunch: {s.id: s.lunch},
+    );
+  }
+
+  /// Persists every currently-loaded student of [classId]/[sectionId] in
+  /// one `store/` call — used by bulk-mark/save/mark-all-present flows.
+  Future<void> persistSection(int classId, int sectionId, List<AttendanceStudentEntity> students) async {
+    if (students.isEmpty) return;
+    final date = _ref.read(selectedDateProvider);
+    await _repo.storeAttendance(
+      date: date,
+      classId: classId,
+      sectionId: sectionId,
+      ids: students.map((s) => s.id).toList(),
+      attendance: {for (final s in students) s.id: attendanceTypeForStatus(s.status)},
+      note: {for (final s in students) s.id: s.absentReason ?? ''},
+      arrivalTime: {for (final s in students) s.id: s.arrivalTime ?? ''},
+      signInTime: {for (final s in students) s.id: s.signInTime ?? ''},
+      signOutTime: {for (final s in students) s.id: s.signOutTime ?? ''},
+      pickupTime: {for (final s in students) s.id: s.pickupTime ?? ''},
+      pickupBy: {for (final s in students) s.id: s.pickupBy ?? ''},
+      lunch: {for (final s in students) s.id: s.lunch},
+    );
   }
 
   void replaceSection(int classId, int sectionId, List<AttendanceStudentEntity> students) {
     final key = '$classId-$sectionId';
     state = AttendanceStudentsState(students: {...state.students, key: students}, loading: state.loading);
-    AttendanceLocalData.setStudents(classId, sectionId, students);
   }
 
   void clear() {
@@ -77,7 +172,7 @@ class AttendanceStudentsNotifier extends StateNotifier<AttendanceStudentsState> 
 }
 
 final attendanceStudentsProvider = StateNotifierProvider<AttendanceStudentsNotifier, AttendanceStudentsState>((ref) {
-  return AttendanceStudentsNotifier();
+  return AttendanceStudentsNotifier(ref);
 });
 
 String _todayIso() {

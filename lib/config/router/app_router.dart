@@ -66,14 +66,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         orElse: () => false,
       );
       final isLoggingIn = state.matchedLocation == '/login';
+      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$authState, isAuthenticated=$isAuthenticated');
 
       // If not authenticated and not on login page, redirect to login
       if (!isAuthenticated && !isLoggingIn) {
+        debugPrint('[AppRouter] redirect -> /login');
         return '/login';
       }
 
       // If authenticated and on login page, redirect to home
       if (isAuthenticated && isLoggingIn) {
+        debugPrint('[AppRouter] redirect -> /home');
         return '/home';
       }
 

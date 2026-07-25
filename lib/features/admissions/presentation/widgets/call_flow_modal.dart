@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/inquiry_entity.dart';
-import '../providers/admissions_local_data.dart';
+import '../providers/admissions_provider.dart';
 
 enum _CallStep { contact, coaching, converted }
 
@@ -100,7 +101,7 @@ const Map<String, Map<String, Color>> _tipColors = {
 /// MODAL". A 3-step guided calling flow: confirm contact details → live
 /// AI call-coach tips (branch on detected parent sentiment) → post-call
 /// conversion actions once a student enrolls.
-class CallFlowModal extends StatefulWidget {
+class CallFlowModal extends ConsumerStatefulWidget {
   final InquiryEntity inquiry;
   final String today;
   final VoidCallback onClose;
@@ -117,10 +118,10 @@ class CallFlowModal extends StatefulWidget {
   });
 
   @override
-  State<CallFlowModal> createState() => _CallFlowModalState();
+  ConsumerState<CallFlowModal> createState() => _CallFlowModalState();
 }
 
-class _CallFlowModalState extends State<CallFlowModal> {
+class _CallFlowModalState extends ConsumerState<CallFlowModal> {
   _CallStep _step = _CallStep.contact;
   late final List<_CallTip> _tips = _generateCallScript(widget.inquiry);
 
@@ -131,11 +132,17 @@ class _CallFlowModalState extends State<CallFlowModal> {
 
   Future<void> _handleEnrolled() async {
     setState(() => _step = _CallStep.converted);
-    await AdmissionsLocalData.updateInquiry(widget.inquiry.id, (c) => c.copyWith(
-          status: 'enrolled',
-          activeStatus: 2,
-          followUpDate: widget.today,
-        ));
+    try {
+      await ref.read(admissionsRepositoryProvider).updateInquiry(widget.inquiry.id, (c) => c.copyWith(
+            status: 'enrolled',
+            activeStatus: 2,
+            followUpDate: widget.today,
+          ));
+    } catch (_) {
+      // Matches web's own `handleCallOutcome("converted")`, which swallows
+      // this PATCH's errors (`.catch(() => {})`) — the converted step is
+      // already shown either way.
+    }
     widget.onEnrolled();
   }
 
@@ -159,11 +166,15 @@ class _CallFlowModalState extends State<CallFlowModal> {
         padding: const EdgeInsets.all(16),
         child: GestureDetector(
           onTap: () {},
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 620),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-            clipBehavior: Clip.antiAlias,
-            child: SingleChildScrollView(child: _content()),
+          // `Material` ancestor required — see `EnquiryFormModal`'s same fix.
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 620),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              clipBehavior: Clip.antiAlias,
+              child: SingleChildScrollView(child: _content()),
+            ),
           ),
         ),
       ),

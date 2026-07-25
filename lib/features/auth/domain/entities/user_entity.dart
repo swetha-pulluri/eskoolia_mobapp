@@ -8,6 +8,7 @@ class UserEntity extends Equatable {
   final String email;
   final String firstName;
   final String lastName;
+  final int? schoolId;
   final String? schoolName;
   final String portalType;
   final bool isSuperuser;
@@ -20,6 +21,7 @@ class UserEntity extends Equatable {
     required this.email,
     required this.firstName,
     required this.lastName,
+    this.schoolId,
     this.schoolName,
     required this.portalType,
     required this.isSuperuser,
@@ -36,6 +38,7 @@ class UserEntity extends Equatable {
     email,
     firstName,
     lastName,
+    schoolId,
     schoolName,
     portalType,
     isSuperuser,

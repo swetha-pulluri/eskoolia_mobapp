@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/entities/attendance_entities.dart';
-import '../providers/attendance_local_data.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/attendance_layout.dart';
 import '../widgets/attendance_page_header.dart';
@@ -97,16 +97,8 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     final selectedRows = ref.watch(selectedRowsProvider);
     final isEditUnlocked = ref.watch(isEditUnlockedProvider);
 
-    final allStudents = studentsState.students.values.expand((l) => l).toList();
-    final kpis = classes.isEmpty
-        ? null
-        : KpiDataEntity(
-            totalStudents: classes.fold<int>(0, (s, c) => s + c.totalStudents),
-            presentToday: allStudents.where((s) => s.status == 'present').length,
-            absentToday: allStudents.where((s) => s.status == 'absent').length,
-            lateToday: allStudents.where((s) => s.status == 'late').length,
-            presentPct: allStudents.isEmpty ? 0 : ((allStudents.where((s) => s.status == 'present').length / allStudents.length) * 100).round(),
-          );
+    final kpisAsync = ref.watch(dailySummaryProvider);
+    final kpis = kpisAsync.maybeWhen(data: (v) => v, orElse: () => null);
 
     return AttendanceLayout(
       currentPath: '/attendance/student',
@@ -123,7 +115,7 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
                   AttendancePageHeader(
                     onImport: () => setState(() => _importDialogOpen = true),
                     onExport: _handleExportCsv,
-                    onDownloadSample: () => _toast('Sample attendance template downloaded.'),
+                    onDownloadSample: _handleDownloadSample,
                   ),
                   if (kpis != null && kpis.rteAtRisk > 0) AttendanceAlert(count: kpis.rteAtRisk),
                   AttendanceKpis(data: kpis, selectedDate: selectedDate, today: _today),
@@ -276,7 +268,7 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
 
   // ── Mutations (all local — no backend) ──────────────────────────────
 
-  void _commitStudentStatus(int classId, int sectionId, AttendanceStudentEntity student, String newStatus, {String? absentReason, Object? signInTime = _unset, Object? signOutTime = _unset}) {
+  void _commitStudentStatus(int classId, int sectionId, AttendanceStudentEntity student, String newStatus, {String? absentReason, Object? signInTime = _unset, Object? signOutTime = _unset}) async {
     final notifier = ref.read(attendanceStudentsProvider.notifier);
     final resolvedSignIn = identical(signInTime, _unset) ? student.signInTime : signInTime as String?;
     final resolvedSignOut = identical(signOutTime, _unset) ? student.signOutTime : signOutTime as String?;
@@ -288,9 +280,13 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
       arrivalTime: resolvedSignIn ?? student.arrivalTime,
       isLate: newStatus == 'late',
     );
-    notifier.updateStudent(classId, sectionId, updated);
-    AttendanceLocalData.refreshClassSummary().then((_) => _reloadClasses());
-    _toast('Attendance updated.');
+    try {
+      await notifier.updateStudent(classId, sectionId, updated);
+      _reloadClasses();
+      _toast('Attendance updated.');
+    } catch (e) {
+      if (mounted) _toast('Unable to save attendance: $e', error: true);
+    }
   }
 
   void _handleToggleAbsent(int classId, int sectionId, AttendanceStudentEntity student) async {
@@ -321,10 +317,14 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     }
   }
 
-  void _handleToggleLunch(int classId, int sectionId, AttendanceStudentEntity student) {
+  void _handleToggleLunch(int classId, int sectionId, AttendanceStudentEntity student) async {
     final notifier = ref.read(attendanceStudentsProvider.notifier);
-    notifier.updateStudent(classId, sectionId, student.copyWith(lunch: !student.lunch));
-    _toast('Lunch status updated.');
+    try {
+      await notifier.updateStudent(classId, sectionId, student.copyWith(lunch: !student.lunch));
+      _toast('Lunch status updated.');
+    } catch (e) {
+      if (mounted) _toast('Unable to save lunch status: $e', error: true);
+    }
   }
 
   void _handleSignIn(int classId, int sectionId, AttendanceStudentEntity student) {
@@ -358,15 +358,19 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     return (true, minutesLate);
   }
 
-  void _handleSignOut(int classId, int sectionId, AttendanceStudentEntity student) {
+  void _handleSignOut(int classId, int sectionId, AttendanceStudentEntity student) async {
     if (_isReadOnly || student.signInTime == null || student.signOutTime != null) return;
     final now = _nowHHMM();
     final notifier = ref.read(attendanceStudentsProvider.notifier);
-    notifier.updateStudent(classId, sectionId, student.copyWith(signOutTime: now, pickupTime: now));
-    _toast('Sign-out saved.');
+    try {
+      await notifier.updateStudent(classId, sectionId, student.copyWith(signOutTime: now, pickupTime: now));
+      _toast('Sign-out saved.');
+    } catch (e) {
+      if (mounted) _toast('Unable to save sign-out: $e', error: true);
+    }
   }
 
-  void _handleBulkMark(int classId, int sectionId, String status, Map<String, Set<int>> selectedRows, AttendanceStudentsState studentsState) {
+  void _handleBulkMark(int classId, int sectionId, String status, Map<String, Set<int>> selectedRows, AttendanceStudentsState studentsState) async {
     final key = '$classId-$sectionId';
     final ids = selectedRows[key] ?? <int>{};
     final sectionStudents = studentsState.students[key] ?? const <AttendanceStudentEntity>[];
@@ -375,45 +379,80 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     if (targets.isEmpty) return;
     final now = _nowHHMM();
     final notifier = ref.read(attendanceStudentsProvider.notifier);
-    for (final s in targets) {
+    final updatedTargets = targets.map((s) {
       final shouldSignIn = status == 'present' && s.signInTime == null;
-      notifier.updateStudent(classId, sectionId, s.copyWith(status: status, signInTime: shouldSignIn ? now : s.signInTime, arrivalTime: shouldSignIn ? (s.arrivalTime ?? now) : s.arrivalTime));
+      return s.copyWith(status: status, signInTime: shouldSignIn ? now : s.signInTime, arrivalTime: shouldSignIn ? (s.arrivalTime ?? now) : s.arrivalTime);
+    }).toList();
+    for (final s in updatedTargets) {
+      notifier.replaceSection(classId, sectionId, [
+        for (final existing in sectionStudents) existing.id == s.id ? s : existing,
+      ]);
     }
     ref.read(selectedRowsProvider.notifier).state = {...selectedRows, key: <int>{}};
-    AttendanceLocalData.refreshClassSummary().then((_) => _reloadClasses());
-    _toast('${targets.length} attendance record(s) updated.');
+    try {
+      await notifier.persistSection(classId, sectionId, updatedTargets);
+      _reloadClasses();
+      _toast('${targets.length} attendance record(s) updated.');
+    } catch (e) {
+      if (mounted) _toast('Unable to save attendance: $e', error: true);
+    }
   }
 
-  void _handleBulkSignIn(int classId, int sectionId, Map<String, Set<int>> selectedRows, AttendanceStudentsState studentsState) {
+  void _handleBulkSignIn(int classId, int sectionId, Map<String, Set<int>> selectedRows, AttendanceStudentsState studentsState) async {
     final key = '$classId-$sectionId';
     final ids = selectedRows[key] ?? <int>{};
     final now = _nowHHMM();
-    final targets = (studentsState.students[key] ?? const <AttendanceStudentEntity>[]).where((s) => ids.contains(s.id) && s.status != 'absent').toList();
+    final sectionStudents = studentsState.students[key] ?? const <AttendanceStudentEntity>[];
+    final targets = sectionStudents.where((s) => ids.contains(s.id) && s.status != 'absent').toList();
+    if (targets.isEmpty) return;
     final notifier = ref.read(attendanceStudentsProvider.notifier);
-    for (final s in targets) {
-      notifier.updateStudent(classId, sectionId, s.copyWith(status: 'present', signInTime: s.signInTime ?? now, arrivalTime: s.arrivalTime ?? s.signInTime ?? now));
+    final updatedTargets = targets.map((s) => s.copyWith(status: 'present', signInTime: s.signInTime ?? now, arrivalTime: s.arrivalTime ?? s.signInTime ?? now)).toList();
+    notifier.replaceSection(classId, sectionId, [
+      for (final existing in sectionStudents)
+        if (updatedTargets.any((u) => u.id == existing.id)) updatedTargets.firstWhere((u) => u.id == existing.id) else existing,
+    ]);
+    try {
+      await notifier.persistSection(classId, sectionId, updatedTargets);
+      _toast('${targets.length} sign-in record(s) saved.');
+    } catch (e) {
+      if (mounted) _toast('Unable to save sign-ins: $e', error: true);
     }
-    _toast('${targets.length} sign-in record(s) saved.');
   }
 
-  void _handleSave(int classId, int sectionId) {
-    _toast('✓ Saved attendance record(s).');
-    final openClasses = ref.read(openClassesProvider);
-    ref.read(openClassesProvider.notifier).state = Set.of(openClasses)..remove(classId);
-    final key = '$classId-$sectionId';
-    final selectedRows = ref.read(selectedRowsProvider);
-    ref.read(selectedRowsProvider.notifier).state = {...selectedRows, key: <int>{}};
-    AttendanceLocalData.refreshClassSummary().then((_) => _reloadClasses());
-  }
-
-  void _handleReset(int classId, int sectionId) {
-    final notifier = ref.read(attendanceStudentsProvider.notifier);
+  void _handleSave(int classId, int sectionId) async {
     final key = '$classId-$sectionId';
     final sectionStudents = ref.read(attendanceStudentsProvider).students[key] ?? const <AttendanceStudentEntity>[];
-    for (final s in sectionStudents) {
-      notifier.updateStudent(classId, sectionId, s.copyWith(status: 'unmarked', absentReason: null, arrivalTime: null, signInTime: null, signOutTime: null, pickupTime: null, pickupBy: null, notes: const [], isLate: false));
+    final notifier = ref.read(attendanceStudentsProvider.notifier);
+    try {
+      await notifier.persistSection(classId, sectionId, sectionStudents);
+      _toast('✓ Saved attendance record(s).');
+    } catch (e) {
+      if (mounted) _toast('Unable to save attendance: $e', error: true);
+      return;
     }
-    _toast('Section attendance reset.');
+    final openClasses = ref.read(openClassesProvider);
+    ref.read(openClassesProvider.notifier).state = Set.of(openClasses)..remove(classId);
+    final selectedRows = ref.read(selectedRowsProvider);
+    ref.read(selectedRowsProvider.notifier).state = {...selectedRows, key: <int>{}};
+    _reloadClasses();
+  }
+
+  /// Reloads this section fresh from the server, discarding any unsaved
+  /// local optimistic changes. Note: unlike web (whose "Reset" explicitly
+  /// force-clears every field server-side via empty-string values), the
+  /// real `store/` endpoint has no way to clear a status back to
+  /// "unmarked" — every id submitted must have a real P/A/L status
+  /// (confirmed against the backend's "full coverage" validation rule) —
+  /// so a true destructive clear-all-marks isn't something this endpoint
+  /// supports. Reloading from server truth is the closest safe equivalent.
+  void _handleReset(int classId, int sectionId) async {
+    final notifier = ref.read(attendanceStudentsProvider.notifier);
+    try {
+      await notifier.loadSection(classId, sectionId);
+      _toast('Section reloaded from server.');
+    } catch (e) {
+      if (mounted) _toast('Unable to reload section: $e', error: true);
+    }
   }
 
   void _handleMarkAllVisible(String status, List<ClassInfoEntity> classes, Set<int> openClasses, Map<int, int> activeSections, AttendanceStudentsState studentsState) {
@@ -439,23 +478,32 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     return visible.every((s) => s.status == 'present' || s.status == 'absent' || s.status == 'late');
   }
 
-  void _handleMarkAllPresentForClass(int classId, List<ClassInfoEntity> classes, AttendanceStudentsState studentsState) {
+  void _handleMarkAllPresentForClass(int classId, List<ClassInfoEntity> classes, AttendanceStudentsState studentsState) async {
     final cls = classes.where((c) => c.id == classId).toList();
     if (cls.isEmpty) return;
     final now = _nowHHMM();
     final notifier = ref.read(attendanceStudentsProvider.notifier);
     var touched = 0;
-    for (final sec in cls.first.sections) {
-      final key = '$classId-${sec.id}';
-      final sectionStudents = studentsState.students[key];
-      if (sectionStudents == null || sectionStudents.isEmpty) continue;
-      for (final s in sectionStudents.where((s) => s.status != 'absent')) {
-        notifier.updateStudent(classId, sec.id, s.copyWith(status: 'present', signInTime: s.signInTime ?? now, arrivalTime: s.arrivalTime ?? s.signInTime ?? now));
-        touched++;
+    try {
+      for (final sec in cls.first.sections) {
+        final key = '$classId-${sec.id}';
+        final sectionStudents = studentsState.students[key];
+        if (sectionStudents == null || sectionStudents.isEmpty) continue;
+        final targets = sectionStudents.where((s) => s.status != 'absent').toList();
+        if (targets.isEmpty) continue;
+        final updatedTargets = targets.map((s) => s.copyWith(status: 'present', signInTime: s.signInTime ?? now, arrivalTime: s.arrivalTime ?? s.signInTime ?? now)).toList();
+        notifier.replaceSection(classId, sec.id, [
+          for (final existing in sectionStudents)
+            if (updatedTargets.any((u) => u.id == existing.id)) updatedTargets.firstWhere((u) => u.id == existing.id) else existing,
+        ]);
+        await notifier.persistSection(classId, sec.id, updatedTargets);
+        touched += updatedTargets.length;
       }
+      if (touched > 0) _toast('Marked $touched student(s) present in ${cls.first.displayLabel}.');
+      _reloadClasses();
+    } catch (e) {
+      if (mounted) _toast('Unable to mark class present: $e', error: true);
     }
-    if (touched > 0) _toast('Marked $touched student(s) present in ${cls.first.displayLabel}.');
-    AttendanceLocalData.refreshClassSummary().then((_) => _reloadClasses());
   }
 
   void _handleToggleClass(int classId, List<ClassInfoEntity> classes, Map<int, int> activeSections, AttendanceStudentsState studentsState) {
@@ -488,19 +536,57 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     final classes = ref.read(classesProvider).maybeWhen(data: (v) => v, orElse: () => const <ClassInfoEntity>[]);
     final opts = await exportOptionsDialog(context, defaultDate: _selectedDate, classes: classes);
     if (opts == null) return;
-    _toast('Attendance report downloaded.');
+    try {
+      final bytes = await ref.read(attendanceRepositoryProvider).exportAttendance(
+            fmt: 'xlsx',
+            classId: opts.classId == 'all' ? null : int.tryParse(opts.classId),
+            sectionId: opts.sectionId == 'all' ? null : int.tryParse(opts.sectionId),
+            month: opts.scope == 'month' ? int.tryParse(opts.month.split('-').last) : null,
+            year: opts.scope == 'month' ? int.tryParse(opts.month.split('-').first) : null,
+            date: opts.scope == 'day' ? opts.date : null,
+            dateFrom: opts.scope == 'range' ? opts.dateFrom : null,
+            dateTo: opts.scope == 'range' ? opts.dateTo : null,
+          );
+      await Share.shareXFiles([XFile.fromData(bytes, name: 'attendance_export_${opts.scope}.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      _toast('Attendance report downloaded.');
+    } catch (e) {
+      if (mounted) _toast('Unable to export attendance: $e', error: true);
+    }
   }
 
-  void _handleSaveNote(int classId, int sectionId, int studentId, String noteText) {
+  Future<void> _handleDownloadSample() async {
+    try {
+      final bytes = await ref.read(attendanceRepositoryProvider).downloadSample();
+      await Share.shareXFiles([XFile.fromData(bytes, name: 'student_attendance_sheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      _toast('Sample attendance template downloaded.');
+    } catch (e) {
+      if (mounted) _toast('Unable to download sample: $e', error: true);
+    }
+  }
+
+  void _handleSaveNote(int classId, int sectionId, int studentId, String noteText) async {
     final key = '$classId-$sectionId';
     final list = ref.read(attendanceStudentsProvider).students[key] ?? const <AttendanceStudentEntity>[];
     final matches = list.where((s) => s.id == studentId).toList();
     if (matches.isEmpty) return;
     final student = matches.first;
     final newNote = StudentNoteEntity(id: 'note-${DateTime.now().millisecondsSinceEpoch}', text: noteText, createdAt: '');
-    ref.read(attendanceStudentsProvider.notifier).updateStudent(classId, sectionId, student.copyWith(notes: [...student.notes, newNote]));
-    _toast('Note saved.');
-    setState(() => _notesDialogState = null);
+    try {
+      // The backend only has one `notes`/`attendance_note` field per
+      // (student, date) record — matching web's own documented "multiple
+      // notes are a client-side illusion" reality, all notes are joined
+      // and sent as the student's single `absentReason`/note field.
+      final updatedNotes = [...student.notes, newNote];
+      await ref.read(attendanceStudentsProvider.notifier).updateStudent(
+            classId,
+            sectionId,
+            student.copyWith(notes: updatedNotes, absentReason: updatedNotes.map((n) => n.text).join(' ||| ')),
+          );
+      _toast('Note saved.');
+      if (mounted) setState(() => _notesDialogState = null);
+    } catch (e) {
+      if (mounted) _toast('Unable to save note: $e', error: true);
+    }
   }
 
   void _handleUpdateNote(int classId, int sectionId, int studentId, String noteId, String newText) {

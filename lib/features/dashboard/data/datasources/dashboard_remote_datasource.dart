@@ -14,7 +14,9 @@ class DashboardRemoteDataSource {
       final data = response.data as Map<String, dynamic>;
       return data['count'] as int? ?? 0;
     } catch (e) {
-      AppLogger.error('Get attention count error', e);
+      // TEMP DEBUG: surface the swallowed error while diagnosing the
+      // post-login dashboard load issue — remove once resolved.
+      AppLogger.error('[TEMP DEBUG] Get attention count error (endpoint: ${ApiConstants.attentionCountEndpoint})', e);
       return 0; // Return 0 on error
     }
   }
