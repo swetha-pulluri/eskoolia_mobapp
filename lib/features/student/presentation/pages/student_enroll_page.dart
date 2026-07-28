@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,12 +11,15 @@ import '../../domain/models/guardian_draft.dart';
 import '../../domain/models/school_class.dart';
 import '../../domain/models/student_data.dart';
 import '../providers/student_providers.dart';
+import '../utils/camera_capture_helper.dart';
 import '../utils/enrollment_pdf.dart';
+import '../utils/photo_compress_helper.dart';
 import '../widgets/enroll_form_fields.dart';
 import '../widgets/student_ai_assist_dialog.dart';
 import '../widgets/student_draft_saved_dialog.dart';
 import '../widgets/student_drafts_dialog.dart';
 import '../widgets/student_enroll_checklist_dialog.dart';
+import 'student_verification_form_page.dart';
 
 class _NavItem {
   final String id;
@@ -33,12 +37,33 @@ const List<_NavItem> _navItems = [
   _NavItem('guardians', 'Family & guardians', 'Parent/guardian details'),
   _NavItem('apaar', 'Government identity', 'Government identity', badge: EnrollBadge.goi),
   _NavItem('documents', 'Documents', 'Consent and student records'),
-  _NavItem('medical', 'Medical & emergency', 'Health, vaccinations', startsGroup: true),
-  _NavItem('speciallyAbled', 'Specially abled', 'PwD accommodations'),
+  _NavItem('medical', 'Medical & emergency', 'Health, vaccinations', badge: EnrollBadge.newBadge, startsGroup: true),
+  _NavItem('speciallyAbled', 'Specially abled', 'PwD accommodations', badge: EnrollBadge.newBadge),
   _NavItem('identityMarks', 'Identity marks', 'Physical identifiers', badge: EnrollBadge.sensitive),
   _NavItem('fees', 'Fee plan', 'Assign fees & concessions'),
   _NavItem('review', 'Review', 'Confirm & enroll'),
 ];
+
+/// Mirrors StudentAddPanel.tsx's `MOTHER_TONGUES` array exactly (verbatim
+/// order), plus its trailing "Other" free-text reveal.
+const List<String> kMotherTongueOptions = [
+  'Hindi', 'English', 'Bengali', 'Telugu', 'Marathi', 'Tamil', 'Urdu', 'Gujarati', 'Kannada', 'Malayalam',
+  'Odia', 'Punjabi', 'Assamese', 'Maithili', 'Sanskrit', 'Konkani', 'Nepali', 'Sindhi', 'Dogri', 'Manipuri',
+  'Bodo', 'Santali', 'Kashmiri', 'Other',
+];
+
+/// Mirrors StudentAddPanel.tsx's religion `<select>` exactly — "Prefer not
+/// to say" is the default value (not a blank placeholder).
+const List<String> kReligionOptions = [
+  'Prefer not to say', 'Hindu', 'Muslim', 'Christian', 'Sikh', 'Buddhist', 'Jain', 'Other',
+];
+
+/// Mirrors StudentAddPanel.tsx's nationality `<select>` exactly.
+const List<String> kNationalityOptions = ['Indian', 'Nepali', 'Bhutanese', 'Other'];
+
+/// Mirrors StudentAddPanel.tsx's admission-type `<select>` exactly (4
+/// options, not the generic "New/Transfer/Readmission" 3-option guess).
+const List<String> kAdmissionTypeOptions = ['New admission', 'Transfer', 'Re-admission', 'RTE Quota'];
 
 /// Student Enroll Page — mirrors frontend components/students/
 /// StudentAddPanel.tsx: hero header + KPI, scan-to-prefill banner, an
@@ -54,10 +79,10 @@ const List<_NavItem> _navItems = [
 ///
 /// Scope note: the hero action bar's Drafts / AI Assist / PDF / "What I'll
 /// need" buttons are fully wired — see `_saveDraftSnapshot`,
-/// `StudentAiAssistDialog`, `printEnrollmentForm`, and
+/// `StudentAiAssistDialog`, `StudentVerificationFormPage`, and
 /// `StudentEnrollChecklistDialog`. OCR "Scan & fill" and the consent form's
-/// secondary flows (letterhead branding, upload-signed-copy, blank-form
-/// email/WhatsApp/digital-fill) remain a disclosed "coming soon" — see
+/// secondary flows (upload-signed-copy, blank-form email/WhatsApp/
+/// digital-fill) remain a disclosed "coming soon" — see
 /// `enrollment_pdf.dart`'s doc comment for the scope line drawn there.
 class StudentEnrollPage extends ConsumerStatefulWidget {
   final StudentData? editingStudent;
@@ -97,20 +122,29 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
   final _dobController = TextEditingController();
   StudentGender? _gender;
   String? _bloodGroup;
-  final _motherTongueController = TextEditingController();
-  final _religionController = TextEditingController();
-  final _nationalityController = TextEditingController(text: 'Indian');
+  String? _motherTongue;
+  final _motherTongueOtherController = TextEditingController();
+  String? _religion = 'Prefer not to say';
+  final _religionOtherController = TextEditingController();
+  String? _nationality = 'Indian';
+  final _nationalityOtherController = TextEditingController();
+  String? _dobError;
 
   // Academic
   int? _academicYearId;
   int? _classId;
   int? _sectionId;
   int? _categoryId;
-  String _admissionType = 'New';
+  String _admissionType = 'New admission';
+  final _previousSchoolNameController = TextEditingController();
+  final _rteCertificateController = TextEditingController();
 
   // Contact
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _landmarkController = TextEditingController();
+  final List<String> _transportModes = [];
+  final _customTransportController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _districtController = TextEditingController();
@@ -124,11 +158,19 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
 
   // Government identity
   final _apaarIdController = TextEditingController();
+  final _aadhaarController = TextEditingController();
+  bool _aadhaarVisible = false;
+  final _penUdiseController = TextEditingController();
+  final _digilockerMobileController = TextEditingController();
+  final _abcIdController = TextEditingController();
 
   // Photo
   String? _photoUrl;
+  Uint8List? _photoPreviewBytes;
   bool _photoUploading = false;
   String? _photoError;
+
+  bool get _hasPhoto => _photoUrl != null || _photoPreviewBytes != null;
 
   // Documents — upload is only wired to the backend once a real student id
   // exists (edit mode); a brand-new enrollment has no id yet (the frontend's
@@ -252,9 +294,11 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     _middleNameController.dispose();
     _lastNameController.dispose();
     _dobController.dispose();
-    _motherTongueController.dispose();
-    _religionController.dispose();
-    _nationalityController.dispose();
+    _motherTongueOtherController.dispose();
+    _religionOtherController.dispose();
+    _nationalityOtherController.dispose();
+    _previousSchoolNameController.dispose();
+    _rteCertificateController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
@@ -262,7 +306,13 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     _districtController.dispose();
     _stateController.dispose();
     _pincodeController.dispose();
+    _landmarkController.dispose();
+    _customTransportController.dispose();
     _apaarIdController.dispose();
+    _aadhaarController.dispose();
+    _penUdiseController.dispose();
+    _digilockerMobileController.dispose();
+    _abcIdController.dispose();
     _allergiesController.dispose();
     _medicationsController.dispose();
     _emergencyContactController.dispose();
@@ -301,6 +351,12 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     );
   }
 
+  /// Resolves a "Select ... / Other" dropdown + its free-text reveal down to
+  /// the single effective string StudentAddPanel.tsx would submit.
+  String get _motherTongueEffective => _motherTongue == 'Other' ? _motherTongueOtherController.text.trim() : (_motherTongue ?? '');
+  String get _religionEffective => _religion == 'Other' ? _religionOtherController.text.trim() : (_religion ?? 'Prefer not to say');
+  String get _nationalityEffective => _nationality == 'Other' ? _nationalityOtherController.text.trim() : (_nationality ?? '');
+
   // ══════════════════════════════════════════════════════════════════════
   // HERO ACTION BAR — Drafts / AI Assist / PDF / What I'll need
   // ══════════════════════════════════════════════════════════════════════
@@ -322,14 +378,19 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       'dob': _dobController.text.trim(),
       'gender': _gender?.name,
       'bloodGroup': _bloodGroup,
-      'motherTongue': _motherTongueController.text.trim(),
-      'religion': _religionController.text.trim(),
-      'nationality': _nationalityController.text.trim(),
+      'motherTongue': _motherTongue,
+      'motherTongueOther': _motherTongueOtherController.text.trim(),
+      'religion': _religion,
+      'religionOther': _religionOtherController.text.trim(),
+      'nationality': _nationality,
+      'nationalityOther': _nationalityOtherController.text.trim(),
       'academicYearId': _academicYearId,
       'classId': _classId,
       'sectionId': _sectionId,
       'categoryId': _categoryId,
       'admissionType': _admissionType,
+      'previousSchoolName': _previousSchoolNameController.text.trim(),
+      'rteCertificateNo': _rteCertificateController.text.trim(),
       'phone': _phoneController.text.trim(),
       'email': _emailController.text.trim(),
       'address': _addressController.text.trim(),
@@ -337,6 +398,8 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       'district': _districtController.text.trim(),
       'state': _stateController.text.trim(),
       'pincode': _pincodeController.text.trim(),
+      'landmark': _landmarkController.text.trim(),
+      'transportModes': _transportModes,
       'guardians': _guardians
           .map((g) => {
                 'clientId': g.clientId,
@@ -349,6 +412,10 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               })
           .toList(),
       'apaarId': _apaarIdController.text.trim(),
+      'aadhaar': _aadhaarController.text.trim(),
+      'penUdise': _penUdiseController.text.trim(),
+      'digilockerMobile': _digilockerMobileController.text.trim(),
+      'abcId': _abcIdController.text.trim(),
       'photoUrl': _photoUrl,
       'documentsUploaded': _documentsUploaded,
       'consentChecked': _consentChecked,
@@ -434,26 +501,40 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       _dobController.clear();
       _gender = null;
       _bloodGroup = null;
-      _motherTongueController.clear();
-      _religionController.clear();
-      _nationalityController.text = 'Indian';
+      _motherTongue = null;
+      _motherTongueOtherController.clear();
+      _religion = 'Prefer not to say';
+      _religionOtherController.clear();
+      _nationality = 'Indian';
+      _nationalityOtherController.clear();
+      _dobError = null;
       _academicYearId = _academicYears.where((y) => y.isCurrent).firstOrNull?.id;
       _classId = null;
       _sectionId = null;
       _categoryId = null;
-      _admissionType = 'New';
+      _admissionType = 'New admission';
+      _previousSchoolNameController.clear();
+      _rteCertificateController.clear();
       _phoneController.clear();
       _emailController.clear();
       _addressController.clear();
       _cityController.clear();
       _districtController.clear();
+      _landmarkController.clear();
+      _transportModes.clear();
       _stateController.clear();
       _pincodeController.clear();
       _guardians
         ..clear()
         ..add(GuardianDraft(clientId: '1', isPrimary: true));
       _apaarIdController.clear();
+      _aadhaarController.clear();
+      _aadhaarVisible = false;
+      _penUdiseController.clear();
+      _digilockerMobileController.clear();
+      _abcIdController.clear();
       _photoUrl = null;
+      _photoPreviewBytes = null;
       _photoError = null;
       _documentsUploaded.updateAll((key, value) => false);
       _documentsUploading.clear();
@@ -494,14 +575,19 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       final genderName = data['gender'] as String?;
       _gender = genderName == null ? null : StudentGender.values.where((g) => g.name == genderName).firstOrNull;
       _bloodGroup = data['bloodGroup'] as String?;
-      _motherTongueController.text = (data['motherTongue'] as String?) ?? '';
-      _religionController.text = (data['religion'] as String?) ?? '';
-      _nationalityController.text = (data['nationality'] as String?) ?? 'Indian';
+      _motherTongue = data['motherTongue'] as String?;
+      _motherTongueOtherController.text = (data['motherTongueOther'] as String?) ?? '';
+      _religion = (data['religion'] as String?) ?? 'Prefer not to say';
+      _religionOtherController.text = (data['religionOther'] as String?) ?? '';
+      _nationality = (data['nationality'] as String?) ?? 'Indian';
+      _nationalityOtherController.text = (data['nationalityOther'] as String?) ?? '';
       _academicYearId = (data['academicYearId'] as num?)?.toInt();
       _classId = (data['classId'] as num?)?.toInt();
       _sectionId = (data['sectionId'] as num?)?.toInt();
       _categoryId = (data['categoryId'] as num?)?.toInt();
-      _admissionType = (data['admissionType'] as String?) ?? 'New';
+      _admissionType = (data['admissionType'] as String?) ?? 'New admission';
+      _previousSchoolNameController.text = (data['previousSchoolName'] as String?) ?? '';
+      _rteCertificateController.text = (data['rteCertificateNo'] as String?) ?? '';
       _phoneController.text = (data['phone'] as String?) ?? '';
       _emailController.text = (data['email'] as String?) ?? '';
       _addressController.text = (data['address'] as String?) ?? '';
@@ -509,6 +595,10 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       _districtController.text = (data['district'] as String?) ?? '';
       _stateController.text = (data['state'] as String?) ?? '';
       _pincodeController.text = (data['pincode'] as String?) ?? '';
+      _landmarkController.text = (data['landmark'] as String?) ?? '';
+      _transportModes
+        ..clear()
+        ..addAll(((data['transportModes'] as List?) ?? const []).map((e) => e.toString()));
       final guardiansData = (data['guardians'] as List?) ?? const [];
       _guardians.clear();
       if (guardiansData.isEmpty) {
@@ -528,6 +618,10 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
         }
       }
       _apaarIdController.text = (data['apaarId'] as String?) ?? '';
+      _aadhaarController.text = (data['aadhaar'] as String?) ?? '';
+      _penUdiseController.text = (data['penUdise'] as String?) ?? '';
+      _digilockerMobileController.text = (data['digilockerMobile'] as String?) ?? '';
+      _abcIdController.text = (data['abcId'] as String?) ?? '';
       _photoUrl = data['photoUrl'] as String?;
       final docsData = (data['documentsUploaded'] as Map?)?.cast<String, dynamic>();
       if (docsData != null) {
@@ -631,14 +725,23 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
 
   /// Mirrors the hero "PDF" button / footer "🖨 Print / PDF" button opening
   /// `ConsentForm.tsx` with no initial action — its default view IS the
-  /// filled admission-form document, ready to print. See
+  /// Student Verification Form, ready to print. See
   /// `enrollment_pdf.dart`'s doc comment for the field-mapping/scope notes.
   Future<void> _previewEnrollmentPdf() async {
+    final data = _buildVerificationPdfData();
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => StudentVerificationFormPage(data: data)),
+    );
+  }
+
+  EnrollmentPdfData _buildVerificationPdfData() {
     final schoolClass = _classes.where((c) => c.id == _classId).firstOrNull;
     final section = schoolClass?.sections.where((s) => s.id == _sectionId).firstOrNull;
     final academicYear = _academicYears.where((y) => y.id == _academicYearId).firstOrNull;
     final category = _categories.where((c) => c.id == _categoryId).firstOrNull;
     final data = EnrollmentPdfData(
+      studentId: widget.editingStudent?.id,
       schoolName: _schoolName,
       firstName: _firstNameController.text.trim(),
       middleName: _middleNameController.text.trim(),
@@ -647,9 +750,9 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       dob: _dobController.text.trim(),
       gender: _gender?.label ?? '',
       bloodGroup: _bloodGroup ?? '',
-      motherTongue: _motherTongueController.text.trim(),
-      religion: _religionController.text.trim(),
-      nationality: _nationalityController.text.trim(),
+      motherTongue: _motherTongueEffective,
+      religion: _religionEffective == 'Prefer not to say' ? '' : _religionEffective,
+      nationality: _nationalityEffective,
       isActive: _isActive,
       academicYearName: academicYear?.name ?? '',
       className: schoolClass?.name ?? '',
@@ -692,7 +795,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       birthmark: _birthmarkController.text.trim(),
       photoUrl: _photoUrl,
     );
-    await printEnrollmentForm(data);
+    return data;
   }
 
   Future<void> _pickAndUploadPhoto() async {
@@ -703,8 +806,37 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     );
     final file = result?.files.singleOrNull;
     if (file == null || file.bytes == null) return;
-    if (file.size > 4 * 1024 * 1024) {
-      setState(() => _photoError = 'Please choose an image up to 4MB.');
+    await _uploadPhotoBytes(Uint8List.fromList(file.bytes!), file.name, file.size);
+  }
+
+  /// "Take photo" — on mobile/desktop this launches the native OS camera
+  /// directly (`camera_capture_io.dart`); on web it mirrors the frontend's
+  /// own in-page `getUserMedia` camera modal exactly, since a browser has
+  /// no native camera app to hand off to (`camera_capture_web.dart`).
+  Future<void> _takePhoto() async {
+    Uint8List? bytes;
+    try {
+      bytes = await captureStudentPhotoViaCamera(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _photoError = 'Could not open the camera: $e');
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    await _uploadPhotoBytes(bytes, 'student-photo-${DateTime.now().millisecondsSinceEpoch}.jpg', bytes.length);
+  }
+
+  /// Shared by both "Upload file" and "Take photo" — mirrors
+  /// `uploadStudentPhoto()`'s own client-side size gate, compression, and
+  /// success/failure handling exactly, regardless of where the bytes came
+  /// from.
+  Future<void> _uploadPhotoBytes(Uint8List bytes, String sourceName, int sizeBytes) async {
+    // Mirrors `uploadStudentPhoto()`'s own client-side gate exactly (the
+    // frontend's separate, looser 5MB check on the raw <input> `onChange`
+    // never actually matters — that same request still gets rejected by
+    // this 4MB check moments later, so this is the one real limit).
+    if (sizeBytes > 4 * 1024 * 1024) {
+      setState(() => _photoError = 'Please choose an image up to 4MB before compression.');
       return;
     }
     setState(() {
@@ -712,12 +844,34 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       _photoError = null;
     });
     try {
+      // A hard ceiling so a platform-specific compression hiccup surfaces as
+      // a normal error instead of leaving the spinner stuck forever.
+      final compressed = await compressPhotoForUpload(bytes).timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => throw Exception('Photo processing took too long. Please try a different photo.'),
+      );
+      var filename = sourceName;
+      if (!filename.toLowerCase().endsWith('.jpg') && !filename.toLowerCase().endsWith('.jpeg')) {
+        filename = '${filename.contains('.') ? filename.substring(0, filename.lastIndexOf('.')) : filename}.jpg';
+      }
       final url = await ref
           .read(studentRepositoryProvider)
-          .uploadStudentPhoto(bytes: file.bytes!, filename: file.name);
+          .uploadStudentPhoto(bytes: compressed, filename: filename)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Upload took too long. Please check your connection and try again.'),
+          );
       if (!mounted) return;
       setState(() {
         _photoUrl = url;
+        // Render straight from the just-uploaded bytes instead of re-fetching
+        // the server URL over the network for the on-screen preview — avoids
+        // a second round trip (and, on Flutter web, potential CORS failures
+        // on the image fetch) so the photo the user just picked shows up
+        // immediately and reliably, matching the frontend's end state (the
+        // circle shows the uploaded photo) without depending on a live
+        // network re-fetch to get there.
+        _photoPreviewBytes = compressed;
         _photoUploading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -725,8 +879,13 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       );
     } catch (e) {
       if (!mounted) return;
+      // Mirrors the frontend's own failure behavior exactly: the photo is
+      // cleared back to the "ADD PHOTO" placeholder, not left showing a
+      // stale/broken preview.
       setState(() {
         _photoUploading = false;
+        _photoUrl = null;
+        _photoPreviewBytes = null;
         _photoError = e.toString().replaceFirst('Exception: ', '');
       });
     }
@@ -1150,14 +1309,12 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
           final item = _navItems[index];
           final isActive = index == _activeIndex;
           final isLocked = index > _maxReachedIndex + 1;
-          final isDone = index <= _maxReachedIndex && index != _activeIndex;
           return _StepChip(
             index: index + 1,
             label: item.label,
             badge: item.badge,
             isActive: isActive,
             isLocked: isLocked,
-            isDone: isDone,
             onTap: isLocked ? null : () => _goToIndex(index),
           );
         },
@@ -1236,79 +1393,45 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              InkWell(
-                onTap: _photoUploading ? null : _pickAndUploadPhoto,
-                borderRadius: BorderRadius.circular(50),
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: _photoUrl != null ? const Color(0xFFF0FDF4) : const Color(0xFFF3F4F6),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _photoUrl != null ? const Color(0xFF86EFAC) : AppColors.studentEnrollLine,
-                    ),
-                  ),
-                  child: _photoUploading
-                      ? const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          _photoUrl != null ? Icons.check_circle : Icons.camera_alt_outlined,
-                          color: _photoUrl != null ? const Color(0xFF16A34A) : const Color(0xFF9CA3AF),
-                        ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                _photoUploading
-                    ? 'UPLOADING…'
-                    : _photoUrl != null
-                        ? 'PHOTO UPLOADED · TAP TO REPLACE'
-                        : 'ADD PHOTO',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          if (_photoError != null) ...[
-            const SizedBox(height: 6),
-            Text(_photoError!, style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626))),
-          ],
-          const SizedBox(height: 20),
+          _buildPhotoField(),
+          const SizedBox(height: 24),
           EnrollFieldGrid(children: [
             EnrollTextField(
-              label: 'Admission No',
+              label: 'Admission number',
               controller: _admissionNoController,
               badge: EnrollBadge.required,
-              enabled: !_admissionNoLocked,
-              helpText: _admissionNoLocked ? 'Auto-generated · tap edit to override' : 'Editable',
-              suffixIcon: IconButton(
-                icon: Icon(_admissionNoLocked ? Icons.lock_outline : Icons.edit_outlined, size: 18),
+              readOnly: _admissionNoLocked,
+              filledWhenReadOnly: false,
+              hint: _firstNameController.text.trim().isNotEmpty ? 'e.g. ADM20240001' : 'Enter first name to generate',
+              maxLines: 1,
+              helpText: 'Auto-generated. Click Edit to customize.',
+              suffixIcon: TextButton(
                 onPressed: () => setState(() => _admissionNoLocked = !_admissionNoLocked),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.studentEnrollBrand,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(40, 30),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(_admissionNoLocked ? 'Edit' : 'Lock', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ),
             EnrollTextField(
-              label: 'Roll No',
-              controller: TextEditingController(text: 'Assigned later'),
+              label: 'Roll number',
+              controller: TextEditingController(text: 'Auto when class is set'),
+              badge: EnrollBadge.assignedLater,
               readOnly: true,
               enabled: false,
+              helpText: 'Rolls are assigned after class allocation.',
             ),
           ]),
           const SizedBox(height: 16),
-          EnrollToggle(
-            label: 'Active',
-            description: 'Inactive students are hidden from most lists.',
-            value: _isActive,
-            onChanged: (v) => setState(() => _isActive = v),
-          ),
-          const SizedBox(height: 8),
+          _buildStatusToggle(),
+          const SizedBox(height: 16),
           EnrollFieldGrid(
             maxColumns: 3,
             children: [
-              EnrollTextField(label: 'First name', controller: _firstNameController, badge: EnrollBadge.required),
+              EnrollTextField(label: 'First name', controller: _firstNameController, badge: EnrollBadge.required, onChanged: (_) => setState(() {})),
               EnrollTextField(label: 'Middle name', controller: _middleNameController, badge: EnrollBadge.optional),
               EnrollTextField(label: 'Last name', controller: _lastNameController, badge: EnrollBadge.required),
             ],
@@ -1319,14 +1442,20 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               label: 'Date of birth',
               controller: _dobController,
               badge: EnrollBadge.required,
-              hint: 'DD/MM/YYYY',
+              hint: 'DD / MM / YYYY',
               keyboardType: TextInputType.datetime,
+              errorText: _dobError,
+              onChanged: (_) => _validateDob(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                onPressed: _pickDob,
+              ),
             ),
             EnrollDropdown<StudentGender>(
               label: 'Gender',
               badge: EnrollBadge.required,
               value: _gender,
-              hint: 'Select gender',
+              hint: 'Select',
               items: StudentGender.values
                   .map((g) => DropdownMenuItem(value: g, child: Text(g.label)))
                   .toList(),
@@ -1339,22 +1468,322 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               label: 'Blood group',
               badge: EnrollBadge.optional,
               value: _bloodGroup,
-              hint: 'Select blood group',
+              hint: 'Select',
               items: const ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
                   .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                   .toList(),
               onChanged: (v) => setState(() => _bloodGroup = v),
             ),
-            EnrollTextField(label: 'Mother tongue', controller: _motherTongueController, badge: EnrollBadge.optional),
+            EnrollDropdown<String>(
+              label: 'Mother tongue',
+              badge: EnrollBadge.optional,
+              value: _motherTongue,
+              hint: 'Select',
+              items: kMotherTongueOptions.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+              onChanged: (v) => setState(() => _motherTongue = v),
+            ),
           ]),
+          if (_motherTongue == 'Other') ...[
+            const SizedBox(height: 12),
+            EnrollTextField(label: 'Specify language', controller: _motherTongueOtherController, badge: EnrollBadge.optional),
+          ],
           const SizedBox(height: 16),
           EnrollFieldGrid(children: [
-            EnrollTextField(label: 'Religion', controller: _religionController, badge: EnrollBadge.optional),
-            EnrollTextField(label: 'Nationality', controller: _nationalityController, badge: EnrollBadge.optional),
+            EnrollDropdown<String>(
+              label: 'Religion',
+              badge: EnrollBadge.optional,
+              value: _religion,
+              hint: 'Select',
+              items: kReligionOptions.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              onChanged: (v) => setState(() => _religion = v),
+            ),
+            EnrollDropdown<String>(
+              label: 'Nationality',
+              badge: EnrollBadge.required,
+              value: _nationality,
+              hint: 'Select Nationality',
+              items: kNationalityOptions.map((n) => DropdownMenuItem(value: n, child: Text(n))).toList(),
+              onChanged: (v) => setState(() => _nationality = v),
+            ),
           ]),
+          if (_religion == 'Other') ...[
+            const SizedBox(height: 12),
+            EnrollTextField(label: 'Specify religion', controller: _religionOtherController, badge: EnrollBadge.optional),
+          ],
+          if (_nationality == 'Other') ...[
+            const SizedBox(height: 12),
+            EnrollTextField(label: 'Specify nationality', controller: _nationalityOtherController, badge: EnrollBadge.required),
+          ],
         ],
       ),
     );
+  }
+
+  /// Mirrors StudentAddPanel.tsx's photo uploader exactly: a large dashed
+  /// circle placeholder (camera/plus icon + "ADD PHOTO" caption) beside a
+  /// "Student photo" heading, description copy, and Upload file / Take
+  /// photo actions.
+  Widget _buildPhotoField() {
+    return LayoutBuilder(builder: (context, constraints) {
+      final stacked = constraints.maxWidth < 420;
+      final circle = InkWell(
+        onTap: _photoUploading ? null : _pickAndUploadPhoto,
+        borderRadius: BorderRadius.circular(80),
+        child: Container(
+          width: 132,
+          height: 132,
+          decoration: BoxDecoration(
+            color: _hasPhoto ? Colors.white : const Color(0xFFFAFAFA),
+            shape: BoxShape.circle,
+            // Mirrors `.photo-circle.has-photo { border: none; }` exactly —
+            // the dashed placeholder ring disappears entirely once a photo
+            // fills the circle, not just changes color.
+            border: _hasPhoto ? null : Border.all(color: const Color(0xFFD1D5DB), width: 2),
+          ),
+          alignment: Alignment.center,
+          child: _photoUploading
+              ? const CircularProgressIndicator(strokeWidth: 2)
+              : _photoPreviewBytes != null
+                  ? ClipOval(
+                      child: Image.memory(
+                        _photoPreviewBytes!,
+                        width: 132,
+                        height: 132,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : _photoUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            _photoUrl!,
+                            width: 132,
+                            height: 132,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.check_circle, size: 32, color: Color(0xFF16A34A)),
+                          ),
+                        )
+                      : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.add, size: 26, color: Color(0xFF9CA3AF)),
+                        SizedBox(height: 4),
+                        Text('ADD PHOTO', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF9CA3AF), letterSpacing: 0.5)),
+                      ],
+                    ),
+        ),
+      );
+
+      final details = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Student photo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.studentEnrollInk)),
+          const SizedBox(height: 6),
+          const Text(
+            "Square JPG or PNG, at least 400×400px. We'll crop it into a circle for ID cards and reports.",
+            style: TextStyle(fontSize: 13, color: AppColors.studentEnrollMuted, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              // Mirrors `.btn-upload-file` exactly — always present, label
+              // swaps "Upload file" -> "Change" once a photo exists.
+              _photoOutlinedButton(
+                label: _hasPhoto ? 'Change' : 'Upload file',
+                onPressed: _photoUploading ? null : _pickAndUploadPhoto,
+              ),
+              if (_hasPhoto) ...[
+                _photoOutlinedButton(label: 'View image', onPressed: _photoUploading ? null : _openPhotoPreview),
+                _photoLinkButton(label: 'Remove', onPressed: _photoUploading ? null : _removePhoto),
+              ] else
+                _photoLinkButton(label: 'Take photo', onPressed: _photoUploading ? null : _takePhoto),
+            ],
+          ),
+          if (_photoError != null) ...[
+            const SizedBox(height: 6),
+            Text(_photoError!, style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626))),
+          ],
+        ],
+      );
+
+      return stacked
+          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [circle, const SizedBox(height: 16), details])
+          : Row(crossAxisAlignment: CrossAxisAlignment.center, children: [circle, const SizedBox(width: 20), Expanded(child: details)]);
+    });
+  }
+
+  /// Mirrors `.btn-upload-file` exactly — outlined, neutral, not bold.
+  Widget _photoOutlinedButton({required String label, required VoidCallback? onPressed}) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF374151),
+        side: const BorderSide(color: Color(0xFFD1D5DB)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.normal),
+      ),
+      child: Text(label),
+    );
+  }
+
+  /// Mirrors `.btn-take-photo` exactly — plain underlined brand-colour text
+  /// link, no border/background/bold weight.
+  Widget _photoLinkButton({required String label, required VoidCallback? onPressed}) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(foregroundColor: AppColors.studentEnrollBrand, padding: EdgeInsets.zero),
+      child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.normal, decoration: TextDecoration.underline)),
+    );
+  }
+
+  /// "View image" — mirrors `photoPreviewOpen`'s `.photo-preview-overlay`/
+  /// `.photo-preview-card` exactly: a centered white card with just a close
+  /// button and the full image, nothing else.
+  void _openPhotoPreview() {
+    showDialog<void>(
+      context: context,
+      barrierColor: const Color(0xAD0F172A),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    color: const Color(0xFFF8FAFC),
+                    constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+                    child: _photoPreviewBytes != null
+                        ? Image.memory(_photoPreviewBytes!, fit: BoxFit.contain)
+                        : Image.network(_photoUrl!, fit: BoxFit.contain),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).pop(),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('✕', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// "Remove" — mirrors `clearStudentPhoto()` exactly: clears the photo
+  /// back to the empty "ADD PHOTO" state and any lingering error, with no
+  /// backend delete call (the frontend doesn't make one either).
+  void _removePhoto() {
+    setState(() {
+      _photoUrl = null;
+      _photoPreviewBytes = null;
+      _photoError = null;
+    });
+  }
+
+  /// Mirrors StudentAddPanel.tsx's Active/Inactive radiogroup pills exactly
+  /// — a two-way segmented toggle, not a Material [Switch].
+  Widget _buildStatusToggle() {
+    Widget pill(String label, bool active, VoidCallback onTap) {
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? AppColors.studentEnrollBrand : Colors.white,
+              border: Border.all(color: active ? AppColors.studentEnrollBrand : AppColors.studentEnrollLine),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: active ? Colors.white : AppColors.studentFieldLabel),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Status', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.studentFieldLabel)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            pill('Active', _isActive, () => setState(() => _isActive = true)),
+            const SizedBox(width: 8),
+            pill('Inactive', !_isActive, () => setState(() => _isActive = false)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Mirrors StudentAddPanel.tsx's DOB blur validation exactly: under 2 or
+  /// over 25 years old triggers a warning (does not hard-block `_submit`).
+  void _validateDob() {
+    final dob = _parseDob(_dobController.text.trim());
+    setState(() {
+      if (dob == null) {
+        _dobError = null;
+        return;
+      }
+      final age = DateTime.now().difference(dob).inDays / 365.25;
+      if (age < 2) {
+        _dobError = 'Student must be at least 2 years old';
+      } else if (age > 25) {
+        _dobError = 'Date of birth seems too old — please verify';
+      } else {
+        _dobError = null;
+      }
+    });
+  }
+
+  Future<void> _pickDob() async {
+    final initial = _parseDob(_dobController.text.trim()) ?? DateTime(DateTime.now().year - 6);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1990),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null) return;
+    setState(() {
+      _dobController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+    });
+    _validateDob();
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1386,13 +1815,21 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               label: 'Admission type',
               badge: EnrollBadge.required,
               value: _admissionType,
-              hint: 'Select type',
-              items: const ['New', 'Transfer', 'Readmission']
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                  .toList(),
-              onChanged: (v) => setState(() => _admissionType = v ?? 'New'),
+              hint: 'Select Admission Type',
+              items: kAdmissionTypeOptions.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+              onChanged: (v) => setState(() => _admissionType = v ?? 'New admission'),
+              helpText: 'New admission: first-time enrollment · Transfer: from another school · '
+                  'Re-admission: previously enrolled, returning · RTE Quota: Right to Education Act 2009 reservation',
             ),
           ]),
+          if (_admissionType == 'Transfer') ...[
+            const SizedBox(height: 16),
+            EnrollTextField(label: 'Previous school name', controller: _previousSchoolNameController),
+          ],
+          if (_admissionType == 'RTE Quota') ...[
+            const SizedBox(height: 16),
+            EnrollTextField(label: 'RTE certificate number', controller: _rteCertificateController, badge: EnrollBadge.required),
+          ],
           const SizedBox(height: 16),
           EnrollFieldGrid(children: [
             EnrollDropdown<int>(
@@ -1448,30 +1885,104 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
             EnrollTextField(
               label: 'Phone',
               controller: _phoneController,
-              badge: EnrollBadge.recommended,
+              badge: EnrollBadge.required,
+              hint: '10-digit mobile number',
               keyboardType: TextInputType.phone,
             ),
             EnrollTextField(
               label: 'Email',
               controller: _emailController,
-              badge: EnrollBadge.optional,
+              badge: EnrollBadge.recommended,
+              hint: 'student@example.com',
               keyboardType: TextInputType.emailAddress,
             ),
           ]),
           const SizedBox(height: 16),
-          EnrollTextField(label: 'Address line', controller: _addressController, badge: EnrollBadge.recommended),
-          const SizedBox(height: 16),
           EnrollFieldGrid(children: [
-            EnrollTextField(label: 'Pincode', controller: _pincodeController, badge: EnrollBadge.optional, keyboardType: TextInputType.number),
-            EnrollTextField(label: 'City', controller: _cityController, badge: EnrollBadge.optional),
+            EnrollTextField(label: 'Pincode', controller: _pincodeController, badge: EnrollBadge.required, keyboardType: TextInputType.number),
+            EnrollTextField(label: 'Address line', controller: _addressController, badge: EnrollBadge.required),
           ]),
           const SizedBox(height: 16),
           EnrollFieldGrid(children: [
-            EnrollTextField(label: 'District', controller: _districtController, badge: EnrollBadge.optional),
-            EnrollTextField(label: 'State', controller: _stateController, badge: EnrollBadge.optional),
+            EnrollTextField(label: 'State', controller: _stateController, badge: EnrollBadge.required),
+            EnrollTextField(label: 'District', controller: _districtController, badge: EnrollBadge.required),
           ]),
+          const SizedBox(height: 16),
+          EnrollTextField(label: 'City', controller: _cityController, badge: EnrollBadge.required),
+          const SizedBox(height: 16),
+          EnrollTextField(label: 'Landmark', controller: _landmarkController, badge: EnrollBadge.optional, hint: 'Near school, landmark, area name…'),
+          const SizedBox(height: 16),
+          _buildTransportField(),
         ],
       ),
+    );
+  }
+
+  static const List<String> _transportOptions = [
+    'School bus', 'Private vehicle', 'Auto-rickshaw', 'Cycle', 'Walk', 'Public bus/metro', 'Cab/Taxi',
+  ];
+
+  /// Mirrors StudentAddPanel.tsx's "Means of transport" multi-select pill
+  /// picker + custom free-text add row exactly.
+  Widget _buildTransportField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const EnrollLabel('Means of transport', badge: EnrollBadge.optional),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ..._transportOptions.map((mode) {
+              final selected = _transportModes.contains(mode);
+              return FilterChip(
+                label: Text(mode, style: const TextStyle(fontSize: 12.5)),
+                selected: selected,
+                onSelected: (v) => setState(() => v ? _transportModes.add(mode) : _transportModes.remove(mode)),
+                selectedColor: AppColors.studentEnrollBrand.withValues(alpha: 0.12),
+                checkmarkColor: AppColors.studentEnrollBrand,
+                side: BorderSide(color: selected ? AppColors.studentEnrollBrand : AppColors.studentEnrollLine),
+                backgroundColor: Colors.white,
+              );
+            }),
+            ..._transportModes.where((m) => !_transportOptions.contains(m)).map((custom) => Chip(
+                  label: Text(custom, style: const TextStyle(fontSize: 12.5)),
+                  onDeleted: () => setState(() => _transportModes.remove(custom)),
+                  backgroundColor: AppColors.studentEnrollBrand.withValues(alpha: 0.12),
+                )),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _customTransportController,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'Custom transport mode…',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.studentFieldBorder)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.studentEnrollBrand, width: 1.5)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: () {
+                final v = _customTransportController.text.trim();
+                if (v.isEmpty) return;
+                setState(() {
+                  if (!_transportModes.contains(v)) _transportModes.add(v);
+                  _customTransportController.clear();
+                });
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1611,14 +2122,70 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
   Widget _buildApaarSection() {
     return EnrollSectionCard(
       title: 'Government identity',
-      subtitle: 'APAAR ID for national student records',
+      subtitle: '"One Nation, One Student ID" — a 12-digit lifelong academic identity issued by the '
+          'Ministry of Education (NEP 2020).',
       stepNumber: 5,
       navButtons: _navButtons(),
-      child: EnrollTextField(
-        label: 'APAAR ID',
-        controller: _apaarIdController,
-        badge: EnrollBadge.optional,
-        helpText: 'The 12-digit Automated Permanent Academic Account Registry ID, if already issued.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFBFDBFE))),
+            child: const Text(
+              '📋 Entering a valid APAAR ID auto-fills all matching fields across the form.',
+              style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          EnrollTextField(
+            label: 'APAAR ID',
+            controller: _apaarIdController,
+            badge: EnrollBadge.optional,
+            hint: '1234 5678 9012',
+          ),
+          const SizedBox(height: 16),
+          const Text('OTHER GOVERNMENT IDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.studentEnrollMuted)),
+          const SizedBox(height: 12),
+          EnrollTextField(
+            label: 'Aadhaar number',
+            controller: _aadhaarController,
+            badge: EnrollBadge.optional,
+            hint: '12-digit Aadhaar',
+            obscureText: !_aadhaarVisible,
+            keyboardType: TextInputType.number,
+            helpText: 'Stored encrypted — used for APAAR KYC only. Only required if performing APAAR KYC verification.',
+            suffixIcon: IconButton(
+              icon: Icon(_aadhaarVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18),
+              onPressed: () => setState(() => _aadhaarVisible = !_aadhaarVisible),
+            ),
+          ),
+          const SizedBox(height: 16),
+          EnrollFieldGrid(children: [
+            EnrollTextField(label: 'PEN / UDISE+', controller: _penUdiseController, badge: EnrollBadge.optional, hint: 'Permanent Education Number'),
+            EnrollTextField(label: 'DigiLocker mobile', controller: _digilockerMobileController, badge: EnrollBadge.optional, hint: 'Aadhaar-linked mobile'),
+          ]),
+          const SizedBox(height: 16),
+          EnrollTextField(
+            label: 'ABC Portal ID',
+            controller: _abcIdController,
+            badge: EnrollBadge.optional,
+            hint: 'From abc.gov.in',
+            helpText: 'Academic Bank of Credits ID issued by the National Academic Depository. Find yours at abc.gov.in',
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: const Color(0xFFFAFAFB), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.studentEnrollLine)),
+            child: const Text(
+              '🔒 Aadhaar and biometric data are stored AES-256 encrypted and are never shared with third parties. '
+              'Access is restricted to authorised school administrators only, in compliance with the DPDPA 2023.',
+              style: TextStyle(fontSize: 11.5, color: AppColors.studentEnrollMuted, height: 1.4),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1629,19 +2196,16 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
 
   Widget _buildDocumentsSection() {
     final selectedCategoryName = _categories.where((c) => c.id == _categoryId).firstOrNull?.name;
-    final docs = <(String, String, EnrollBadge)>[
-      ('birth_certificate', 'Birth certificate', EnrollBadge.required),
-      ('aadhaar', 'Aadhaar card (masked)', EnrollBadge.recommended),
-      (
-        'caste_certificate',
-        'Caste certificate',
-        (selectedCategoryName != null && selectedCategoryName != 'General')
-            ? EnrollBadge.required
-            : EnrollBadge.optional,
-      ),
-      ('disability_certificate', 'UDID / disability certificate', _isPwD ? EnrollBadge.required : EnrollBadge.optional),
-      ('medical_info', 'Medical information', EnrollBadge.optional),
-      ('transfer_certificate', 'Transfer certificate', EnrollBadge.optional),
+    final showCaste = selectedCategoryName != null && selectedCategoryName.trim().toLowerCase() != 'general';
+    final docs = <(String key, String label, EnrollBadge badge, String description)>[
+      ('birth_certificate', 'Birth certificate', EnrollBadge.docRequired, 'Government-issued proof of date of birth. PDF, JPG, or PNG up to 5 MB.'),
+      ('aadhaar', 'Aadhaar card', EnrollBadge.masked, 'We store only the last 4 digits. The full number is never saved to disk or shared.'),
+      if (showCaste)
+        ('caste_certificate', 'Caste certificate', EnrollBadge.docRequired, 'Required for the selected reserved category. PDF, JPG, or PNG up to 5 MB.'),
+      if (_isPwD)
+        ('disability_certificate', 'UDID / disability certificate', EnrollBadge.docRequired, 'Unique Disability ID issued by the government. PDF, JPG, or PNG up to 5 MB.'),
+      ('medical_info', 'Medical information', EnrollBadge.optional, 'Allergies, ongoing conditions, emergency contact for medical decisions. Stored encrypted.'),
+      ('transfer_certificate', 'Transfer Certificate (TC)', EnrollBadge.optional, 'Previous school Transfer Certificate and last attended report card. Required for lateral admissions.'),
     ];
 
     return EnrollSectionCard(
@@ -1653,7 +2217,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           EnrollFieldGrid(
-            children: docs.map((doc) => _buildDocumentCard(doc.$1, doc.$2, doc.$3)).toList(),
+            children: docs.map((doc) => _buildDocumentCard(doc.$1, doc.$2, doc.$3, doc.$4)).toList(),
           ),
           const SizedBox(height: 16),
           InkWell(
@@ -1666,12 +2230,21 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
                   onChanged: (v) => setState(() => _consentChecked = v ?? false),
                   activeColor: AppColors.studentEnrollBrand,
                 ),
-                const Expanded(
+                Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: Text(
-                      "I confirm the guardian has consented to storing this student's documents.",
-                      style: TextStyle(fontSize: 13, color: AppColors.studentFieldLabel),
+                    padding: const EdgeInsets.only(top: 12),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(fontSize: 13, color: AppColors.studentFieldLabel, height: 1.5),
+                        children: [
+                          TextSpan(text: 'Parent / Guardian consent ', style: TextStyle(fontWeight: FontWeight.w700)),
+                          TextSpan(text: '*', style: TextStyle(color: AppColors.studentRequiredMark, fontWeight: FontWeight.w700)),
+                          TextSpan(
+                            text:
+                                "\nI confirm that the student's parent or legal guardian has authorized me to submit these documents and has consented to their storage for school records, admissions, fee management, and legally required reporting. I understand that withdrawing consent requires a written request.",
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1683,7 +2256,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     );
   }
 
-  Widget _buildDocumentCard(String key, String label, EnrollBadge badge) {
+  Widget _buildDocumentCard(String key, String label, EnrollBadge badge, String description) {
     final uploaded = _documentsUploaded[key] ?? false;
     final uploading = _documentsUploading[key] ?? false;
     return InkWell(
@@ -1725,14 +2298,15 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               ],
             ),
             const SizedBox(height: 6),
-            EnrollLabel('', badge: badge),
+            _docBadgeChip(badge),
+            const SizedBox(height: 6),
             Text(
               uploading
                   ? 'Uploading…'
                   : uploaded
                       ? 'Uploaded'
                       : isEditMode
-                          ? 'Tap to upload'
+                          ? description
                           : 'Available once the student is enrolled',
               style: TextStyle(
                 fontSize: 11,
@@ -1742,6 +2316,19 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Mirrors `StudentDocumentsUpload.tsx`'s `.doc-badge-req` /
+  /// `.doc-badge-mask` / `.doc-badge-opt` — a text pill for every state
+  /// (there is no bare-asterisk "required" convention in this component,
+  /// unlike the rest of the wizard).
+  Widget _docBadgeChip(EnrollBadge badge) {
+    final (bg, text, label) = enrollBadgeStyle(badge);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(label, style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: text, letterSpacing: 0.4)),
     );
   }
 
@@ -2227,7 +2814,7 @@ class _HeroActionButton extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(11),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: showLabel ? 18 : 12, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: showLabel ? 18 : 10, vertical: showLabel ? 10 : 8),
             decoration: BoxDecoration(
               gradient: style.gradient,
               color: style.gradient == null ? style.background : null,
@@ -2270,13 +2857,16 @@ class _HeroActionButton extends StatelessWidget {
   }
 }
 
+/// Mirrors StudentAddPanel.tsx's `.nav-item`/`.nav-bullet` exactly — there is
+/// no "done/completed" visual state in the frontend (only `active`,
+/// `locked`, and default), so this never shows a checkmark for
+/// visited-but-not-active steps.
 class _StepChip extends StatelessWidget {
   final int index;
   final String label;
   final EnrollBadge? badge;
   final bool isActive;
   final bool isLocked;
-  final bool isDone;
   final VoidCallback? onTap;
 
   const _StepChip({
@@ -2285,7 +2875,6 @@ class _StepChip extends StatelessWidget {
     required this.badge,
     required this.isActive,
     required this.isLocked,
-    required this.isDone,
     required this.onTap,
   });
 
@@ -2314,36 +2903,28 @@ class _StepChip extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 20,
-                    height: 20,
+                    width: 24,
+                    height: 24,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: isActive
-                          ? AppColors.studentEnrollBrand
-                          : (isDone ? const Color(0xFF10B981) : AppColors.studentNavBulletBg),
+                      color: isActive ? AppColors.studentEnrollBrand : AppColors.studentNavBulletBg,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isActive || isDone ? Colors.transparent : AppColors.studentEnrollLine,
+                        color: isActive ? Colors.transparent : AppColors.studentEnrollLine,
                       ),
                     ),
-                    child: isDone
-                        ? const Icon(Icons.check, size: 12, color: Colors.white)
-                        : Text(
-                            '$index',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: isActive ? Colors.white : AppColors.studentNavBulletText,
-                            ),
-                          ),
+                    child: Text(
+                      '$index',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isActive ? Colors.white : AppColors.studentNavBulletText,
+                      ),
+                    ),
                   ),
                   if (badge != null) ...[
                     const SizedBox(width: 4),
-                    Icon(
-                      badge == EnrollBadge.sensitive ? Icons.warning_amber_rounded : Icons.verified_outlined,
-                      size: 12,
-                      color: badge == EnrollBadge.sensitive ? const Color(0xFFDC2626) : AppColors.studentEnrollBrand,
-                    ),
+                    Flexible(child: _navBadgePill(badge!)),
                   ],
                 ],
               ),
@@ -2361,6 +2942,19 @@ class _StepChip extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _navBadgePill(EnrollBadge badge) {
+    final (bg, text, label) = enrollBadgeStyle(badge);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(3)),
+      child: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 7, fontWeight: FontWeight.w700, color: text, letterSpacing: 0.2),
       ),
     );
   }

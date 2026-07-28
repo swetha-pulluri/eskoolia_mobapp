@@ -6,6 +6,53 @@ import 'package:flutter/material.dart';
 /// StudentMultiClassPanel.module.css (Ring, SubBadge, PreviewBadges, Chk,
 /// the editable ModuleCard option-picker, and the compact ellipsis pager).
 
+/// Mirrors the "Mandatory subjects (auto-checked, locked) N/N" header used
+/// atop both the main Assign card and the row-editor dialog's mandatory
+/// block — same markup in both places in the reference (`moduleHeader` with
+/// a lock icon + title + sub-copy + count chip). Used a `Wrap` instead of a
+/// bare `Row`: the reference has no wrap/media-query fallback here either,
+/// but a browser just clips silently on an ultra-narrow viewport instead of
+/// throwing Flutter's hard `RenderFlex overflowed` assertion.
+class MandatorySubjectsHeader extends StatelessWidget {
+  final int count;
+  const MandatorySubjectsHeader({super.key, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    // Every text piece is `Flexible` (not just wrapped in an outer `Wrap`)
+    // so this row can never itself overflow — `Wrap` only stops its own
+    // children from overflowing the *line*, it doesn't stop a non-flexible
+    // `Row` child from overflowing on its own if that child's fixed content
+    // alone exceeds the width `Wrap` hands it.
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: 4,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_outline, size: 13, color: Color(0xFF19162C)),
+            const SizedBox(width: 5),
+            const Flexible(
+              child: Text('Mandatory subjects', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF19162C))),
+            ),
+            const SizedBox(width: 5),
+            const Flexible(
+              child: Text('(auto-checked, locked)', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(fontSize: 11, color: Color(0xFF908AAC))),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          decoration: BoxDecoration(color: const Color(0xFFEEF9F3), border: Border.all(color: const Color(0xFFCFEEDE)), borderRadius: BorderRadius.circular(999)),
+          child: Text('$count / $count', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF0A7A4A))),
+        ),
+      ],
+    );
+  }
+}
+
 /// Mirrors `.checkBox` / `.checkBoxOn` — a 16×16 rounded-square checkbox.
 class Chk extends StatelessWidget {
   final bool checked;
@@ -363,37 +410,83 @@ class _ModuleOptionCardState extends State<ModuleOptionCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Icon(widget.icon, size: 13, color: const Color(0xFF19162C)),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  widget.cardDef.title,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF19162C)),
-                  overflow: TextOverflow.ellipsis,
+          // Mirrors `.moduleHeader { display:flex; justify-content:space-between }`
+          // exactly. Uses `LayoutBuilder` to measure the card's real
+          // available width and, only when the fixed chrome (icon + chip +
+          // edit-icon) genuinely doesn't leave room for the title on one
+          // line, drops the chip+edit-icon group to its own line below —
+          // the mobile equivalent of the reference's implicit CSS overflow
+          // (it has no media query here either; a browser just clips
+          // silently on an ultra-narrow viewport instead of throwing
+          // Flutter's hard `RenderFlex overflowed` assertion). Deliberately
+          // NOT a bare `Wrap` of two sub-`Row`s: a `Wrap` only protects
+          // against its *own* children overflowing the line, not against
+          // one of those children (itself a `Row` with non-flexible kids)
+          // overflowing on its own — measuring the real width up front is
+          // the only way to rule that out entirely, regardless of title
+          // length or screen size.
+          LayoutBuilder(builder: (context, constraints) {
+            // `Flexible` on the chip's text (not just the title's) means
+            // this Row can never itself overflow either, regardless of
+            // device width or the system font-scale factor — there's
+            // always at least one shrinkable element absorbing the deficit
+            // instead of a fixed-width sum that has to "just fit".
+            final trailingGroup = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: widget.chipBg,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: widget.chipBorder),
+                    ),
+                    child: Text(
+                      widget.chipLabel,
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: widget.chipText),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  color: widget.chipBg,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: widget.chipBorder),
+                const SizedBox(width: 5),
+                InkWell(
+                  onTap: _enterEditMode,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.all(3),
+                    child: Icon(Icons.edit_outlined, size: 12, color: Color(0xFFC4BEDD)),
+                  ),
                 ),
-                child: Text(widget.chipLabel, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: widget.chipText)),
-              ),
-              const SizedBox(width: 5),
-              InkWell(
-                onTap: _enterEditMode,
-                borderRadius: BorderRadius.circular(6),
-                child: const Padding(
-                  padding: EdgeInsets.all(3),
-                  child: Icon(Icons.edit_outlined, size: 12, color: Color(0xFFC4BEDD)),
+              ],
+            );
+            final titleRow = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, size: 13, color: const Color(0xFF19162C)),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    widget.cardDef.title,
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF19162C)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+            // Generous margin (the trailing group's own natural width is
+            // ~90-100px at default text scale) so there's headroom left for
+            // larger system font-scale settings before this needs to stack.
+            if (constraints.maxWidth < 160) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [titleRow, const SizedBox(height: 4), trailingGroup],
+              );
+            }
+            return Row(children: [Expanded(child: titleRow), trailingGroup]);
+          }),
           const SizedBox(height: 4),
           for (final opt in widget.cardDef.options)
             Opacity(
@@ -435,50 +528,70 @@ class _ModuleOptionCardState extends State<ModuleOptionCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _titleCtrl,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF19162C)),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
+          // Mirrors `.cardEditHeader` (title input + Save/Cancel) exactly,
+          // but stacks the actions below the input on very narrow cards
+          // instead of forcing a `RenderFlex overflowed` crash — the
+          // reference has no fallback here either (no media query), but a
+          // browser just visually clips/wraps instead of hard-crashing the
+          // way Flutter's `Row` does when non-flexible siblings alone don't
+          // fit.
+          LayoutBuilder(builder: (context, constraints) {
+            final titleField = TextField(
+              controller: _titleCtrl,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF19162C)),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(7), borderSide: const BorderSide(color: Color(0xFF6C4CF1), width: 1.5)),
+              ),
+            );
+            final actions = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // `Flexible` here (not just on the title/chip elsewhere)
+                // means this Row can't overflow even in the stacked branch
+                // on an extremely narrow card or a large system font-scale
+                // — only the fixed Discard icon button is non-negotiable.
+                Flexible(
+                  child: InkWell(
+                    onTap: _saveCard,
+                    borderRadius: BorderRadius.circular(7),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(color: const Color(0xFF6C4CF1), borderRadius: BorderRadius.circular(7)),
+                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.check, size: 12, color: Colors.white),
+                        SizedBox(width: 4),
+                        Flexible(child: Text('Save', overflow: TextOverflow.ellipsis, maxLines: 1, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white))),
+                      ]),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 5),
-              InkWell(
-                onTap: _saveCard,
-                borderRadius: BorderRadius.circular(7),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(color: const Color(0xFF6C4CF1), borderRadius: BorderRadius.circular(7)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.check, size: 12, color: Colors.white),
-                    SizedBox(width: 4),
-                    Text('Save', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ]),
+                const SizedBox(width: 5),
+                InkWell(
+                  onTap: _discardCard,
+                  borderRadius: BorderRadius.circular(7),
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(color: const Color(0xFFE8E3D8), borderRadius: BorderRadius.circular(7)),
+                    child: const Icon(Icons.close, size: 13, color: Color(0xFF48436A)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 5),
-              InkWell(
-                onTap: _discardCard,
-                borderRadius: BorderRadius.circular(7),
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(color: const Color(0xFFE8E3D8), borderRadius: BorderRadius.circular(7)),
-                  child: const Icon(Icons.close, size: 13, color: Color(0xFF48436A)),
-                ),
-              ),
-            ],
-          ),
+              ],
+            );
+            if (constraints.maxWidth < 180) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [titleField, const SizedBox(height: 6), Align(alignment: Alignment.centerRight, child: actions)],
+              );
+            }
+            return Row(children: [Expanded(child: titleField), const SizedBox(width: 5), actions]);
+          }),
           const SizedBox(height: 10),
           for (var i = 0; i < _draftOpts.length; i++) _optRow(i),
           Padding(

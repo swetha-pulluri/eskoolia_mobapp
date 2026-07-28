@@ -115,8 +115,9 @@ abstract class StudentRemoteDataSource {
   Future<String> uploadStudentPhoto({required List<int> bytes, required String filename});
 
   /// POST /api/v1/students/documents/upload_document/ (multipart, fields
-  /// `student_id`, `document_type`, `file`).
-  Future<void> uploadStudentDocument({
+  /// `student_id`, `document_type`, `file`). Returns the created document's
+  /// absolute `file_url` from the response.
+  Future<String?> uploadStudentDocument({
     required int studentId,
     required String documentType,
     required List<int> bytes,
@@ -466,7 +467,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<void> uploadStudentDocument({
+  Future<String?> uploadStudentDocument({
     required int studentId,
     required String documentType,
     required List<int> bytes,
@@ -478,7 +479,10 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
         'document_type': documentType,
         'file': MultipartFile.fromBytes(bytes, filename: filename),
       });
-      await _dio.post(ApiConstants.studentDocumentUpload, data: formData);
+      final response = await _dio.post(ApiConstants.studentDocumentUpload, data: formData);
+      final body = response.data;
+      if (body is Map<String, dynamic>) return body['file_url'] as String?;
+      return null;
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Failed to upload document.');
     }

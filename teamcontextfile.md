@@ -211,7 +211,52 @@ Completed Work:
 
 ---
 
-## Date: 2026-07-26 (Saturday)
+## Date: 2026-07-22 (Wednesday)
+
+Developer: Swetha
+Git Branch: feature/login-screen
+
+Completed Work:
+- Started the Academics module: built the Foundation setup flow (Academic Year, Classes, Rooms, Sections, and Subjects steps) matching the frontend's step-by-step setup UI
+- Built the Staff Assignment screens: workload tab, audit log tab, and the related assignment dialogs
+- Registered the new Academics routes and sub-nav in `app_router.dart`
+- Reconciled and briefly stashed in-progress Student backend/profile-page work before syncing with Main
+
+*Note: reconstructed from git history — no separate commit exists for this date; content is split by module from the combined 2026-07-24 commit per your confirmation.*
+
+---
+
+## Date: 2026-07-23 (Thursday)
+
+Developer: Swetha
+Git Branch: feature/login-screen
+
+Completed Work:
+- Built out the Fees module: Fees Home (KPI cards, live payment feed, task queue, audit trail), Fee Configuration (Fee Types, Fee Groups, Fee Schedules, Late Fee Rules tabs), and Fee Assignment (assign/edit, bulk assign, change plan, and concession rules dialogs)
+- Added the supporting data layer for Fees: remote datasources, repositories, and domain models for fee types/groups/schedules/assignments/late-fee rules
+- Extended `api_constants.dart` with the new Fees endpoints
+
+*Note: reconstructed from git history — no separate commit exists for this date; content is split by module from the combined 2026-07-24 commit per your confirmation.*
+
+---
+
+## Date: 2026-07-24 (Friday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Added Student module extras beyond Enroll/List/Profile: Student Categories, Deleted, Disabled, Export, Groups, Promotion, Subject Assignment, and Unassigned pages
+- Extended the Student Class Accordion with the additional data/actions needed by the new pages above
+- Added the supporting data layer for the new Student pages: remote datasources and repositories for promotion, student category, student group, and subject assignment
+- Wired all new Academics, Fees, and Student pages into `app_router.dart` and finished polishing/testing the combined work before committing
+- Committed the combined Academics + Fees + Student-extras work as "Completed Fees Home, Fee Configuration and Fee Assignment modules"
+
+*Note: this date's commit (`4a385941`) is the only one in git history covering 2026-07-22 through 2026-07-24 — its Academics/Student-extras portions were reconstructed and moved to the 22nd/23rd entries above per your confirmation; final integration, routing, and commit happened on this date.*
+
+---
+
+## Date: 2026-07-27 (Monday)
 
 Developer: Swetha
 Git Branch: Main
@@ -228,7 +273,7 @@ Completed Work:
 
 ---
 
-## Date: 2026-07-28 (Monday)
+## Date: 2026-07-28 (Tuesday)
 
 Developer: Swetha
 Git Branch: Main
@@ -248,6 +293,17 @@ Completed Work:
 - Implemented the Student Enroll screen's "What I'll need" checklist modal, plus a printable checklist PDF
 - Restyled the Enroll screen's hero action buttons (Drafts / AI Assist / PDF / What I'll need) to match the frontend's colors, icons, badges, and pulse animation exactly
 - Verified with `flutter analyze` and a full `flutter build web --release` — no new errors or warnings
+- Completed the Student Enroll hero action bar (Drafts, AI Assist, PDF, What I'll Need)
+- Implemented the Student Verification Form with PDF preview
+- Fixed Dashboard → Quick Actions → Add Student navigation
+- Fixed Export behavior to match the frontend
+- Fixed the Student photo upload flow
+- Added Change, View Image, and Remove actions after a successful photo upload
+- Implemented the Admission Number Edit ↔ Lock toggle behavior
+- Fixed Multi Subject Assignment overflow issues
+- Fixed bottom sheet/dialog overflow issues across the Students module
+- Performed UI refinements to match the frontend exactly
+- Ran `flutter analyze`/build and resolved issues where applicable
 
 ---
 

@@ -84,7 +84,10 @@ abstract class StudentRepository {
   /// documents against a server-assigned draft id that this pass doesn't
   /// reproduce, so document upload during a brand-new enrollment stays
   /// deferred (see student_enroll_page.dart's Documents step).
-  Future<void> uploadStudentDocument({
+  /// Returns the uploaded document's absolute `file_url`, so callers that
+  /// need to link back to it (e.g. the Verification Form's "View saved"
+  /// action) don't have to make a second request.
+  Future<String?> uploadStudentDocument({
     required int studentId,
     required String documentType,
     required List<int> bytes,

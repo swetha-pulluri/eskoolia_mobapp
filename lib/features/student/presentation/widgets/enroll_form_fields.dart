@@ -46,7 +46,23 @@ class EnrollFieldGrid extends StatelessWidget {
   }
 }
 
-enum EnrollBadge { required, recommended, optional, goi, sensitive }
+enum EnrollBadge { required, recommended, optional, goi, sensitive, newBadge, masked, assignedLater, docRequired }
+
+/// Mirrors StudentAddPanel.tsx's `.nav-badge-goi` / `.nav-badge-new` /
+/// `.nav-badge-sensitive` / `.badge-assigned-later` pill colors exactly —
+/// shared by [EnrollLabel]'s field badges and the step strip's nav-item
+/// badges so both use the same (bg, text, label) triples.
+(Color, Color, String) enrollBadgeStyle(EnrollBadge badge) => switch (badge) {
+      EnrollBadge.recommended => (AppColors.studentRecommendedBg, AppColors.studentRecommendedText, 'RECOMMENDED'),
+      EnrollBadge.optional => (AppColors.studentOptionalBg, AppColors.studentOptionalText, 'OPTIONAL'),
+      EnrollBadge.goi => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'GOI'),
+      EnrollBadge.newBadge => (const Color(0xFFDBEAFE), const Color(0xFF1E40AF), 'NEW'),
+      EnrollBadge.sensitive => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'SENSITIVE'),
+      EnrollBadge.masked => (const Color(0xFFFFEDD5), const Color(0xFF9A3412), 'MASKED'),
+      EnrollBadge.assignedLater => (const Color(0xFFF3F4F6), const Color(0xFF6B7280), 'ASSIGNED LATER'),
+      EnrollBadge.docRequired => (const Color(0xFFFEE2E2), const Color(0xFFB91C1C), 'REQUIRED'),
+      EnrollBadge.required => (Colors.transparent, Colors.transparent, ''),
+    };
 
 class EnrollLabel extends StatelessWidget {
   final String label;
@@ -91,13 +107,7 @@ class EnrollLabel extends StatelessWidget {
   }
 
   Widget _buildBadgeChip(EnrollBadge badge) {
-    final (bg, text, label) = switch (badge) {
-      EnrollBadge.recommended => (AppColors.studentRecommendedBg, AppColors.studentRecommendedText, 'RECOMMENDED'),
-      EnrollBadge.optional => (AppColors.studentOptionalBg, AppColors.studentOptionalText, 'OPTIONAL'),
-      EnrollBadge.goi => (AppColors.studentEnrollBrand.withValues(alpha: 0.12), AppColors.studentEnrollBrand, 'GOI'),
-      EnrollBadge.sensitive => (const Color(0xFFFEF2F2), const Color(0xFFDC2626), 'SENSITIVE'),
-      EnrollBadge.required => (Colors.transparent, Colors.transparent, ''),
-    };
+    final (bg, text, label) = enrollBadgeStyle(badge);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
@@ -122,6 +132,14 @@ class EnrollTextField extends StatelessWidget {
   final int maxLines;
   final ValueChanged<String>? onChanged;
   final Widget? suffixIcon;
+  final bool obscureText;
+
+  /// Whether a `readOnly` (but still `enabled`) field gets the muted fill
+  /// background. Mirrors the frontend's own admission-number field exactly:
+  /// its "locked" state is a plain `readOnly` input with no distinct
+  /// styling, not a greyed-out `disabled` one — set this to `false` for
+  /// fields with that same "read-only text, unlocked via a toggle" pattern.
+  final bool filledWhenReadOnly;
 
   const EnrollTextField({
     super.key,
@@ -137,6 +155,8 @@ class EnrollTextField extends StatelessWidget {
     this.maxLines = 1,
     this.onChanged,
     this.suffixIcon,
+    this.obscureText = false,
+    this.filledWhenReadOnly = true,
   });
 
   @override
@@ -152,13 +172,14 @@ class EnrollTextField extends StatelessWidget {
           enabled: enabled,
           readOnly: readOnly,
           keyboardType: keyboardType,
-          maxLines: maxLines,
+          maxLines: obscureText ? 1 : maxLines,
+          obscureText: obscureText,
           onChanged: onChanged,
           style: const TextStyle(fontSize: 14, color: AppColors.studentEnrollInk),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
-            filled: readOnly || !enabled,
+            filled: (readOnly && filledWhenReadOnly) || !enabled,
             fillColor: const Color(0xFFF9FAFB),
             suffixIcon: suffixIcon,
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -1,20 +1,15 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart' show Color;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../fees/presentation/utils/pdf_unicode_theme.dart';
+import '../../domain/models/school_header_settings.dart';
 
-/// Mirrors `ConsentForm.tsx`'s `DEFAULT_DECLARATION` exactly — the frontend
-/// only ever prints this default text (per-school declaration customization
-/// lives in `ConsentForm.tsx`'s branding/settings panel, which is out of
-/// scope for this pass — see [printEnrollmentForm]'s doc comment).
-const String kDefaultEnrollmentDeclaration =
-    "I, the undersigned parent / legal guardian of {studentName}, hereby confirm that all information provided in "
-    "this admission form is accurate and complete to the best of my knowledge. I consent to the school collecting, "
-    "storing, and using the student's personal data exclusively for educational, administrative, and legally "
-    "mandated purposes in accordance with the Digital Personal Data Protection Act, 2023. I understand that any "
-    "withdrawal of consent must be submitted in writing to the school administration.";
+/// Mirrors `ConsentForm.tsx`'s `DEFAULT_DECLARATION` exactly.
+const String kDefaultEnrollmentDeclaration = kDefaultDeclaration;
 
 class EnrollmentPdfGuardian {
   final String fullName;
@@ -39,6 +34,11 @@ class EnrollmentPdfGuardian {
 /// separate from the page's live [TextEditingController]s so this util has
 /// no Flutter-widget-tree dependency.
 class EnrollmentPdfData {
+  /// Mirrors `ConsentFormStudent.studentId` — only set once the student has
+  /// a real backend id (edit mode); null for a brand-new, not-yet-saved
+  /// enrollment, matching the frontend's own "Student must be saved before
+  /// uploading a signed form" gate exactly.
+  final int? studentId;
   final String schoolName;
   final String schoolAddress;
   final String schoolPhone;
@@ -81,6 +81,7 @@ class EnrollmentPdfData {
   final String? photoUrl;
 
   const EnrollmentPdfData({
+    this.studentId,
     required this.schoolName,
     this.schoolAddress = '',
     this.schoolPhone = '',
@@ -163,31 +164,36 @@ pw.Widget _kvTable(List<(String, String)> rows) {
   );
 }
 
-/// Builds a real PDF of the filled admission/enrollment form and opens the
-/// native print/share/save-as-PDF sheet — the mobile equivalent of
-/// `ConsentForm.tsx` opening a print-only browser window and calling
-/// `window.print()` (there is no `window.print()` on mobile; `Printing.
-/// layoutPdf` is the standard Flutter substitute, used the same way
-/// elsewhere in this app — see `document_print_helper.dart`).
+/// Builds a real PDF of the Student Verification Form and opens the native
+/// print/share/save-as-PDF sheet — the mobile equivalent of
+/// `ConsentForm.tsx`'s `printFormInNewWindow()` (there is no
+/// `window.print()` on mobile; `Printing.layoutPdf` is the standard Flutter
+/// substitute, used the same way elsewhere in this app — see
+/// `document_print_helper.dart`). Mirrors the on-screen
+/// `StudentVerificationDocument` widget exactly: same header/logo/accent
+/// colour, same section order gated by [hiddenSections], same declaration
+/// text — so what the user previewed is exactly what gets printed/saved.
 ///
-/// Scope (disclosed): this reproduces `ConsentForm.tsx`'s core "filled
-/// form" document — same 10 numbered sections, same declaration text, same
-/// signature lines — using only the fields the Flutter Enroll form itself
-/// collects. The frontend's surrounding secondary flows (school letterhead/
-/// branding settings, upload-signed-copy, blank-form email/WhatsApp/
-/// digital-fill menus, OCR scan-fill) are separate, much larger features
-/// not covered by this pass. Section 5 "Government Identity" mirrors the
-/// frontend's own privacy behavior (Aadhaar/APAAR is never printed in the
-/// clear) by showing only whether an APAAR ID is on file, not its digits —
-/// the frontend shows PEN/UDISE+ and ABC Portal ID instead, fields this
-/// form doesn't collect.
-Future<void> printEnrollmentForm(EnrollmentPdfData data) async {
+/// Scope (disclosed): section content itself (which fields appear inside
+/// each of the 10 sections) is limited to what the Flutter Enroll form
+/// collects — see [EnrollmentPdfData]'s field list. Section 5 "Government
+/// Identity" mirrors the frontend's own privacy behavior (Aadhaar/APAAR is
+/// never printed in the clear) by showing only whether an APAAR ID is on
+/// file, not its digits.
+Future<void> printVerificationForm({
+  required EnrollmentPdfData data,
+  required SchoolHeaderSettings header,
+  required Color accentColor,
+  required Set<String> hiddenSections,
+}) async {
   final theme = await pdfUnicodeTheme();
   final photoBytes = await _fetchImageBytes(data.photoUrl);
-  const accent = PdfColor.fromInt(0xFF6C3CE1);
+  final logoBytes = header.logoBase64.isNotEmpty ? base64Decode(header.logoBase64) : null;
+  final accent = PdfColor.fromInt(accentColor.toARGB32());
 
   final fullName = [data.firstName, data.middleName, data.lastName].where((s) => s.trim().isNotEmpty).join(' ');
-  final declaration = kDefaultEnrollmentDeclaration.replaceAll('{studentName}', fullName.isEmpty ? '_____' : fullName);
+  final declaration = header.declarationText.replaceAll('{studentName}', fullName.isEmpty ? '_____' : fullName);
+  bool visible(String id) => !hiddenSections.contains(id);
 
   final doc = pw.Document(theme: theme);
   doc.addPage(
@@ -195,12 +201,33 @@ Future<void> printEnrollmentForm(EnrollmentPdfData data) async {
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.fromLTRB(28, 28, 28, 28),
       build: (context) => [
-        pw.Text(data.schoolName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: accent)),
-        if (data.schoolAddress.isNotEmpty || data.schoolPhone.isNotEmpty || data.schoolEmail.isNotEmpty)
-          pw.Text(
-            [data.schoolAddress, data.schoolPhone, data.schoolEmail].where((s) => s.isNotEmpty).join('  ·  '),
-            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
-          ),
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            if (logoBytes != null)
+              pw.Container(
+                width: 40,
+                height: 40,
+                margin: const pw.EdgeInsets.only(right: 10),
+                child: pw.Image(pw.MemoryImage(logoBytes), fit: pw.BoxFit.contain),
+              ),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(header.schoolName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: accent)),
+                  if (header.schoolMotto.trim().isNotEmpty)
+                    pw.Text(header.schoolMotto, style: pw.TextStyle(fontSize: 9, fontStyle: pw.FontStyle.italic, color: PdfColors.grey600)),
+                  if (header.schoolAddress.isNotEmpty || header.schoolPhone.isNotEmpty || header.schoolEmail.isNotEmpty)
+                    pw.Text(
+                      [header.schoolAddress, header.schoolPhone, header.schoolEmail].where((s) => s.isNotEmpty).join('  ·  '),
+                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
         pw.Divider(color: PdfColors.grey400, height: 12),
         pw.Text('Student Verification Form', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
         pw.Text(
@@ -208,133 +235,153 @@ Future<void> printEnrollmentForm(EnrollmentPdfData data) async {
           style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
         ),
 
-        _sectionHeading('1. Student Identity', accent),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Container(
-              width: 64,
-              height: 64,
-              margin: const pw.EdgeInsets.only(right: 10),
-              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(4)),
-              alignment: pw.Alignment.center,
-              child: photoBytes != null
-                  ? pw.ClipRRect(
-                      horizontalRadius: 4,
-                      verticalRadius: 4,
-                      child: pw.Image(pw.MemoryImage(photoBytes), fit: pw.BoxFit.cover, width: 64, height: 64),
-                    )
-                  : pw.Text('Photo', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
-            ),
-            pw.Expanded(
-              child: _kvTable([
-                ('Full Name', fullName.isEmpty ? '—' : fullName),
-                ('Admission No.', _val(data.admissionNo)),
-                ('Date of Birth', _val(data.dob)),
-                ('Gender', _val(data.gender)),
-                ('Blood Group', _val(data.bloodGroup)),
-                ('Mother Tongue', _val(data.motherTongue)),
-                ('Religion', _val(data.religion)),
-                ('Nationality', _val(data.nationality)),
-                ('Status', data.isActive ? 'Active' : 'Inactive'),
-              ]),
-            ),
-          ],
-        ),
-
-        _sectionHeading('2. Academic Placement', accent),
-        _kvTable([
-          ('Academic Year', _val(data.academicYearName)),
-          ('Class & Section', data.className.isEmpty ? '—' : '${data.className}${data.sectionName.isNotEmpty ? ' – ${data.sectionName}' : ''}'),
-          ('Admission Type', _val(data.admissionType)),
-          ('Category', _val(data.categoryName)),
-        ]),
-
-        _sectionHeading('3. Contact & Address', accent),
-        _kvTable([
-          ('Phone', _val(data.phone)),
-          ('Email', _val(data.email)),
-          ('Address', _val(data.addressLine)),
-          ('City', _val(data.city)),
-          ('District', _val(data.district)),
-          ('State', _val(data.stateName)),
-          ('Pincode', _val(data.pincode)),
-        ]),
-
-        _sectionHeading('4. Guardians', accent),
-        if (data.guardians.isEmpty)
-          pw.Text('No guardian details provided.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500))
-        else
-          pw.Column(
+        if (visible('identity'))
+          _sectionHeading('1. Student Identity', accent),
+        if (visible('identity'))
+          pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: data.guardians
-                .map((g) => pw.Padding(
-                      padding: const pw.EdgeInsets.only(bottom: 8),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          if (g.isPrimary)
-                            pw.Padding(
-                              padding: const pw.EdgeInsets.only(bottom: 3),
-                              child: pw.Text('PRIMARY', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: accent)),
-                            ),
-                          _kvTable([
-                            ('Name', _val(g.fullName)),
-                            ('Relation', _val(g.relation)),
-                            ('Phone', _val(g.phone)),
-                            if (g.email.trim().isNotEmpty) ('Email', g.email.trim()),
-                            if (g.occupation.trim().isNotEmpty) ('Occupation', g.occupation.trim()),
-                          ]),
-                        ],
-                      ),
-                    ))
-                .toList(),
+            children: [
+              pw.Container(
+                width: 64,
+                height: 64,
+                margin: const pw.EdgeInsets.only(right: 10),
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400), borderRadius: pw.BorderRadius.circular(4)),
+                alignment: pw.Alignment.center,
+                child: photoBytes != null
+                    ? pw.ClipRRect(
+                        horizontalRadius: 4,
+                        verticalRadius: 4,
+                        child: pw.Image(pw.MemoryImage(photoBytes), fit: pw.BoxFit.cover, width: 64, height: 64),
+                      )
+                    : pw.Text('Photo', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+              ),
+              pw.Expanded(
+                child: _kvTable([
+                  ('Full Name', fullName.isEmpty ? '—' : fullName),
+                  ('Admission No.', _val(data.admissionNo)),
+                  ('Date of Birth', _val(data.dob)),
+                  ('Gender', _val(data.gender)),
+                  ('Blood Group', _val(data.bloodGroup)),
+                  ('Mother Tongue', _val(data.motherTongue)),
+                  ('Religion', _val(data.religion)),
+                  ('Nationality', _val(data.nationality)),
+                  ('Status', data.isActive ? 'Active' : 'Inactive'),
+                ]),
+              ),
+            ],
           ),
 
-        _sectionHeading('5. Government Identity', accent),
-        _kvTable([
-          ('APAAR ID', data.apaarProvided ? 'On file' : 'Not provided'),
-        ]),
-        pw.Text(
-          'Aadhaar number and APAAR ID are encrypted and not displayed for security.',
-          style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey500),
-        ),
+        if (visible('academic')) ...[
+          _sectionHeading('2. Academic Placement', accent),
+          _kvTable([
+            ('Academic Year', _val(data.academicYearName)),
+            ('Class & Section', data.className.isEmpty ? '—' : '${data.className}${data.sectionName.isNotEmpty ? ' – ${data.sectionName}' : ''}'),
+            ('Admission Type', _val(data.admissionType)),
+            ('Category', _val(data.categoryName)),
+          ]),
+        ],
 
-        _sectionHeading('6. Documents Checklist', accent),
-        if (data.documents.isEmpty)
-          pw.Text('No documents uploaded yet.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500))
-        else
-          _kvTable(data.documents.map((d) => (d.$1, d.$2 ? 'Submitted' : 'Pending')).toList()),
+        if (visible('contact')) ...[
+          _sectionHeading('3. Contact & Address', accent),
+          _kvTable([
+            ('Phone', _val(data.phone)),
+            ('Email', _val(data.email)),
+            ('Address', _val(data.addressLine)),
+            ('City', _val(data.city)),
+            ('District', _val(data.district)),
+            ('State', _val(data.stateName)),
+            ('Pincode', _val(data.pincode)),
+          ]),
+        ],
 
-        _sectionHeading('7. Medical & Emergency', accent),
-        _kvTable([
-          ('Allergies', _val(data.allergies)),
-          ('Current Medications', _val(data.medications)),
-          ('Emergency Contact', _val(data.emergencyContact)),
-        ]),
+        if (visible('guardians')) ...[
+          _sectionHeading('4. Guardians', accent),
+          if (data.guardians.isEmpty)
+            pw.Text('No guardian details provided.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500))
+          else
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: data.guardians
+                  .map((g) => pw.Padding(
+                        padding: const pw.EdgeInsets.only(bottom: 8),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            if (g.isPrimary)
+                              pw.Padding(
+                                padding: const pw.EdgeInsets.only(bottom: 3),
+                                child: pw.Text('PRIMARY', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: accent)),
+                              ),
+                            _kvTable([
+                              ('Name', _val(g.fullName)),
+                              ('Relation', _val(g.relation)),
+                              ('Phone', _val(g.phone)),
+                              if (g.email.trim().isNotEmpty) ('Email', g.email.trim()),
+                              if (g.occupation.trim().isNotEmpty) ('Occupation', g.occupation.trim()),
+                            ]),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+        ],
 
-        _sectionHeading('8. Specially Abled (PwD)', accent),
-        _kvTable([
-          ('PwD Disclosure', data.isPwD ? 'Yes — disclosed' : 'Not Disclosed'),
-          if (data.isPwD) ('Accommodation Notes', _val(data.pwdNotes)),
-        ]),
+        if (visible('govt')) ...[
+          _sectionHeading('5. Government Identity', accent),
+          _kvTable([
+            ('APAAR ID', data.apaarProvided ? 'On file' : 'Not provided'),
+          ]),
+          pw.Text(
+            'Aadhaar number and APAAR ID are encrypted and not displayed for security.',
+            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey500),
+          ),
+        ],
 
-        _sectionHeading('9. Physical Identity Marks', accent),
-        _kvTable([
-          ('Identity Mark 1', _val(data.identityMark1)),
-          ('Identity Mark 2', _val(data.identityMark2)),
-          ('Birthmark', _val(data.birthmark)),
-        ]),
+        if (visible('documents')) ...[
+          _sectionHeading('6. Documents Checklist', accent),
+          if (data.documents.isEmpty)
+            pw.Text('No documents uploaded yet.', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey500))
+          else
+            _kvTable(data.documents.map((d) => (d.$1, d.$2 ? 'Submitted' : 'Pending')).toList()),
+        ],
 
-        _sectionHeading('10. Declaration', accent),
-        pw.Text(declaration, style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800, lineSpacing: 2)),
+        if (visible('medical')) ...[
+          _sectionHeading('7. Medical & Emergency', accent),
+          _kvTable([
+            ('Allergies', _val(data.allergies)),
+            ('Current Medications', _val(data.medications)),
+            ('Emergency Contact', _val(data.emergencyContact)),
+          ]),
+        ],
+
+        if (visible('pwd')) ...[
+          _sectionHeading('8. Specially Abled (PwD)', accent),
+          _kvTable([
+            ('PwD Disclosure', data.isPwD ? 'Yes — disclosed' : 'Not Disclosed'),
+            if (data.isPwD) ('Accommodation Notes', _val(data.pwdNotes)),
+          ]),
+        ],
+
+        if (visible('marks')) ...[
+          _sectionHeading('9. Physical Identity Marks', accent),
+          _kvTable([
+            ('Identity Mark 1', _val(data.identityMark1)),
+            ('Identity Mark 2', _val(data.identityMark2)),
+            ('Birthmark', _val(data.birthmark)),
+          ]),
+        ],
+
+        if (visible('declaration')) ...[
+          _sectionHeading('10. Declaration', accent),
+          pw.Text(declaration, style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey800, lineSpacing: 2)),
+        ],
 
         pw.SizedBox(height: 36),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             _signatureBlock('Guardian / Parent Signature'),
-            _signatureBlock('Principal / Authorised Signatory'),
+            _signatureBlock('${header.principalName} / Authorised Signatory'),
             _signatureBlock('Date'),
           ],
         ),
@@ -342,7 +389,7 @@ Future<void> printEnrollmentForm(EnrollmentPdfData data) async {
     ),
   );
 
-  await Printing.layoutPdf(onLayout: (_) async => doc.save(), name: 'enrollment-form.pdf');
+  await Printing.layoutPdf(onLayout: (_) async => doc.save(), name: 'student-verification-form.pdf');
 }
 
 pw.Widget _signatureBlock(String label) => pw.Column(

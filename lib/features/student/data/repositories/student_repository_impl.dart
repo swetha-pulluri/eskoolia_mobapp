@@ -182,7 +182,7 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
-  Future<void> uploadStudentDocument({
+  Future<String?> uploadStudentDocument({
     required int studentId,
     required String documentType,
     required List<int> bytes,

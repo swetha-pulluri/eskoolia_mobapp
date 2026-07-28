@@ -49,6 +49,17 @@ dependencies:
   # File Picking (Administration attachments, Attendance import dialog)
   file_picker: ^8.1.2
 
+  # Native camera capture (Student Enroll "Take photo" — the mobile
+  # equivalent of the frontend's in-browser getUserMedia camera modal;
+  # opens the OS camera app directly instead, the standard native pattern)
+  image_picker: ^1.1.2
+
+  # Client-side photo compression before upload (Student Enroll photo) — the
+  # mobile equivalent of the frontend's canvas-based resize-before-upload,
+  # so a normal phone-camera photo (often 3-8MB) still fits the backend's
+  # upload size limit instead of being rejected outright.
+  image: ^4.3.0
+
   # PDF generation + native print/share dialog (Documents Studio: Generate &
   # Print — the mobile equivalent of web's `window.open()` + `popup.print()`)
   pdf: ^3.11.1

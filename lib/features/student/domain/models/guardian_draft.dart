@@ -27,6 +27,9 @@ const List<String> guardianRelationOptions = [
   'Father',
   'Mother',
   'Guardian',
-  'Grandparent',
+  'Grandfather',
+  'Grandmother',
+  'Uncle',
+  'Aunt',
   'Other',
 ];

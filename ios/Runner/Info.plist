@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Eskoolia needs camera access so you can take a student's photo during enrollment.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Eskoolia needs photo library access so you can pick a student's photo during enrollment.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -694,8 +694,9 @@ class _StudentSubjectAssignmentPageState extends ConsumerState<StudentSubjectAss
             runSpacing: 12,
             children: [
               PreviewBadges(lang2: _lang2, lang3: _lang3, sports: _sports, arts: _arts),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: () => setState(() {
@@ -712,7 +713,6 @@ class _StudentSubjectAssignmentPageState extends ConsumerState<StudentSubjectAss
                     ),
                     child: const Text('Reset', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () async {
                       await SharedPrefs().remove('eskoolia_last_enrolled_student');
@@ -774,20 +774,7 @@ class _StudentSubjectAssignmentPageState extends ConsumerState<StudentSubjectAss
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.lock_outline, size: 13, color: Color(0xFF19162C)),
-              const SizedBox(width: 5),
-              const Text('Mandatory subjects', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF19162C))),
-              const SizedBox(width: 5),
-              const Expanded(child: Text('(auto-checked, locked)', style: TextStyle(fontSize: 11, color: Color(0xFF908AAC)), overflow: TextOverflow.ellipsis)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFEEF9F3), border: Border.all(color: const Color(0xFFCFEEDE)), borderRadius: BorderRadius.circular(999)),
-                child: Text('${_mandatory.length} / ${_mandatory.length}', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF0A7A4A))),
-              ),
-            ],
-          ),
+          MandatorySubjectsHeader(count: _mandatory.length),
           const SizedBox(height: 11),
           ResponsiveGrid(
             baseCols: 7,
@@ -815,8 +802,7 @@ class _StudentSubjectAssignmentPageState extends ConsumerState<StudentSubjectAss
         ),
         const SizedBox(width: 6),
         if (editing)
-          SizedBox(
-            width: 80,
+          Flexible(
             child: Focus(
               onFocusChange: (has) {
                 if (!has) _commitMandatory(idx);
@@ -1612,18 +1598,7 @@ class _SubjectEditorDialogState extends ConsumerState<_SubjectEditorDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(children: [
-                            const Icon(Icons.lock_outline, size: 13, color: Color(0xFF19162C)),
-                            const SizedBox(width: 5),
-                            const Text('Mandatory subjects', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF19162C))),
-                            const SizedBox(width: 5),
-                            const Expanded(child: Text('(auto-checked, locked)', style: TextStyle(fontSize: 11, color: Color(0xFF908AAC)))),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                              decoration: BoxDecoration(color: const Color(0xFFEEF9F3), border: Border.all(color: const Color(0xFFCFEEDE)), borderRadius: BorderRadius.circular(999)),
-                              child: Text('${mandatory.length} / ${mandatory.length}', style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF0A7A4A))),
-                            ),
-                          ]),
+                          MandatorySubjectsHeader(count: mandatory.length),
                           const SizedBox(height: 11),
                           ResponsiveGrid(
                             baseCols: 7,
@@ -1760,8 +1735,15 @@ class _SubjectEditorDialogState extends ConsumerState<_SubjectEditorDialog> {
                 border: Border(top: BorderSide(color: Color(0xFFE8E3D8))),
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // `Wrap` rather than a bare `Row` — the two action buttons
+              // never overflow on any realistic phone width, but this keeps
+              // the whole screen's "no RenderFlex overflow anywhere"
+              // guarantee airtight rather than relying on it.
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: _saving ? null : () => Navigator.of(context).pop(false),
@@ -1772,7 +1754,6 @@ class _SubjectEditorDialogState extends ConsumerState<_SubjectEditorDialog> {
                     ),
                     child: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _saving ? null : _save,
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C4CF1), foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
