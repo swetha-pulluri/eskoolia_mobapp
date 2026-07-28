@@ -1,8 +1,10 @@
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../domain/entities/pin_item_entity.dart';
 import '../../domain/entities/recent_item_entity.dart';
+import '../../domain/models/kpi_data.dart';
 import '../datasources/dashboard_remote_datasource.dart';
 import '../datasources/dashboard_local_datasource.dart';
+import '../../../../core/utils/logger.dart';
 
 /// Dashboard Repository Implementation
 class DashboardRepositoryImpl implements DashboardRepository {
@@ -10,6 +12,19 @@ class DashboardRepositoryImpl implements DashboardRepository {
   final DashboardLocalDataSource _localDataSource;
 
   DashboardRepositoryImpl(this._remoteDataSource, this._localDataSource);
+
+  @override
+  Future<KpiData> getKpis() async {
+    try {
+      return await _remoteDataSource.getKpis();
+    } catch (e) {
+      AppLogger.error('Get KPIs error', e);
+      // All-null KpiData renders every card as "—", same honest-empty
+      // convention already used for individual missing fields, rather than
+      // showing stale/fake numbers on a real fetch failure.
+      return const KpiData();
+    }
+  }
 
   @override
   Future<int> getAttentionCount() async {
@@ -28,6 +43,11 @@ class DashboardRepositoryImpl implements DashboardRepository {
     // Web frontend uses localStorage ONLY.
     // Use local storage directly.
     return await _localDataSource.getLocalRecentModules();
+  }
+
+  @override
+  Future<void> recordVisit(String path) async {
+    await _localDataSource.recordVisit(path);
   }
 
   @override

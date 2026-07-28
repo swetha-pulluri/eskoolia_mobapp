@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/kpi_data.dart';
+import '../providers/dashboard_provider.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/quick_action_button.dart';
 
@@ -20,16 +22,16 @@ import '../widgets/quick_action_button.dart';
 /// - Exams This Week
 ///
 /// Plus Quick Actions for common tasks.
-class SchoolOverviewPage extends StatefulWidget {
+class SchoolOverviewPage extends ConsumerStatefulWidget {
   const SchoolOverviewPage({super.key});
 
   @override
-  State<SchoolOverviewPage> createState() => _SchoolOverviewPageState();
+  ConsumerState<SchoolOverviewPage> createState() => _SchoolOverviewPageState();
 }
 
-class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
+class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
   bool _isLoading = true;
-  late KpiData _kpiData;
+  KpiData _kpiData = const KpiData();
 
   @override
   void initState() {
@@ -38,19 +40,14 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
   }
 
   Future<void> _loadKPIs() async {
-    // Simulate API call with delay
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    // TODO: Replace with actual API call when backend is connected
-    // final response = await dashboardRepository.getKPIs();
-    // setState(() {
-    //   _kpiData = KpiData.fromJson(response);
-    //   _isLoading = false;
-    // });
+    final repository = ref.read(dashboardRepositoryProvider);
+    // Never throws — repository.getKpis() itself catches and returns an
+    // all-null KpiData (renders every card as "—") on a real fetch failure.
+    final data = await repository.getKpis();
 
     if (mounted) {
       setState(() {
-        _kpiData = KpiData.mock();
+        _kpiData = data;
         _isLoading = false;
       });
     }
@@ -396,8 +393,8 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
                   color: AppColors.quickActionAttendance,
                   backgroundColor: AppColors.quickActionAttendanceBg,
                   onTap: () {
-                    // TODO: Navigate to attendance screen
-                    debugPrint('Navigate to Mark Attendance');
+                    recordModuleVisit(ref, '/attendance/student');
+                    context.push('/attendance/student');
                   },
                 ),
                 QuickActionButton(
@@ -405,23 +402,39 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
                   color: AppColors.quickActionFees,
                   backgroundColor: AppColors.quickActionFeesBg,
                   onTap: () {
-                    // TODO: Navigate to fees screen
-                    debugPrint('Navigate to Collect Fees');
+                    recordModuleVisit(ref, '/fees/payments');
+                    context.push('/fees/payments');
                   },
                 ),
                 QuickActionButton(
                   label: 'Add Student',
                   color: AppColors.quickActionStudent,
                   backgroundColor: AppColors.quickActionStudentBg,
-                  onTap: () => context.push('/students/enroll'),
+                  onTap: () {
+                    // Matches frontend/app/(dashboard)/dashboard/page.tsx's
+                    // Quick Actions data: { label: 'Add Student', path:
+                    // '/students/list', ... } — opens the Student Enroll &
+                    // List hub (Flutter route '/students'), not the
+                    // standalone enroll form directly. That page has its
+                    // own "Enroll Student" button for the actual form.
+                    recordModuleVisit(ref, '/students');
+                    context.push('/students');
+                  },
                 ),
+                // Exam Schedule / Staff Payroll / Library Issues have no
+                // registered route yet (Examination/HR modules are
+                // `comingSoon: true` in module_entity.dart, matching the
+                // real web app's own unfinished state) — shows the same
+                // "Coming Soon" affordance used for comingSoon module tiles
+                // elsewhere, instead of a silent no-op.
                 QuickActionButton(
                   label: 'Exam Schedule',
                   color: AppColors.quickActionExam,
                   backgroundColor: AppColors.quickActionExamBg,
                   onTap: () {
-                    // TODO: Navigate to exam schedule screen
-                    debugPrint('Navigate to Exam Schedule');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Exam Schedule - Coming Soon')),
+                    );
                   },
                 ),
                 QuickActionButton(
@@ -429,8 +442,9 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
                   color: AppColors.quickActionPayroll,
                   backgroundColor: AppColors.quickActionPayrollBg,
                   onTap: () {
-                    // TODO: Navigate to payroll screen
-                    debugPrint('Navigate to Staff Payroll');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Staff Payroll - Coming Soon')),
+                    );
                   },
                 ),
                 QuickActionButton(
@@ -438,8 +452,9 @@ class _SchoolOverviewPageState extends State<SchoolOverviewPage> {
                   color: AppColors.quickActionLibrary,
                   backgroundColor: AppColors.quickActionLibraryBg,
                   onTap: () {
-                    // TODO: Navigate to library screen
-                    debugPrint('Navigate to Library Issues');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Library Issues - Coming Soon')),
+                    );
                   },
                 ),
               ],

@@ -1,14 +1,19 @@
 import '../entities/pin_item_entity.dart';
 import '../entities/recent_item_entity.dart';
+import '../models/kpi_data.dart';
 
 /// Dashboard Repository Interface
 abstract class DashboardRepository {
+  // KPIs
+  Future<KpiData> getKpis();
+
   // Attention count
   Future<int> getAttentionCount();
-  
+
   // Recent modules
   Future<List<RecentItemEntity>> getRecentModules({int limit = 8});
-  
+  Future<void> recordVisit(String path);
+
   // Pins management
   Future<List<PinItemEntity>> getPins();
   Future<void> addPin(PinItemEntity pin);

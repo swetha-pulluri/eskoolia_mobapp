@@ -2,12 +2,20 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../data/enrollment_draft_store.dart';
 import '../../domain/models/academic_year.dart';
+import '../../domain/models/enrollment_draft.dart';
 import '../../domain/models/guardian_draft.dart';
 import '../../domain/models/school_class.dart';
 import '../../domain/models/student_data.dart';
 import '../providers/student_providers.dart';
+import '../utils/enrollment_pdf.dart';
 import '../widgets/enroll_form_fields.dart';
+import '../widgets/student_ai_assist_dialog.dart';
+import '../widgets/student_draft_saved_dialog.dart';
+import '../widgets/student_drafts_dialog.dart';
+import '../widgets/student_enroll_checklist_dialog.dart';
 
 class _NavItem {
   final String id;
@@ -44,11 +52,13 @@ const List<_NavItem> _navItems = [
 /// top — the standard mobile equivalent of a step sidebar — rather than
 /// stacking 11 nav rows above the content on every section.
 ///
-/// Scope note: OCR "Scan & fill", "AI Assist", and the consent PDF
-/// generator/print/share menu are visibly present (matching the frontend)
-/// but not functionally implemented in this UI-only, mock-data pass — each
-/// shows a "coming soon" notice, the same deferred-feature pattern already
-/// used elsewhere in this app.
+/// Scope note: the hero action bar's Drafts / AI Assist / PDF / "What I'll
+/// need" buttons are fully wired — see `_saveDraftSnapshot`,
+/// `StudentAiAssistDialog`, `printEnrollmentForm`, and
+/// `StudentEnrollChecklistDialog`. OCR "Scan & fill" and the consent form's
+/// secondary flows (letterhead branding, upload-signed-copy, blank-form
+/// email/WhatsApp/digital-fill) remain a disclosed "coming soon" — see
+/// `enrollment_pdf.dart`'s doc comment for the scope line drawn there.
 class StudentEnrollPage extends ConsumerStatefulWidget {
   final StudentData? editingStudent;
 
@@ -66,6 +76,12 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
   bool _loadingLookups = true;
   int? _currentEnrolledCount;
   bool _scanBannerDismissed = false;
+
+  // Drafts — mirrors StudentAddPanel.tsx's `students:add:drafts:v2`
+  // localStorage-only persistence (see EnrollmentDraftStore).
+  final _draftStore = EnrollmentDraftStore();
+  String? _currentDraftId;
+  bool _draftSaving = false;
 
   List<AcademicYear> _academicYears = [];
   List<SchoolClass> _classes = [];
@@ -285,6 +301,400 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // HERO ACTION BAR — Drafts / AI Assist / PDF / What I'll need
+  // ══════════════════════════════════════════════════════════════════════
+
+  String get _schoolName {
+    final authState = ref.read(authNotifierProvider);
+    final name = authState.maybeWhen(authenticated: (user) => user.schoolName, orElse: () => null);
+    return (name == null || name.trim().isEmpty) ? 'Eskoolia School' : name;
+  }
+
+  Map<String, dynamic> _buildDraftSnapshotData() {
+    return {
+      'admissionNo': _admissionNoController.text.trim(),
+      'admissionNoLocked': _admissionNoLocked,
+      'isActive': _isActive,
+      'firstName': _firstNameController.text.trim(),
+      'middleName': _middleNameController.text.trim(),
+      'lastName': _lastNameController.text.trim(),
+      'dob': _dobController.text.trim(),
+      'gender': _gender?.name,
+      'bloodGroup': _bloodGroup,
+      'motherTongue': _motherTongueController.text.trim(),
+      'religion': _religionController.text.trim(),
+      'nationality': _nationalityController.text.trim(),
+      'academicYearId': _academicYearId,
+      'classId': _classId,
+      'sectionId': _sectionId,
+      'categoryId': _categoryId,
+      'admissionType': _admissionType,
+      'phone': _phoneController.text.trim(),
+      'email': _emailController.text.trim(),
+      'address': _addressController.text.trim(),
+      'city': _cityController.text.trim(),
+      'district': _districtController.text.trim(),
+      'state': _stateController.text.trim(),
+      'pincode': _pincodeController.text.trim(),
+      'guardians': _guardians
+          .map((g) => {
+                'clientId': g.clientId,
+                'isPrimary': g.isPrimary,
+                'fullName': g.fullName,
+                'relation': g.relation,
+                'phone': g.phone,
+                'email': g.email,
+                'occupation': g.occupation,
+              })
+          .toList(),
+      'apaarId': _apaarIdController.text.trim(),
+      'photoUrl': _photoUrl,
+      'documentsUploaded': _documentsUploaded,
+      'consentChecked': _consentChecked,
+      'allergies': _allergiesController.text.trim(),
+      'medications': _medicationsController.text.trim(),
+      'emergencyContact': _emergencyContactController.text.trim(),
+      'isPwD': _isPwD,
+      'pwdNotes': _pwdNotesController.text.trim(),
+      'identityMark1': _identityMark1Controller.text.trim(),
+      'identityMark2': _identityMark2Controller.text.trim(),
+      'birthmark': _birthmarkController.text.trim(),
+      'feeGroup': _feeGroup,
+      'concession': _concession,
+      'reviewConfirmed': _reviewConfirmed,
+    };
+  }
+
+  /// Mirrors `saveDraftSnapshot()`: upserts the current form state into the
+  /// multi-draft list, keyed by admission no. so repeat saves of the same
+  /// in-progress enrollment replace the same entry rather than duplicating.
+  Future<void> _saveDraftSnapshot() async {
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    _currentDraftId ??= 'draft-${DateTime.now().millisecondsSinceEpoch}';
+    final label = '${firstName.isEmpty ? 'Unnamed' : firstName} $lastName'.trim();
+    final draft = EnrollmentDraft(
+      id: _currentDraftId!,
+      savedAt: DateTime.now().millisecondsSinceEpoch,
+      label: label,
+      admissionNo: _admissionNoController.text.trim(),
+      firstName: firstName,
+      lastName: lastName,
+      classId: _classId,
+      maxReachedIndex: _maxReachedIndex,
+      activeIndex: _activeIndex,
+      data: _buildDraftSnapshotData(),
+    );
+    await _draftStore.upsert(draft);
+    if (mounted) setState(() {}); // refresh the Drafts button's badge count
+  }
+
+  /// Entry point used by the AI Assist panel's quick actions — toast only,
+  /// no confirmation modal (mirrors `saveDraftSnapshot()` + `showToast(...)`
+  /// call sites, as opposed to the footer button's `saveDraftNow()`).
+  Future<void> _saveDraftWithToast() async {
+    await _saveDraftSnapshot();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Draft saved.'), backgroundColor: Color(0xFF10B981), duration: Duration(seconds: 3)),
+    );
+  }
+
+  /// Footer "Save draft" button — mirrors `saveDraftNow()`: briefly flashes
+  /// the breadcrumb dot to "Saving…" then shows the full "Draft saved!"
+  /// confirmation dialog.
+  Future<void> _saveDraftFromFooter() async {
+    setState(() => _draftSaving = true);
+    await _saveDraftSnapshot();
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    setState(() => _draftSaving = false);
+    showDialog(
+      context: context,
+      builder: (context) => StudentDraftSavedDialog(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        onEnrollAnother: _resetFormForNewEnrollment,
+        onGoToList: () => Navigator.of(context).maybePop(),
+      ),
+    );
+  }
+
+  /// "Enroll another student (fresh form)" — mirrors `clearDraftNow()`:
+  /// resets every field and re-fetches a fresh auto-generated admission no.
+  void _resetFormForNewEnrollment() {
+    setState(() {
+      _admissionNoController.clear();
+      _admissionNoLocked = true;
+      _isActive = true;
+      _firstNameController.clear();
+      _middleNameController.clear();
+      _lastNameController.clear();
+      _dobController.clear();
+      _gender = null;
+      _bloodGroup = null;
+      _motherTongueController.clear();
+      _religionController.clear();
+      _nationalityController.text = 'Indian';
+      _academicYearId = _academicYears.where((y) => y.isCurrent).firstOrNull?.id;
+      _classId = null;
+      _sectionId = null;
+      _categoryId = null;
+      _admissionType = 'New';
+      _phoneController.clear();
+      _emailController.clear();
+      _addressController.clear();
+      _cityController.clear();
+      _districtController.clear();
+      _stateController.clear();
+      _pincodeController.clear();
+      _guardians
+        ..clear()
+        ..add(GuardianDraft(clientId: '1', isPrimary: true));
+      _apaarIdController.clear();
+      _photoUrl = null;
+      _photoError = null;
+      _documentsUploaded.updateAll((key, value) => false);
+      _documentsUploading.clear();
+      _consentChecked = false;
+      _allergiesController.clear();
+      _medicationsController.clear();
+      _emergencyContactController.clear();
+      _isPwD = false;
+      _pwdNotesController.clear();
+      _identityMark1Controller.clear();
+      _identityMark2Controller.clear();
+      _birthmarkController.clear();
+      _feeGroup = null;
+      _concession = null;
+      _reviewConfirmed = false;
+      _activeIndex = 0;
+      _maxReachedIndex = 0;
+      _currentDraftId = null;
+      _error = null;
+    });
+    _loadLookups();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Draft cleared.'), backgroundColor: Color(0xFF10B981), duration: Duration(seconds: 4)),
+    );
+  }
+
+  /// "Resume" on a saved draft card — mirrors `restoreDraftFromObject()`.
+  void _resumeFromDraft(EnrollmentDraft draft) {
+    final data = draft.data;
+    setState(() {
+      _admissionNoController.text = (data['admissionNo'] as String?) ?? '';
+      _admissionNoLocked = (data['admissionNoLocked'] as bool?) ?? true;
+      _isActive = (data['isActive'] as bool?) ?? true;
+      _firstNameController.text = (data['firstName'] as String?) ?? '';
+      _middleNameController.text = (data['middleName'] as String?) ?? '';
+      _lastNameController.text = (data['lastName'] as String?) ?? '';
+      _dobController.text = (data['dob'] as String?) ?? '';
+      final genderName = data['gender'] as String?;
+      _gender = genderName == null ? null : StudentGender.values.where((g) => g.name == genderName).firstOrNull;
+      _bloodGroup = data['bloodGroup'] as String?;
+      _motherTongueController.text = (data['motherTongue'] as String?) ?? '';
+      _religionController.text = (data['religion'] as String?) ?? '';
+      _nationalityController.text = (data['nationality'] as String?) ?? 'Indian';
+      _academicYearId = (data['academicYearId'] as num?)?.toInt();
+      _classId = (data['classId'] as num?)?.toInt();
+      _sectionId = (data['sectionId'] as num?)?.toInt();
+      _categoryId = (data['categoryId'] as num?)?.toInt();
+      _admissionType = (data['admissionType'] as String?) ?? 'New';
+      _phoneController.text = (data['phone'] as String?) ?? '';
+      _emailController.text = (data['email'] as String?) ?? '';
+      _addressController.text = (data['address'] as String?) ?? '';
+      _cityController.text = (data['city'] as String?) ?? '';
+      _districtController.text = (data['district'] as String?) ?? '';
+      _stateController.text = (data['state'] as String?) ?? '';
+      _pincodeController.text = (data['pincode'] as String?) ?? '';
+      final guardiansData = (data['guardians'] as List?) ?? const [];
+      _guardians.clear();
+      if (guardiansData.isEmpty) {
+        _guardians.add(GuardianDraft(clientId: '1', isPrimary: true));
+      } else {
+        for (final raw in guardiansData) {
+          final map = raw as Map;
+          _guardians.add(GuardianDraft(
+            clientId: (map['clientId'] as String?) ?? '${_guardians.length + 1}',
+            isPrimary: (map['isPrimary'] as bool?) ?? false,
+            fullName: (map['fullName'] as String?) ?? '',
+            relation: (map['relation'] as String?) ?? 'Father',
+            phone: (map['phone'] as String?) ?? '',
+            email: (map['email'] as String?) ?? '',
+            occupation: (map['occupation'] as String?) ?? '',
+          ));
+        }
+      }
+      _apaarIdController.text = (data['apaarId'] as String?) ?? '';
+      _photoUrl = data['photoUrl'] as String?;
+      final docsData = (data['documentsUploaded'] as Map?)?.cast<String, dynamic>();
+      if (docsData != null) {
+        for (final key in _documentsUploaded.keys.toList()) {
+          _documentsUploaded[key] = (docsData[key] as bool?) ?? false;
+        }
+      }
+      _consentChecked = (data['consentChecked'] as bool?) ?? false;
+      _allergiesController.text = (data['allergies'] as String?) ?? '';
+      _medicationsController.text = (data['medications'] as String?) ?? '';
+      _emergencyContactController.text = (data['emergencyContact'] as String?) ?? '';
+      _isPwD = (data['isPwD'] as bool?) ?? false;
+      _pwdNotesController.text = (data['pwdNotes'] as String?) ?? '';
+      _identityMark1Controller.text = (data['identityMark1'] as String?) ?? '';
+      _identityMark2Controller.text = (data['identityMark2'] as String?) ?? '';
+      _birthmarkController.text = (data['birthmark'] as String?) ?? '';
+      _feeGroup = data['feeGroup'] as String?;
+      _concession = data['concession'] as String?;
+      _reviewConfirmed = (data['reviewConfirmed'] as bool?) ?? false;
+      _maxReachedIndex = draft.maxReachedIndex.clamp(0, _navItems.length - 1);
+      _activeIndex = draft.activeIndex.clamp(0, _navItems.length - 1);
+      _currentDraftId = draft.id;
+      _error = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Loaded "${draft.label}". Continue from where you stopped.'),
+        backgroundColor: const Color(0xFF10B981),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _openDraftsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StudentDraftsDialog(totalSteps: _navItems.length - 1, onResume: _resumeFromDraft),
+    );
+  }
+
+  /// Mirrors `isStepComplete()`'s 6-of-10 field checks, feeding the AI
+  /// Assist panel's completion ring/tips.
+  EnrollAiSnapshot _buildAiSnapshot() {
+    return EnrollAiSnapshot(
+      identityComplete: _firstNameController.text.trim().isNotEmpty &&
+          _lastNameController.text.trim().isNotEmpty &&
+          _dobController.text.trim().isNotEmpty,
+      academicComplete: _academicYearId != null && _classId != null && _sectionId != null,
+      contactComplete: _phoneController.text.trim().isNotEmpty &&
+          _addressController.text.trim().isNotEmpty &&
+          _stateController.text.trim().isNotEmpty &&
+          _cityController.text.trim().isNotEmpty &&
+          _pincodeController.text.trim().isNotEmpty,
+      guardiansComplete: _guardians.isNotEmpty && _guardians[0].fullName.trim().isNotEmpty && _guardians[0].phone.trim().isNotEmpty,
+      documentsComplete: _consentChecked,
+      feesComplete: _feeGroup != null,
+      firstName: _firstNameController.text,
+      lastName: _lastNameController.text,
+      dob: _dobController.text,
+      phone: _phoneController.text,
+      pincode: _pincodeController.text,
+      guardianFullName: _guardians.isNotEmpty ? _guardians[0].fullName : '',
+    );
+  }
+
+  void _jumpToSectionId(String sectionId) {
+    final idx = _navItems.indexWhere((item) => item.id == sectionId);
+    if (idx < 0) return;
+    setState(() {
+      _activeIndex = idx;
+      if (idx > _maxReachedIndex) _maxReachedIndex = idx;
+    });
+  }
+
+  void _openAiAssistDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StudentAiAssistDialog(
+        snapshot: _buildAiSnapshot(),
+        onJumpToSection: _jumpToSectionId,
+        onSaveDraft: _saveDraftWithToast,
+        onViewDrafts: _openDraftsDialog,
+        onPreviewPdf: _previewEnrollmentPdf,
+      ),
+    );
+  }
+
+  void _openChecklistDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StudentEnrollChecklistDialog(schoolName: _schoolName),
+    );
+  }
+
+  bool get _canPreviewPdf =>
+      _firstNameController.text.trim().isNotEmpty &&
+      _lastNameController.text.trim().isNotEmpty &&
+      _admissionNoController.text.trim().isNotEmpty &&
+      _classId != null &&
+      _sectionId != null;
+
+  /// Mirrors the hero "PDF" button / footer "🖨 Print / PDF" button opening
+  /// `ConsentForm.tsx` with no initial action — its default view IS the
+  /// filled admission-form document, ready to print. See
+  /// `enrollment_pdf.dart`'s doc comment for the field-mapping/scope notes.
+  Future<void> _previewEnrollmentPdf() async {
+    final schoolClass = _classes.where((c) => c.id == _classId).firstOrNull;
+    final section = schoolClass?.sections.where((s) => s.id == _sectionId).firstOrNull;
+    final academicYear = _academicYears.where((y) => y.id == _academicYearId).firstOrNull;
+    final category = _categories.where((c) => c.id == _categoryId).firstOrNull;
+    final data = EnrollmentPdfData(
+      schoolName: _schoolName,
+      firstName: _firstNameController.text.trim(),
+      middleName: _middleNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      admissionNo: _admissionNoController.text.trim(),
+      dob: _dobController.text.trim(),
+      gender: _gender?.label ?? '',
+      bloodGroup: _bloodGroup ?? '',
+      motherTongue: _motherTongueController.text.trim(),
+      religion: _religionController.text.trim(),
+      nationality: _nationalityController.text.trim(),
+      isActive: _isActive,
+      academicYearName: academicYear?.name ?? '',
+      className: schoolClass?.name ?? '',
+      sectionName: section?.name ?? '',
+      admissionType: _admissionType,
+      categoryName: category?.name ?? '',
+      phone: _phoneController.text.trim(),
+      email: _emailController.text.trim(),
+      addressLine: _addressController.text.trim(),
+      city: _cityController.text.trim(),
+      district: _districtController.text.trim(),
+      stateName: _stateController.text.trim(),
+      pincode: _pincodeController.text.trim(),
+      guardians: _guardians
+          .map((g) => EnrollmentPdfGuardian(
+                fullName: g.fullName,
+                relation: g.relation,
+                phone: g.phone,
+                email: g.email,
+                occupation: g.occupation,
+                isPrimary: g.isPrimary,
+              ))
+          .toList(),
+      apaarProvided: _apaarIdController.text.trim().isNotEmpty,
+      documents: [
+        ('Birth certificate', _documentsUploaded['birth_certificate'] ?? false),
+        ('Aadhaar card (masked)', _documentsUploaded['aadhaar'] ?? false),
+        ('Caste certificate', _documentsUploaded['caste_certificate'] ?? false),
+        ('UDID / disability certificate', _documentsUploaded['disability_certificate'] ?? false),
+        ('Medical information', _documentsUploaded['medical_info'] ?? false),
+        ('Transfer certificate', _documentsUploaded['transfer_certificate'] ?? false),
+      ],
+      allergies: _allergiesController.text.trim(),
+      medications: _medicationsController.text.trim(),
+      emergencyContact: _emergencyContactController.text.trim(),
+      isPwD: _isPwD,
+      pwdNotes: _pwdNotesController.text.trim(),
+      identityMark1: _identityMark1Controller.text.trim(),
+      identityMark2: _identityMark2Controller.text.trim(),
+      birthmark: _birthmarkController.text.trim(),
+      photoUrl: _photoUrl,
+    );
+    await printEnrollmentForm(data);
+  }
+
   Future<void> _pickAndUploadPhoto() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -494,13 +904,11 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.only(right: 6),
-          decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: _PulsingDot(color: _draftSaving ? const Color(0xFF9CA3AF) : const Color(0xFF10B981), animate: _draftSaving),
         ),
-        const Text('Draft saved', style: TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
+        Text(_draftSaving ? 'Saving…' : 'Draft saved', style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280))),
       ],
     );
   }
@@ -563,14 +971,45 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
             ],
           ),
         );
+        final showLabels = MediaQuery.sizeOf(context).width >= 600;
+        final draftCount = _draftStore.load().length;
         final actionsRow = Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _heroActionButton('Drafts', badge: '0', onTap: () => _comingSoon('Drafts')),
-            _heroActionButton('AI Assist', dotColor: AppColors.studentEnrollBrand, onTap: () => _comingSoon('AI Assist')),
-            _heroActionButton('PDF', onTap: () => _comingSoon('Consent PDF preview')),
-            _heroActionButton("What I'll need", onTap: () => _comingSoon("Checklist")),
+            _HeroActionButton(
+              variant: _HeroActionVariant.drafts,
+              icon: Icons.description_outlined,
+              label: 'Drafts',
+              showLabel: showLabels,
+              badgeCount: draftCount,
+              onTap: _openDraftsDialog,
+              tooltip: 'View saved drafts',
+            ),
+            _HeroActionButton(
+              variant: _HeroActionVariant.ai,
+              icon: Icons.auto_awesome,
+              label: 'AI Assist',
+              showLabel: showLabels,
+              onTap: _openAiAssistDialog,
+              tooltip: 'Get AI-powered help & suggestions',
+            ),
+            _HeroActionButton(
+              variant: _HeroActionVariant.pdf,
+              icon: Icons.picture_as_pdf_outlined,
+              label: 'PDF',
+              showLabel: showLabels,
+              onTap: _previewEnrollmentPdf,
+              tooltip: 'Preview & print the consent PDF',
+            ),
+            _HeroActionButton(
+              variant: _HeroActionVariant.info,
+              icon: Icons.info_outline,
+              label: "What I'll need",
+              showLabel: showLabels,
+              onTap: _openChecklistDialog,
+              tooltip: "What documents & details will I need?",
+            ),
           ],
         );
 
@@ -603,36 +1042,6 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _heroActionButton(String label, {String? badge, Color? dotColor, required VoidCallback onTap}) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.studentEnrollInk,
-        side: const BorderSide(color: AppColors.studentEnrollLine),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (dotColor != null) ...[
-            Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-            const SizedBox(width: 6),
-          ],
-          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          if (badge != null) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(10)),
-              child: Text(badge, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -1634,7 +2043,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
                   ),
                   const SizedBox(width: 6),
                   OutlinedButton(
-                    onPressed: () => _comingSoon('Save draft'),
+                    onPressed: _saveDraftFromFooter,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.studentEnrollInk,
                       side: const BorderSide(color: AppColors.studentEnrollLine),
@@ -1643,14 +2052,17 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
                     child: const Text('Save draft'),
                   ),
                   const SizedBox(width: 6),
-                  OutlinedButton(
-                    onPressed: () => _comingSoon('Print / PDF'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.studentEnrollInk,
-                      side: const BorderSide(color: AppColors.studentEnrollLine),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  Tooltip(
+                    message: _canPreviewPdf ? 'Preview & customize the consent PDF' : 'Available after student is enrolled.',
+                    child: OutlinedButton(
+                      onPressed: _canPreviewPdf ? _previewEnrollmentPdf : null,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.studentEnrollInk,
+                        side: const BorderSide(color: AppColors.studentEnrollLine),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('🖨 Print / PDF'),
                     ),
-                    child: const Text('Print / PDF'),
                   ),
                   const SizedBox(width: 6),
                   if (isReviewStep)
@@ -1686,6 +2098,172 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small dot that pulses (fades in/out) while [animate] is true — used by
+/// the breadcrumb row's "Saving…" state. Mirrors the frontend's `pulse
+/// 1.5s ease-in-out infinite` CSS animation on `draftSaveStatus === 'saving'`.
+class _PulsingDot extends StatefulWidget {
+  final Color color;
+  final bool animate;
+  const _PulsingDot({required this.color, required this.animate});
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 750));
+    if (widget.animate) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(_PulsingDot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.animate) {
+      _controller.stop();
+      _controller.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dot = Container(width: 8, height: 8, decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle));
+    if (!widget.animate) return dot;
+    return FadeTransition(opacity: Tween(begin: 0.35, end: 1.0).animate(_controller), child: dot);
+  }
+}
+
+enum _HeroActionVariant { drafts, ai, pdf, info }
+
+class _HeroActionStyle {
+  final LinearGradient? gradient;
+  final Color? background;
+  final Color? borderColor;
+  final Color foreground;
+  final List<BoxShadow>? shadow;
+  const _HeroActionStyle({this.gradient, this.background, this.borderColor, required this.foreground, this.shadow});
+}
+
+/// One hero-bar button — mirrors StudentAddPanel.tsx's `.hero-action-btn`
+/// variants exactly: same per-button gradient/border/text colors, same
+/// draft-count badge, same AI pulse dot. Hides its text label at
+/// `MediaQuery` widths ≥600 are false (matching the frontend's own
+/// `@media (max-width: 600px)` icon-only rule — always true on a phone).
+class _HeroActionButton extends StatelessWidget {
+  final _HeroActionVariant variant;
+  final IconData icon;
+  final String label;
+  final bool showLabel;
+  final int? badgeCount;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _HeroActionButton({
+    required this.variant,
+    required this.icon,
+    required this.label,
+    required this.showLabel,
+    this.badgeCount,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  _HeroActionStyle get _style {
+    switch (variant) {
+      case _HeroActionVariant.drafts:
+        return _HeroActionStyle(
+          background: Colors.white.withValues(alpha: 0.85),
+          borderColor: const Color(0xFFE5E7EB),
+          foreground: const Color(0xFF374151),
+        );
+      case _HeroActionVariant.ai:
+        return const _HeroActionStyle(
+          gradient: LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          foreground: Colors.white,
+          shadow: [BoxShadow(color: Color(0x738B5CF6), blurRadius: 14, offset: Offset(0, 4))],
+        );
+      case _HeroActionVariant.pdf:
+        return const _HeroActionStyle(
+          gradient: LinearGradient(colors: [Color(0xFFF5F3FF), Color(0xFFEDE9FE)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderColor: Color(0xFFDDD6FE),
+          foreground: Color(0xFF6C3CE1),
+        );
+      case _HeroActionVariant.info:
+        return const _HeroActionStyle(
+          gradient: LinearGradient(colors: [Color(0xFFECFEFF), Color(0xFFCFFAFE)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderColor: Color(0xFFA5F3FC),
+          foreground: Color(0xFF0E7490),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _style;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(11),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(11),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: showLabel ? 18 : 12, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: style.gradient,
+              color: style.gradient == null ? style.background : null,
+              border: style.borderColor != null ? Border.all(color: style.borderColor!) : null,
+              borderRadius: BorderRadius.circular(11),
+              boxShadow: style.shadow,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 15, color: style.foreground),
+                    if (showLabel) ...[
+                      const SizedBox(width: 8),
+                      Text(label, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: style.foreground)),
+                    ],
+                    if (badgeCount != null && badgeCount! > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: const Color(0x1F6C3CE1), borderRadius: BorderRadius.circular(999)),
+                        child: Text(
+                          '$badgeCount',
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF6C3CE1)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (variant == _HeroActionVariant.ai)
+                  Positioned(top: 4, right: showLabel ? 4 : -2, child: _PulsingDot(color: Colors.white, animate: true)),
+              ],
+            ),
+          ),
         ),
       ),
     );

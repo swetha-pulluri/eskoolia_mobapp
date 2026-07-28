@@ -7,6 +7,25 @@ import '../../core/constants/app_constants.dart';
 class SecureStorageService {
   final FlutterSecureStorage _storage;
 
+  /// In-memory mirror of the persisted access/refresh tokens.
+  ///
+  /// On Android, `FlutterSecureStorage` with `encryptedSharedPreferences:
+  /// true` backs onto a keystore-encrypted file whose first read
+  /// immediately after a write (before the underlying master key /
+  /// encrypted-prefs file has settled) can transiently return null or throw
+  /// — a documented flutter_secure_storage race, not a Dio/network issue.
+  /// This surfaced as: login's POST succeeds and saves fresh tokens, but the
+  /// very next call (GET /me/, fired moments later by the same login flow)
+  /// reads the access token back too early via this same storage and comes
+  /// up empty, so the request goes out unauthenticated and 401s — read as
+  /// "Unexpected Error" on the first attempt. A second, identical login a
+  /// moment later succeeds because by then the disk-backed store has caught
+  /// up. Serving reads from this cache (updated synchronously the instant a
+  /// token is saved, before the disk write is even awaited) removes the
+  /// race entirely for the lifetime of the process.
+  String? _cachedAccessToken;
+  String? _cachedRefreshToken;
+
   SecureStorageService()
     : _storage = const FlutterSecureStorage(
         aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -16,19 +35,27 @@ class SecureStorageService {
   // Token Management
 
   Future<void> saveAccessToken(String token) async {
+    _cachedAccessToken = token;
     await _storage.write(key: AppConstants.accessTokenKey, value: token);
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: AppConstants.accessTokenKey);
+    if (_cachedAccessToken != null) return _cachedAccessToken;
+    final value = await _storage.read(key: AppConstants.accessTokenKey);
+    _cachedAccessToken = value;
+    return value;
   }
 
   Future<void> saveRefreshToken(String token) async {
+    _cachedRefreshToken = token;
     await _storage.write(key: AppConstants.refreshTokenKey, value: token);
   }
 
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: AppConstants.refreshTokenKey);
+    if (_cachedRefreshToken != null) return _cachedRefreshToken;
+    final value = await _storage.read(key: AppConstants.refreshTokenKey);
+    _cachedRefreshToken = value;
+    return value;
   }
 
   Future<void> saveTokens({
@@ -42,6 +69,8 @@ class SecureStorageService {
   }
 
   Future<void> deleteTokens() async {
+    _cachedAccessToken = null;
+    _cachedRefreshToken = null;
     await Future.wait([
       _storage.delete(key: AppConstants.accessTokenKey),
       _storage.delete(key: AppConstants.refreshTokenKey),
@@ -106,6 +135,8 @@ class SecureStorageService {
   // Clear all data
 
   Future<void> clearAll() async {
+    _cachedAccessToken = null;
+    _cachedRefreshToken = null;
     await _storage.deleteAll();
   }
 

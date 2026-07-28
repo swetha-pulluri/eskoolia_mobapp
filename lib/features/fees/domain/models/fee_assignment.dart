@@ -13,6 +13,11 @@ class FeeAssignment {
   final String discountAmount;
   final String concessionAmount;
   final String status; // unpaid | partial | paid
+  // Present on list/detail responses read by the Collection screen — net
+  // amount still owed after posted payments (amount - discount - concession
+  // - posted payments). Absent from the create/update payload this app
+  // sends, so it stays nullable; falls back to `amount` when absent.
+  final String? netDue;
 
   const FeeAssignment({
     required this.id,
@@ -25,6 +30,7 @@ class FeeAssignment {
     this.discountAmount = '0.00',
     this.concessionAmount = '0.00',
     this.status = 'unpaid',
+    this.netDue,
   });
 
   factory FeeAssignment.fromJson(Map<String, dynamic> json) {
@@ -39,6 +45,7 @@ class FeeAssignment {
       discountAmount: json['discount_amount']?.toString() ?? '0.00',
       concessionAmount: json['concession_amount']?.toString() ?? '0.00',
       status: (json['status'] as String?) ?? 'unpaid',
+      netDue: json['net_due']?.toString(),
     );
   }
 }

@@ -66,10 +66,13 @@ class _ExportOptionsDialogViewState extends State<_ExportOptionsDialogView> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 520),
+        constraints: BoxConstraints(maxWidth: 520, maxHeight: MediaQuery.of(context).size.height * 0.85),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
         clipBehavior: Clip.antiAlias,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Flexible(
+          child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -106,6 +109,9 @@ class _ExportOptionsDialogViewState extends State<_ExportOptionsDialogView> {
                 Expanded(child: _labeled('Section', _sectionSelect())),
               ]),
             ]),
+          ),
+          ]),
+          ),
           ),
           Container(
             width: double.infinity,

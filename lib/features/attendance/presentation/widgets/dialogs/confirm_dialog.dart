@@ -106,11 +106,13 @@ class _ConfirmDialogViewState extends State<_ConfirmDialogView> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 440),
+        constraints: BoxConstraints(maxWidth: 440, maxHeight: MediaQuery.of(context).size.height * 0.85),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
         clipBehavior: Clip.antiAlias,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
+          Flexible(
+          child: SingleChildScrollView(
+          child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Container(width: 36, height: 36, decoration: BoxDecoration(color: style.iconBg, shape: BoxShape.circle), alignment: Alignment.center, child: Icon(Icons.info_outline, size: 20, color: style.iconColor)),
@@ -141,6 +143,8 @@ class _ConfirmDialogViewState extends State<_ConfirmDialogView> {
                 ]),
               ),
             ]),
+          ),
+          ),
           ),
           Container(
             width: double.infinity,

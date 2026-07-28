@@ -128,45 +128,47 @@ class _StaffCTChangeDialogState extends State<_StaffCTChangeDialog> {
             title: 'Change Class Teacher',
             onClose: () => Navigator.of(context).pop(),
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12)),
-                  child: Text.rich(TextSpan(children: [
-                    const TextSpan(text: 'Current: ', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
-                    TextSpan(text: widget.currentTeacherName.isEmpty ? '—' : widget.currentTeacherName, style: const TextStyle(color: Color(0xFF1F2937), fontWeight: FontWeight.w700, fontSize: 13)),
-                  ])),
-                ),
-                const SizedBox(height: 12),
-                _staffFieldLabel('New Teacher', required: true),
-                DropdownButtonFormField<int>(
-                  initialValue: _newId,
-                  isExpanded: true,
-                  decoration: _staffFieldDecoration(hint: 'Select teacher…'),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
-                  items: widget.teachers
-                      .map((t) => DropdownMenuItem(value: t.id, child: Text('${t.fullName}${t.designation.isNotEmpty ? ' (${t.designation})' : ''}', overflow: TextOverflow.ellipsis)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _newId = v),
-                ),
-                const SizedBox(height: 12),
-                _staffFieldLabel('Reason for Change', required: true),
-                TextField(
-                  controller: _reasonController,
-                  maxLines: 3,
-                  onChanged: (v) {
-                    if (v.trim().isNotEmpty && _err.isNotEmpty) setState(() => _err = '');
-                  },
-                  decoration: _staffFieldDecoration(hint: 'Enter reason for changing class teacher…'),
-                ),
-                if (_err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_err, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)))),
-              ],
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12)),
+                    child: Text.rich(TextSpan(children: [
+                      const TextSpan(text: 'Current: ', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+                      TextSpan(text: widget.currentTeacherName.isEmpty ? '—' : widget.currentTeacherName, style: const TextStyle(color: Color(0xFF1F2937), fontWeight: FontWeight.w700, fontSize: 13)),
+                    ])),
+                  ),
+                  const SizedBox(height: 12),
+                  _staffFieldLabel('New Teacher', required: true),
+                  DropdownButtonFormField<int>(
+                    initialValue: _newId,
+                    isExpanded: true,
+                    decoration: _staffFieldDecoration(hint: 'Select teacher…'),
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
+                    items: widget.teachers
+                        .map((t) => DropdownMenuItem(value: t.id, child: Text('${t.fullName}${t.designation.isNotEmpty ? ' (${t.designation})' : ''}', overflow: TextOverflow.ellipsis)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _newId = v),
+                  ),
+                  const SizedBox(height: 12),
+                  _staffFieldLabel('Reason for Change', required: true),
+                  TextField(
+                    controller: _reasonController,
+                    maxLines: 3,
+                    onChanged: (v) {
+                      if (v.trim().isNotEmpty && _err.isNotEmpty) setState(() => _err = '');
+                    },
+                    decoration: _staffFieldDecoration(hint: 'Enter reason for changing class teacher…'),
+                  ),
+                  if (_err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(_err, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)))),
+                ],
+              ),
             ),
           ),
           _modalFooter([
@@ -245,55 +247,57 @@ class _StaffBulkAssignDialogState extends State<_StaffBulkAssignDialog> {
         constraints: const BoxConstraints(maxWidth: 448),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           _modalHeader(leading: const Icon(Icons.bolt, size: 18, color: staffBrand), title: 'Bulk Assign Class Teacher', onClose: () => Navigator.of(context).pop()),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _staffFieldLabel('Teacher', required: true),
-                DropdownButtonFormField<int>(
-                  initialValue: _teacherId,
-                  isExpanded: true,
-                  decoration: _staffFieldDecoration(hint: 'Select teacher…'),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
-                  items: widget.teachers.map((t) => DropdownMenuItem(value: t.id, child: Text(t.fullName, overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) => setState(() => _teacherId = v),
-                ),
-                const SizedBox(height: 12),
-                _staffFieldLabel('Class', required: true),
-                DropdownButtonFormField<int>(
-                  initialValue: _classId,
-                  isExpanded: true,
-                  decoration: _staffFieldDecoration(hint: 'Select class…'),
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
-                  items: widget.classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: (v) => setState(() {
-                    _classId = v;
-                    _sectionId = null;
-                  }),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () => setState(() => _bulk = !_bulk),
-                  child: Row(children: [
-                    Checkbox(value: _bulk, onChanged: (v) => setState(() => _bulk = v ?? false), activeColor: staffBrand, visualDensity: VisualDensity.compact),
-                    const Flexible(child: Text('Assign to all sections of this class', style: TextStyle(fontSize: 13, color: Color(0xFF4B5563)))),
-                  ]),
-                ),
-                if (!_bulk && _classId != null) ...[
-                  const SizedBox(height: 12),
-                  _staffFieldLabel('Section'),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _staffFieldLabel('Teacher', required: true),
                   DropdownButtonFormField<int>(
-                    initialValue: _sectionId,
+                    initialValue: _teacherId,
                     isExpanded: true,
-                    decoration: _staffFieldDecoration(hint: 'Select section…'),
+                    decoration: _staffFieldDecoration(hint: 'Select teacher…'),
                     style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
-                    items: _filteredSections.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, overflow: TextOverflow.ellipsis))).toList(),
-                    onChanged: (v) => setState(() => _sectionId = v),
+                    items: widget.teachers.map((t) => DropdownMenuItem(value: t.id, child: Text(t.fullName, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) => setState(() => _teacherId = v),
                   ),
+                  const SizedBox(height: 12),
+                  _staffFieldLabel('Class', required: true),
+                  DropdownButtonFormField<int>(
+                    initialValue: _classId,
+                    isExpanded: true,
+                    decoration: _staffFieldDecoration(hint: 'Select class…'),
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
+                    items: widget.classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) => setState(() {
+                      _classId = v;
+                      _sectionId = null;
+                    }),
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () => setState(() => _bulk = !_bulk),
+                    child: Row(children: [
+                      Checkbox(value: _bulk, onChanged: (v) => setState(() => _bulk = v ?? false), activeColor: staffBrand, visualDensity: VisualDensity.compact),
+                      const Flexible(child: Text('Assign to all sections of this class', style: TextStyle(fontSize: 13, color: Color(0xFF4B5563)))),
+                    ]),
+                  ),
+                  if (!_bulk && _classId != null) ...[
+                    const SizedBox(height: 12),
+                    _staffFieldLabel('Section'),
+                    DropdownButtonFormField<int>(
+                      initialValue: _sectionId,
+                      isExpanded: true,
+                      decoration: _staffFieldDecoration(hint: 'Select section…'),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
+                      items: _filteredSections.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, overflow: TextOverflow.ellipsis))).toList(),
+                      onChanged: (v) => setState(() => _sectionId = v),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           _modalFooter([

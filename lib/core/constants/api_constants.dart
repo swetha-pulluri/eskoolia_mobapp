@@ -132,6 +132,11 @@ class ApiConstants {
   // Attendance — Reference: backend/apps/attendance/urls.py + views.py
   static const String attendanceBasePath = '$apiBasePath/attendance';
   static const String studentAttendance = '$attendanceBasePath/student-attendance/';
+  // AI Assistant's "report absence" flow — a distinct action route from the
+  // main Attendance screen's own `store/` (confirmed in
+  // frontend/components/aibot/AbsenceFlow.tsx): single-student, one-shot
+  // mark, returns the resolved student/class/section names in the response.
+  static const String studentAttendanceChatbotMark = '${studentAttendance}chatbot-mark/';
 
   // Core — Classes / Sections / Academic Years / Streams / Rooms / Holidays
   // Reference: backend/apps/core/urls.py + views.py
@@ -190,8 +195,41 @@ class ApiConstants {
   static const String feesLateFeeRules = '$feesBasePath/late-fee-rules/';
   static String feesLateFeeRuleDetail(int id) => '$feesLateFeeRules$id/';
 
+  // Fees — Collection screen (payment posting, bank/UPI/cheque
+  // reconciliation, authenticated receipt/ledger header info).
+  // Reference: frontend components/fees/FeesCollectionPanel.tsx.
+  static const String feesReconciliations = '$feesBasePath/reconciliations/';
+  static String feesReconciliationDetail(int id) => '$feesReconciliations$id/';
+  // Authenticated variant of `schoolInfo` above — distinct endpoint used only
+  // by the Collection screen's receipt/ledger header (schoolInfo is public,
+  // no-auth; this one requires a logged-in session).
+  static const String tenancyMySchoolInfo = '$apiBasePath/tenancy/my-school-info/';
+
+  // Fees — Dues & Reminders screen (escalation tiers, class-wise due lists,
+  // per-student interaction log, bulk reminders, CSV/PDF export).
+  // Reference: frontend components/fees/FeesDuesRemindersPanel.tsx.
+  static const String feesDuesBasePath = '$feesBasePath/dues';
+  static const String feesDuesSummary = '$feesDuesBasePath/summary/';
+  static const String feesDuesByClass = '$feesDuesBasePath/by-class/';
+  static const String feesDuesInteractions = '$feesDuesBasePath/interactions/';
+  static const String feesDuesResolve = '$feesDuesBasePath/resolve/';
+  static const String feesDuesSendReminder = '$feesDuesBasePath/send-reminder/';
+  static const String feesDuesExportCsv = '$feesDuesBasePath/export-csv/';
+
+  // Fees — Year-End screen (carry-forward resolution, PDF/CSV year-end
+  // reports, next-year fee-amount staging for rollover).
+  // Reference: frontend app/(dashboard)/fees/year-end/page.tsx.
+  static const String feesYearEndBasePath = '$feesBasePath/year-end';
+  static const String feesYearEndGroupAmounts = '$feesYearEndBasePath/group-amounts/';
+  static const String feesYearEndReport = '$feesYearEndBasePath/report/';
+
   // Dashboard Endpoints
   static const String attentionCountEndpoint =
       '/api/dashboard/attention-count/';
+  // Real, confirmed backend endpoint (backend/apps/dashboard/views.py::DashboardKPIView,
+  // registered in backend/config/urls.py) — school-scoped, field names match
+  // KpiData.fromJson exactly (total_students, attendance_today, fees_collected_mtd,
+  // open_admissions, total_staff, library_books, pending_homework, exams_this_week).
+  static const String dashboardKpis = '$apiBasePath/dashboard/kpis/';
   // NOTE: Backend has NO /api/user/recents/ endpoint - use localStorage only
 }

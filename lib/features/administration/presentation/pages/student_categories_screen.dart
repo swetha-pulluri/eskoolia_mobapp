@@ -421,28 +421,35 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
     final rank = ordered.indexWhere((x) => x.id == c.id) + 1;
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Agentic Summary', style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w500, height: 1.1, color: const Color(0xFF111827))),
-                const Text('Quick operational insights', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
-                const SizedBox(height: 10),
-                _drawerRow('Category', c.name),
-                _drawerRow('Students enrolled', '${c.studentsCount ?? 0}'),
-                _drawerRow('Share of total', share),
-                _drawerRow('Rank by size', '#$rank of ${all.length}'),
-                _drawerRow('Used in modules', 'Admissions, Fees, Reports'),
-                const Divider(height: 20),
-                Text(
-                  (c.studentsCount ?? 0) > 50 ? 'High usage. Avoid renaming as it impacts reports.' : 'Moderate usage. You can edit safely with review.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Agentic Summary', style: GoogleFonts.playfairDisplay(fontSize: 18, fontWeight: FontWeight.w500, height: 1.1, color: const Color(0xFF111827))),
+                    const Text('Quick operational insights', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
+                    const SizedBox(height: 10),
+                    _drawerRow('Category', c.name),
+                    _drawerRow('Students enrolled', '${c.studentsCount ?? 0}'),
+                    _drawerRow('Share of total', share),
+                    _drawerRow('Rank by size', '#$rank of ${all.length}'),
+                    _drawerRow('Used in modules', 'Admissions, Fees, Reports'),
+                    const Divider(height: 20),
+                    Text(
+                      (c.studentsCount ?? 0) > 50 ? 'High usage. Avoid renaming as it impacts reports.' : 'Moderate usage. You can edit safely with review.',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );

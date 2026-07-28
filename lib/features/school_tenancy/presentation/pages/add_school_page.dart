@@ -177,12 +177,14 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#\$';
     const symbols = '!@#\$';
     final random = List.generate(14, (i) {
-      if (i == 0)
+      if (i == 0) {
         return chars.substring(0, 26)[DateTime.now().microsecondsSinceEpoch %
             26];
-      if (i == 13)
+      }
+      if (i == 13) {
         return symbols[(DateTime.now().microsecondsSinceEpoch + i) %
             symbols.length];
+      }
       return chars[(DateTime.now().microsecondsSinceEpoch + i * 7) %
           chars.length];
     }).join();
@@ -246,7 +248,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         if (_seatsController.text.trim().isNotEmpty)
           'seats': int.tryParse(_seatsController.text.trim()),
         'api_access': _apiAccess == 'enabled',
-        if (logoUrl != null) 'logo_url': logoUrl,
+        'logo_url': ?logoUrl,
       });
       ref.invalidate(schoolsProvider);
       ref.invalidate(schoolsGlobalStatsProvider);
@@ -334,7 +336,8 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('School provisioned'),
-        content: Column(
+        content: SingleChildScrollView(
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -362,6 +365,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               style: TextStyle(fontSize: 11.5),
             ),
           ],
+          ),
         ),
         actions: [
           TextButton(

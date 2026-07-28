@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../domain/entities/module_entity.dart';
 import '../providers/dashboard_provider.dart';
@@ -75,10 +76,14 @@ class RecentsRow extends ConsumerWidget {
                       ModuleCard(
                         module: module,
                         onTap: () {
-                          // TODO: Navigate to module page
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Navigate to: ${module.name}')),
-                          );
+                          if (module.comingSoon) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('${module.name} - Coming Soon')),
+                            );
+                          } else {
+                            recordModuleVisit(ref, module.path);
+                            context.go(module.path);
+                          }
                         },
                       ),
                       // Time badge

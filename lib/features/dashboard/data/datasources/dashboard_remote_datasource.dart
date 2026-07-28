@@ -1,12 +1,18 @@
 import '../../../../core/constants/api_constants.dart';
 import '../../../../data/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
+import '../../domain/models/kpi_data.dart';
 
 /// Dashboard Remote Data Source
 class DashboardRemoteDataSource {
   final DioClient _dioClient;
 
   DashboardRemoteDataSource(this._dioClient);
+
+  Future<KpiData> getKpis() async {
+    final response = await _dioClient.get(ApiConstants.dashboardKpis);
+    return KpiData.fromJson(response.data as Map<String, dynamic>);
+  }
 
   Future<int> getAttentionCount() async {
     try {

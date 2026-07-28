@@ -55,7 +55,7 @@ class StudentListPage extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            _buildPageHead(context, notifier),
+                            _buildPageHead(context, state, notifier),
                             const SizedBox(height: 12),
                             StudentStatsGrid(loading: state.loadingStats, stats: state.stats),
                             const SizedBox(height: 12),
@@ -87,6 +87,7 @@ class StudentListPage extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (context) {
         final items = [
@@ -99,27 +100,33 @@ class StudentListPage extends ConsumerWidget {
           ('Student Promotion', Icons.trending_up, '/students/promote'),
         ];
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('More Students tools', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                ),
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('More Students tools', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    ),
+                  ),
+                  for (final item in items)
+                    ListTile(
+                      leading: Icon(item.$2, color: AppColors.studentListBrand),
+                      title: Text(item.$1, style: const TextStyle(fontSize: 13)),
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        context.push(item.$3);
+                      },
+                    ),
+                  const SizedBox(height: 8),
+                ],
               ),
-              for (final item in items)
-                ListTile(
-                  leading: Icon(item.$2, color: AppColors.studentListBrand),
-                  title: Text(item.$1, style: const TextStyle(fontSize: 13)),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    context.push(item.$3);
-                  },
-                ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
         );
       },
@@ -136,7 +143,7 @@ class StudentListPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPageHead(BuildContext context, StudentListNotifier notifier) {
+  Widget _buildPageHead(BuildContext context, StudentListState state, StudentListNotifier notifier) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -191,9 +198,15 @@ class StudentListPage extends ConsumerWidget {
             runSpacing: 8,
             children: [
               OutlinedButton.icon(
-                onPressed: () => context.push('/students/export'),
-                icon: const Icon(Icons.file_download_outlined, size: 14),
-                label: const Text('Export'),
+                // Mirrors frontend StudentListPanel.tsx's page-head Export
+                // button exactly: one click, straight to a downloaded
+                // .xlsx file via the real export-xlsx endpoint — no
+                // intermediate screen or dialog.
+                onPressed: state.exporting ? null : () => notifier.exportVisibleStudents(),
+                icon: state.exporting
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.file_download_outlined, size: 14),
+                label: Text(state.exporting ? 'Exporting…' : 'Export'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.studentListInk,
                   side: const BorderSide(color: Color(0x1F000000)),

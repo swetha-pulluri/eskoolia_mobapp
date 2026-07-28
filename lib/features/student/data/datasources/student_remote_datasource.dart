@@ -102,13 +102,13 @@ abstract class StudentRemoteDataSource {
     required DateTime to,
   });
 
-  /// GET /api/v1/students/students/export-xlsx/?current_class=&current_section=&is_active=
+  /// GET /api/v1/students/students/export-xlsx/?current_class=&current_section=&is_active=&ids=
   /// — returns the raw .xlsx file bytes. This is the ONLY real
   /// backend-wired export for students (fixed 8 columns: Admission No,
-  /// Student, Class, Section, Guardian, Phone, DOB, Status) — see
-  /// student_export_page.dart's doc comment for why the reference
-  /// frontend's own CSV/PDF/column-picker UI isn't reproduced here.
-  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive});
+  /// Student, Class, Section, Guardian, Phone, DOB, Status). `ids` mirrors
+  /// frontend StudentListPanel.tsx's `handleExportVisible` passing the
+  /// currently-visible rows' ids as a comma-joined list.
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive, List<int>? ids});
 
   /// POST /api/v1/students/students/upload-photo/ (multipart, field `photo`)
   /// — returns the uploaded photo's URL.
@@ -352,7 +352,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive}) async {
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive, List<int>? ids}) async {
     try {
       final response = await _dio.get(
         ApiConstants.studentExportXlsx,
@@ -360,6 +360,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
           'current_class': ?classId,
           'current_section': ?sectionId,
           if (isActive != null) 'is_active': isActive.toString(),
+          if (ids != null && ids.isNotEmpty) 'ids': ids.join(','),
         },
         options: Options(responseType: ResponseType.bytes),
       );

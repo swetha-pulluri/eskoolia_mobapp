@@ -87,15 +87,6 @@ class DioClient {
   InterceptorsWrapper _errorInterceptor() {
     return InterceptorsWrapper(
       onError: (error, handler) {
-        // TEMP DEBUG: raw error details before they get flattened to a
-        // generic message below — remove once the post-login issue is resolved.
-        // ignore: avoid_print
-        print(
-          '[DioClient] RAW error on ${error.requestOptions.method} ${error.requestOptions.path} -> '
-          'type=${error.type}, statusCode=${error.response?.statusCode}, '
-          'message=${error.message}, responseData=${error.response?.data}',
-        );
-
         // Format error response
         String errorMessage = 'An unexpected error occurred';
 
@@ -170,6 +161,16 @@ class DioClient {
       '/api/v1/tenancy/school-info/',
       '/api/v1/auth/forgot-password/',
       '/api/v1/auth/reset-password/',
+      // The refresh endpoint authenticates via the refresh token in the
+      // request body, not a bearer access token. It was missing from this
+      // list, so a stale/expired access token still in storage (the exact
+      // one that just triggered this 401) was being attached as the
+      // Authorization header on the refresh call itself — which a
+      // JWT-authenticated backend can reject outright (an invalid bearer
+      // token fails authentication before the endpoint's own AllowAny
+      // permission is ever checked), breaking the automatic
+      // refresh-and-retry recovery below.
+      '/api/v1/auth/refresh/',
     ];
     return publicEndpoints.any((endpoint) => path.contains(endpoint));
   }

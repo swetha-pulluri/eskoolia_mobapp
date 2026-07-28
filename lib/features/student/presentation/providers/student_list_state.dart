@@ -75,6 +75,10 @@ class StudentListState {
   final String? flashSuccess;
   final String? flashError;
 
+  /// Drives the page-head "Export" button's busy/disabled state — mirrors
+  /// frontend StudentListPanel.tsx's `exportAllBusy`.
+  final bool exporting;
+
   const StudentListState({
     required this.loadingStats,
     this.stats,
@@ -113,6 +117,7 @@ class StudentListState {
     required this.unassignedCounts,
     this.flashSuccess,
     this.flashError,
+    this.exporting = false,
   });
 
   factory StudentListState.initial() {
@@ -183,6 +188,7 @@ class StudentListState {
     Map<int, int>? unassignedCounts,
     Object? flashSuccess = _unset,
     Object? flashError = _unset,
+    bool? exporting,
   }) {
     return StudentListState(
       loadingStats: loadingStats ?? this.loadingStats,
@@ -229,6 +235,7 @@ class StudentListState {
       unassignedCounts: unassignedCounts ?? this.unassignedCounts,
       flashSuccess: identical(flashSuccess, _unset) ? this.flashSuccess : flashSuccess as String?,
       flashError: identical(flashError, _unset) ? this.flashError : flashError as String?,
+      exporting: exporting ?? this.exporting,
     );
   }
 }
