@@ -47,6 +47,15 @@ final recentModulesProvider = FutureProvider<List<RecentItemEntity>>((ref) async
   return result;
 });
 
+/// Records a real navigation to [path] as a "Recently Visited" entry and
+/// refreshes [recentModulesProvider] so the Home screen reflects it
+/// immediately — called from every tile that actually navigates
+/// (QuickAccessGrid, ModuleGrid, RecentsRow), not from "Coming Soon" taps.
+Future<void> recordModuleVisit(WidgetRef ref, String path) async {
+  await ref.read(dashboardRepositoryProvider).recordVisit(path);
+  ref.invalidate(recentModulesProvider);
+}
+
 // Pins Provider (StateNotifier for CRUD operations)
 final pinsProvider = StateNotifierProvider<PinsNotifier, AsyncValue<List<PinItemEntity>>>((ref) {
   return PinsNotifier(ref.watch(dashboardRepositoryProvider));

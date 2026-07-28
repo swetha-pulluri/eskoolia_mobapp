@@ -266,8 +266,8 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
-  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive}) {
-    return _remoteDataSource.exportStudentsXlsx(classId: classId, sectionId: sectionId, isActive: isActive);
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive, List<int>? ids}) {
+    return _remoteDataSource.exportStudentsXlsx(classId: classId, sectionId: sectionId, isActive: isActive, ids: ids);
   }
 
   @override

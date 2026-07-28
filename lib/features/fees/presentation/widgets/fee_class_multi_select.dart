@@ -106,49 +106,57 @@ class _ClassMultiSelectSheetState extends State<_ClassMultiSelectSheet> {
     final filtered = widget.availableClasses.where((c) => c.name.toLowerCase().contains(_search.trim().toLowerCase())).toList();
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              decoration: feeConfigInputDecoration(hint: 'Search classes'),
-              onChanged: (v) => setState(() => _search = v),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                FeeConfigGhostButton(small: true, label: 'Select all', onPressed: () => setState(() => _selected = widget.availableClasses.map((c) => c.id).toList())),
-                FeeConfigGhostButton(small: true, label: 'Clear all', onPressed: () => setState(() => _selected = [])),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
-              child: ListView(
-                shrinkWrap: true,
+      child: SafeArea(
+        top: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final c in filtered)
-                    _classRow(c),
+                  TextField(
+                    decoration: feeConfigInputDecoration(hint: 'Search classes'),
+                    onChanged: (v) => setState(() => _search = v),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      FeeConfigGhostButton(small: true, label: 'Select all', onPressed: () => setState(() => _selected = widget.availableClasses.map((c) => c.id).toList())),
+                      FeeConfigGhostButton(small: true, label: 'Clear all', onPressed: () => setState(() => _selected = [])),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final c in filtered)
+                          _classRow(c),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(_selected),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF111827),
+                        minimumSize: const Size(0, 44),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Apply selection', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(_selected),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF111827),
-                  minimumSize: const Size(0, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Apply selection', style: TextStyle(fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

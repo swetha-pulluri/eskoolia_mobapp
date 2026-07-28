@@ -43,6 +43,7 @@ class ModuleGrid extends ConsumerWidget {
                       SnackBar(content: Text('${module.name} - Coming Soon')),
                     );
                   } else {
+                    recordModuleVisit(ref, module.path);
                     context.go(module.path);
                   }
                 },

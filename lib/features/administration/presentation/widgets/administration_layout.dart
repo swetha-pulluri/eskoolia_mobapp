@@ -6,6 +6,11 @@ import '../../../../core/theme/app_colors.dart';
 /// Provides the top navigation bar for the 4 Administration main tabs
 /// (Communication Hub, Postal Management, Documents Studio, System Config),
 /// matching the web frontend's `ModuleSubNav` styling for the "admin" module.
+///
+/// The global app-wide header (logo, module strip, search, notifications,
+/// avatar — web's `TopBarNew`) is mounted once above every route by
+/// `GlobalAppShell` (see `main.dart`), so this wrapper only renders the
+/// module's own tab strip, not a second back-arrow/title row.
 class AdministrationLayout extends StatelessWidget {
   final Widget child;
   final String currentPath;
@@ -22,84 +27,44 @@ class AdministrationLayout extends StatelessWidget {
       backgroundColor: AppColors.bgSecondary,
       body: Column(
         children: [
-          // Top Navigation Bar
+          // Horizontal navigation tabs (matches web ModuleSubNav)
           Container(
-            color: Colors.white,
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  // Header with back button and title
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: AppColors.borderPrimary, width: 1),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, size: 20),
-                          onPressed: () => context.go('/home'),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 12),
-                        const Icon(Icons.work_outline, size: 20, color: AppColors.primaryPurple),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Administration',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Horizontal navigation tabs (matches web ModuleSubNav)
-                  Container(
-                    height: 46,
-                    decoration: const BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: AppColors.borderPrimary, width: 1),
-                      ),
-                    ),
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      children: [
-                        _buildNavTab(
-                          context,
-                          icon: Icons.person_search_outlined,
-                          label: 'Communication Hub',
-                          path: '/administration/communication-hub',
-                        ),
-                        _buildNavTab(
-                          context,
-                          icon: Icons.mail_outline,
-                          label: 'Postal Management',
-                          path: '/administration/postal',
-                        ),
-                        _buildNavTab(
-                          context,
-                          icon: Icons.badge_outlined,
-                          label: 'Documents Studio',
-                          path: '/administration/documents',
-                        ),
-                        _buildNavTab(
-                          context,
-                          icon: Icons.settings_outlined,
-                          label: 'System Config',
-                          path: '/administration/system-config',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            height: 46,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: AppColors.borderPrimary, width: 1),
               ),
+            ),
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              children: [
+                _buildNavTab(
+                  context,
+                  icon: Icons.person_search_outlined,
+                  label: 'Communication Hub',
+                  path: '/administration/communication-hub',
+                ),
+                _buildNavTab(
+                  context,
+                  icon: Icons.mail_outline,
+                  label: 'Postal Management',
+                  path: '/administration/postal',
+                ),
+                _buildNavTab(
+                  context,
+                  icon: Icons.badge_outlined,
+                  label: 'Documents Studio',
+                  path: '/administration/documents',
+                ),
+                _buildNavTab(
+                  context,
+                  icon: Icons.settings_outlined,
+                  label: 'System Config',
+                  path: '/administration/system-config',
+                ),
+              ],
             ),
           ),
           // Page content

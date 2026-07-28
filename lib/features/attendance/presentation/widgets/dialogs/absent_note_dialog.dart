@@ -52,7 +52,7 @@ class _AbsentNoteDialogState extends State<AbsentNoteDialog> {
         child: GestureDetector(
           onTap: () {},
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: BoxConstraints(maxWidth: 420, maxHeight: MediaQuery.of(context).size.height * 0.85),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
             clipBehavior: Clip.antiAlias,
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -70,7 +70,9 @@ class _AbsentNoteDialogState extends State<AbsentNoteDialog> {
                   ),
                 ]),
               ),
-              Padding(
+              Flexible(
+                child: SingleChildScrollView(
+                child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,6 +117,8 @@ class _AbsentNoteDialogState extends State<AbsentNoteDialog> {
                     ),
                     const SizedBox(height: 12),
                   ],
+                ),
+                ),
                 ),
               ),
               Container(

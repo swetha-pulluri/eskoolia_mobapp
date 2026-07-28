@@ -13,7 +13,6 @@ import '../../features/student/presentation/pages/student_categories_page.dart';
 import '../../features/student/presentation/pages/student_deleted_page.dart';
 import '../../features/student/presentation/pages/student_disabled_page.dart';
 import '../../features/student/presentation/pages/student_enroll_page.dart';
-import '../../features/student/presentation/pages/student_export_page.dart';
 import '../../features/student/presentation/pages/student_groups_page.dart';
 import '../../features/student/presentation/pages/student_list_page.dart';
 import '../../features/student/presentation/pages/student_promotion_page.dart';
@@ -37,6 +36,9 @@ import '../../features/academics/presentation/pages/staff_assignment/staff_assig
 import '../../features/fees/presentation/pages/fees_home_page.dart';
 import '../../features/fees/presentation/pages/fee_configuration_page.dart';
 import '../../features/fees/presentation/pages/fee_assignment_page.dart';
+import '../../features/fees/presentation/pages/fee_collection_page.dart';
+import '../../features/fees/presentation/pages/fee_dues_reminders_page.dart';
+import '../../features/fees/presentation/pages/fee_year_end_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -45,6 +47,14 @@ import '../../features/fees/presentation/pages/fee_assignment_page.dart';
 ///       Visited, All Modules) — this is the post-login landing page.
 ///       /dashboard = the KPI overview page (Swetha's SchoolOverviewPage).
 ///       /super-admin/* = School Tenancy routes (matching web frontend structure)
+/// The current matched route location, kept in sync from [redirect] below
+/// (which already runs on every navigation). This lets app-wide chrome that
+/// lives *outside* the routed `Navigator` — e.g. [GlobalAppShell], mounted
+/// via `MaterialApp.router`'s `builder:` — know which module/tab is active
+/// for highlighting, without needing `GoRouterState.of(context)` (which
+/// isn't reachable from that far up the tree).
+final currentRoutePathProvider = StateProvider<String>((ref) => '/home');
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Built exactly once per app lifetime — do NOT `ref.watch(authNotifierProvider)`
   // here. Watching it would rebuild this whole provider (and therefore
@@ -61,12 +71,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
-      final isAuthenticated = ref.read(authNotifierProvider).maybeWhen(
+      // Keep the app-wide "current route" mirror up to date on every
+      // navigation, redirect or not.
+      Future.microtask(() {
+        if (ref.read(currentRoutePathProvider) != state.matchedLocation) {
+          ref.read(currentRoutePathProvider.notifier).state = state.matchedLocation;
+        }
+      });
+
+      final currentAuthState = ref.read(authNotifierProvider);
+      final isAuthenticated = currentAuthState.maybeWhen(
         authenticated: (_) => true,
         orElse: () => false,
       );
       final isLoggingIn = state.matchedLocation == '/login';
-      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$authState, isAuthenticated=$isAuthenticated');
+      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated');
 
       // If not authenticated and not on login page, redirect to login
       if (!isAuthenticated && !isLoggingIn) {
@@ -204,9 +223,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StaffAssignmentPage(),
       ),
 
-      // Fees Routes (matching web frontend structure) — Home only for now;
-      // see fees_layout.dart / fees_module_sub_nav.dart for the other 5
-      // sub-nav tabs, not yet built.
+      // Fees Routes (matching web frontend structure) — all 6 sub-nav tabs
+      // (Home, Configuration, Fee Assignment, Collection, Dues & Reminders,
+      // Year-End) are built; see fees_layout.dart / fees_module_sub_nav.dart
+      // for the shared module chrome.
       GoRoute(
         path: '/fees/payments',
         name: 'fees-payments',
@@ -221,6 +241,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/fees/fee-assignment',
         name: 'fees-fee-assignment',
         builder: (context, state) => const FeeAssignmentPage(),
+      ),
+      GoRoute(
+        path: '/fees/collection',
+        name: 'fees-collection',
+        builder: (context, state) => const FeesCollectionPage(),
+      ),
+      GoRoute(
+        path: '/fees/dues-reminders',
+        name: 'fees-dues-reminders',
+        builder: (context, state) => const FeesDuesRemindersPage(),
+      ),
+      GoRoute(
+        path: '/fees/year-end',
+        name: 'fees-year-end',
+        builder: (context, state) => const FeesYearEndPage(),
       ),
 
       // Student List & Enroll Routes
@@ -266,11 +301,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/students/multi-subject-assignment',
         name: 'students-multi-subject-assignment',
         builder: (context, state) => const StudentSubjectAssignmentPage(),
-      ),
-      GoRoute(
-        path: '/students/export',
-        name: 'students-export',
-        builder: (context, state) => const StudentExportPage(),
       ),
       GoRoute(
         path: '/students/promote',

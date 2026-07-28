@@ -74,9 +74,10 @@ class _UnlockEditDialogState extends ConsumerState<UnlockEditDialog> {
         child: GestureDetector(
           onTap: () {},
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 380),
+            constraints: BoxConstraints(maxWidth: 380, maxHeight: MediaQuery.of(context).size.height * 0.85),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFFFDF1DC), borderRadius: BorderRadius.circular(8)), alignment: Alignment.center, child: const Icon(Icons.lock_outline, size: 14, color: Color(0xFFB4721B))),
@@ -129,6 +130,7 @@ class _UnlockEditDialogState extends ConsumerState<UnlockEditDialog> {
                 ),
               ]),
             ]),
+            ),
           ),
         ),
       ),

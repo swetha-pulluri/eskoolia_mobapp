@@ -134,4 +134,20 @@ class DashboardLocalDataSource {
       AppLogger.error('Save local recent modules error', e);
     }
   }
+
+  /// Records a real navigation to [path] as the most-recent entry, moving it
+  /// to the front if already present and capping the list at 8 (matching
+  /// `getRecentModules`'s own default limit) — this is the piece that was
+  /// missing: `saveLocalRecentModules` existed but nothing ever called it
+  /// from an actual navigation event, so "Recently Visited" never populated.
+  Future<void> recordVisit(String path) async {
+    try {
+      final current = await getLocalRecentModules();
+      final filtered = current.where((r) => r.path != path).toList();
+      filtered.insert(0, RecentItemEntity(path: path, visitedAt: DateTime.now()));
+      await saveLocalRecentModules(filtered.take(8).toList());
+    } catch (e) {
+      AppLogger.error('Record visit error', e);
+    }
+  }
 }

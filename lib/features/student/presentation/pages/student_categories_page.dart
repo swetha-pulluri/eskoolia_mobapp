@@ -462,57 +462,59 @@ class _CategoryEditorDialogState extends ConsumerState<_CategoryEditorDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isEditMode ? 'Edit Category' : 'New Category', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name *', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _codeController,
-                decoration: const InputDecoration(labelText: 'Short code', border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                maxLength: 500,
-                decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-              ),
-              Row(
-                children: [
-                  const Text('Active', style: TextStyle(fontSize: 13)),
-                  const Spacer(),
-                  Switch(value: _active, onChanged: (v) => setState(() => _active = v)),
+        constraints: BoxConstraints(maxWidth: 420, maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(isEditMode ? 'Edit Category' : 'New Category', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: 'Name *', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _codeController,
+                  decoration: const InputDecoration(labelText: 'Short code', border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  maxLength: 500,
+                  decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                ),
+                Row(
+                  children: [
+                    const Text('Active', style: TextStyle(fontSize: 13)),
+                    const Spacer(),
+                    Switch(value: _active, onChanged: (v) => setState(() => _active = v)),
+                  ],
+                ),
+                if (_error != null) ...[
+                  Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12)),
+                  const SizedBox(height: 8),
                 ],
-              ),
-              if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12)),
-                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _saving ? null : _save,
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4338CA), foregroundColor: Colors.white),
+                      child: _saving
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text(isEditMode ? 'Save' : 'Create'),
+                    ),
+                  ],
+                ),
               ],
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4338CA), foregroundColor: Colors.white),
-                    child: _saving
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Text(isEditMode ? 'Save' : 'Create'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),

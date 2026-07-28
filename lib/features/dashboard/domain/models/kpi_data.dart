@@ -49,18 +49,4 @@ class KpiData {
       'exams_this_week': examsThisWeek,
     };
   }
-
-  /// Mock data for development (matches screenshot values)
-  factory KpiData.mock() {
-    return const KpiData(
-      totalStudents: 92,
-      attendanceToday: null, // Shows as '—'
-      feesCollectedMtd: '₹0',
-      openAdmissions: 25,
-      totalStaff: 11,
-      libraryBooks: 5,
-      pendingHomework: 1,
-      examsThisWeek: 0,
-    );
-  }
 }

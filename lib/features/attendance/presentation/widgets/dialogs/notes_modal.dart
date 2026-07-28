@@ -36,7 +36,7 @@ class _NotesModalState extends State<NotesModal> {
         child: GestureDetector(
           onTap: () {},
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: BoxConstraints(maxWidth: 400, maxHeight: MediaQuery.of(context).size.height * 0.85),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
             clipBehavior: Clip.antiAlias,
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -57,7 +57,9 @@ class _NotesModalState extends State<NotesModal> {
                   ),
                 ]),
               ),
-              Padding(
+              Flexible(
+                child: SingleChildScrollView(
+                child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   TextField(
@@ -78,6 +80,8 @@ class _NotesModalState extends State<NotesModal> {
                   ),
                   Align(alignment: Alignment.centerRight, child: Text('${_controller.text.length}/250', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA0AE)))),
                 ]),
+                ),
+                ),
               ),
               Container(
                 width: double.infinity,

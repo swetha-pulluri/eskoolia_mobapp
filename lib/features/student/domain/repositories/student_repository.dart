@@ -129,10 +129,11 @@ abstract class StudentRepository {
     String? search,
   });
 
-  /// The only real backend-wired student export (fixed 8 columns, .xlsx) —
-  /// see student_export_page.dart for the CSV/PDF/column-picker gap
-  /// disclosure.
-  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive});
+  /// The only real backend-wired student export (fixed 8 columns, .xlsx).
+  /// `ids`, when provided, restricts the export to those specific students —
+  /// mirrors frontend StudentListPanel.tsx's `handleExportVisible` passing
+  /// the currently-visible rows' ids alongside the active filters.
+  Future<List<int>> exportStudentsXlsx({int? classId, int? sectionId, bool? isActive, List<int>? ids});
 
   /// Powers the "Browse & edit by class" accordion's synthetic "Unassigned"
   /// tab — mirrors the frontend's own `loadClassSection(classId,

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/models/school_class.dart';
 import '../../domain/models/student_data.dart';
 import '../../domain/repositories/student_repository.dart';
@@ -439,6 +440,38 @@ class StudentListNotifier extends StateNotifier<StudentListState> {
 
   void dismissFlash() {
     state = state.copyWith(flashSuccess: null, flashError: null);
+  }
+
+  /// Mirrors frontend StudentListPanel.tsx's page-head "Export" button
+  /// (`handleExportVisible`) exactly: a single click that downloads the
+  /// currently-visible students straight to an .xlsx file — no separate
+  /// screen, filter panel, or confirm dialog. "Visible" here is the active
+  /// section's currently-loaded rows (this accordion shows one section's
+  /// table at a time — see the mobile-simplification note on
+  /// [StudentListState]), alongside the same applied class/section/status
+  /// filters the frontend sends.
+  Future<void> exportVisibleStudents() async {
+    if (state.exporting) return;
+    state = state.copyWith(exporting: true, flashError: null);
+    try {
+      bool? isActive;
+      if (state.appliedStatus == StudentStatusFilter.active) isActive = true;
+      if (state.appliedStatus == StudentStatusFilter.inactive) isActive = false;
+
+      final bytes = await _repository.exportStudentsXlsx(
+        classId: state.appliedClassId,
+        sectionId: state.appliedSectionId,
+        isActive: isActive,
+        ids: state.sectionStudents.map((s) => s.id).toList(),
+      );
+      final filename = 'students-list-${DateTime.now().millisecondsSinceEpoch}.xlsx';
+      await saveBytesForDownload(bytes: bytes, filename: filename);
+      if (!mounted) return;
+      state = state.copyWith(exporting: false, flashSuccess: 'Student list exported to Excel.', flashError: null);
+    } catch (_) {
+      if (!mounted) return;
+      state = state.copyWith(exporting: false, flashError: 'Failed to export student list. Please try again.');
+    }
   }
 }
 

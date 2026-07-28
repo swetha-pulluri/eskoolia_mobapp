@@ -133,12 +133,13 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
     Future.delayed(const Duration(milliseconds: 50), () {
       if (!mounted) return;
       final ctx = _formSectionKey.currentContext;
-      if (ctx != null)
+      if (ctx != null) {
         Scrollable.ensureVisible(
           ctx,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
         );
+      }
     });
   }
 
@@ -152,65 +153,74 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Applicable Roles',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'All roles',
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
+              top: false,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Applicable Roles',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      subtitle: const Text(
-                        'Use this template for every role in the school',
-                        style: TextStyle(fontSize: 11.5),
-                      ),
-                      value: applyAll,
-                      onChanged: (v) => setSheetState(() {
-                        applyAll = v ?? false;
-                        if (applyAll) selected = [];
-                      }),
-                    ),
-                    const Divider(height: 1),
-                    ...roles.map(
-                      (role) => CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                          role.name,
-                          style: const TextStyle(fontSize: 13.5),
+                        const SizedBox(height: 8),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'All roles',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Use this template for every role in the school',
+                            style: TextStyle(fontSize: 11.5),
+                          ),
+                          value: applyAll,
+                          onChanged: (v) => setSheetState(() {
+                            applyAll = v ?? false;
+                            if (applyAll) selected = [];
+                          }),
                         ),
-                        value: selected.contains(role.id),
-                        onChanged: (v) => setSheetState(() {
-                          applyAll = false;
-                          if (v == true) {
-                            if (!selected.contains(role.id))
-                              selected.add(role.id);
-                          } else {
-                            selected.remove(role.id);
-                          }
-                        }),
-                      ),
+                        const Divider(height: 1),
+                        ...roles.map(
+                          (role) => CheckboxListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              role.name,
+                              style: const TextStyle(fontSize: 13.5),
+                            ),
+                            value: selected.contains(role.id),
+                            onChanged: (v) => setSheetState(() {
+                              applyAll = false;
+                              if (v == true) {
+                                if (!selected.contains(role.id)) {
+                                  selected.add(role.id);
+                                }
+                              } else {
+                                selected.remove(role.id);
+                              }
+                            }),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        WebButton(
+                          label: 'Done',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    WebButton(
-                      label: 'Done',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -314,8 +324,9 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       validator: (v) {
                         final value = v?.trim() ?? '';
                         if (value.isEmpty) return 'ID Card title is required.';
-                        if (value.length < 3)
+                        if (value.length < 3) {
                           return 'Title must be at least 3 characters.';
+                        }
                         return null;
                       },
                     ),
@@ -363,12 +374,17 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: AppColors.redSoft,
-                                    border: Border.all(color: AppColors.dangerRed),
+                                    border: Border.all(
+                                      color: AppColors.dangerRed,
+                                    ),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     'Unable to load roles: ${rolesAsync.error}',
-                                    style: const TextStyle(fontSize: 12.5, color: AppColors.dangerRed),
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.dangerRed,
+                                    ),
                                   ),
                                 )
                               : roles.isEmpty
@@ -448,11 +464,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                           : Uint8List.fromList(_bgFrontAttachment!.bytes),
                       onTap: () async {
                         final picked = await _pickImage();
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() {
                             _bgFrontName = picked.name;
                             _bgFrontAttachment = picked;
                           });
+                        }
                       },
                     ),
                     AdminFileField(
@@ -468,11 +485,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                           : Uint8List.fromList(_bgBackAttachment!.bytes),
                       onTap: () async {
                         final picked = await _pickImage();
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() {
                             _bgBackName = picked.name;
                             _bgBackAttachment = picked;
                           });
+                        }
                       },
                     ),
                     AdminFileField(
@@ -490,11 +508,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                           maxBytes: 1024 * 1024,
                           extensions: const ['png', 'jpg', 'jpeg', 'svg'],
                         );
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() {
                             _logoName = picked.name;
                             _logoAttachment = picked;
                           });
+                        }
                       },
                     ),
                     AdminFileField(
@@ -509,11 +528,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                           : Uint8List.fromList(_signatureAttachment!.bytes),
                       onTap: () async {
                         final picked = await _pickImage(maxBytes: 1024 * 1024);
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() {
                             _signatureName = picked.name;
                             _signatureAttachment = picked;
                           });
+                        }
                       },
                     ),
                     const SizedBox(height: 6),
