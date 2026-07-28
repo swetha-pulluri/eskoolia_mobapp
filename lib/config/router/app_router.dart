@@ -37,6 +37,11 @@ import '../../features/academics/presentation/pages/staff_assignment/staff_assig
 import '../../features/fees/presentation/pages/fees_home_page.dart';
 import '../../features/fees/presentation/pages/fee_configuration_page.dart';
 import '../../features/fees/presentation/pages/fee_assignment_page.dart';
+import '../../features/hr/presentation/pages/hr_setup_page.dart';
+import '../../features/hr/presentation/pages/staff_attendance_page.dart';
+import '../../features/hr/presentation/pages/staff_directory_page.dart';
+import '../../features/hr/presentation/pages/staff_form_page.dart';
+import '../../features/hr/presentation/pages/staff_onboard_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -61,7 +66,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
-      final isAuthenticated = ref.read(authNotifierProvider).maybeWhen(
+      final authState = ref.read(authNotifierProvider);
+      final isAuthenticated = authState.maybeWhen(
         authenticated: (_) => true,
         orElse: () => false,
       );
@@ -276,6 +282,54 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/students/promote',
         name: 'students-promote',
         builder: (context, state) => const StudentPromotionPage(),
+      ),
+
+      // Human Resource Routes — UI matches the real, dormant `HrPanels.tsx`
+      // components on the current `main` branch; API integration matches
+      // the ACTUAL currently-running backend (verified read-only), not the
+      // richer unmerged `demo` branch schema.
+      GoRoute(
+        path: '/hr/setup',
+        name: 'hr-setup',
+        builder: (context, state) => const HrSetupPage(),
+      ),
+      GoRoute(
+        path: '/hr/directory',
+        name: 'hr-staff-directory',
+        builder: (context, state) => const StaffDirectoryPage(),
+      ),
+      GoRoute(
+        path: '/hr/staff',
+        name: 'hr-staff-form',
+        builder: (context, state) {
+          final editParam = state.uri.queryParameters['edit'];
+          final tabParam = state.uri.queryParameters['tab'];
+          return StaffFormPage(
+            editId: editParam != null ? int.tryParse(editParam) : null,
+            initialTab: tabParam != null ? int.tryParse(tabParam) ?? 0 : 0,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/hr/attendance',
+        name: 'hr-staff-attendance',
+        builder: (context, state) => const StaffAttendancePage(),
+      ),
+      GoRoute(
+        path: '/hr/onboard',
+        name: 'hr-staff-onboard',
+        builder: (context, state) {
+          final editParam = state.uri.queryParameters['edit'];
+          final draftParam = state.uri.queryParameters['draft'];
+          final departmentParam = state.uri.queryParameters['department'];
+          final stepParam = state.uri.queryParameters['step'];
+          return StaffOnboardPage(
+            editId: editParam != null ? int.tryParse(editParam) : null,
+            resumeDraftId: draftParam != null ? int.tryParse(draftParam) : null,
+            initialDepartmentId: departmentParam != null ? int.tryParse(departmentParam) : null,
+            initialStep: stepParam != null ? int.tryParse(stepParam) : null,
+          );
+        },
       ),
 
       // Note: Assign Permissions is not a separate route — it's a tab within

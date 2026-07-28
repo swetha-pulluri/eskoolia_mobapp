@@ -138,11 +138,13 @@ class Modules {
     ModuleEntity(
       id: 'hr',
       name: 'Human Resource',
-      path: '/hr/staff',
+      // Only the Setup submodule (Departments/Designations wizard) is built
+      // so far, matching the real web's `/hr/setup` default route.
+      path: '/hr/setup',
       icon: Icons.badge_outlined,
       bgColor: AppColors.hrBg,
       iconColor: AppColors.hrIc,
-      comingSoon: true,
+      comingSoon: false,
     ),
     // Finance, Library, Transport, Inventory, Utilities are commented out in web - REMOVED to match web's 12 modules
   ];

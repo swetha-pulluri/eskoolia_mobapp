@@ -1367,3 +1367,108 @@ throwaway test file afterward.
 `flutter analyze`: 0 errors (same pre-existing info-level lints as always, none new). `flutter
 build web --release`: succeeded. No files outside `eskoolia_mobapp` modified (pubspec.yaml already
 had `share_plus` from the Admissions pass, reused here); no git operations performed.
+
+---
+
+Name: Archana
+Date: July 27, 2026
+Git Branch: main
+
+## Human Resource module: Setup, Staff Directory, and a full 10-step Onboarding Wizard build
+
+Started a new module, **Human Resource** (Setup / Staff List & Onboarding / Attendance), continuing
+the same "inspect real web + backend read-only before writing code" discipline used throughout.
+Repeated the exact same `main`-is-stale-vs-`demo`-is-real pattern seen earlier in Administration:
+`main`'s HR pages are dormant/`ComingSoon`-wrapped or a much simpler schema, while the actually-live
+product's richer HR schema and pages live on `origin/demo`/`origin/BugFix`.
+
+### HR Setup — Department drawer fix
+1. Re-verified the Add/Edit Department drawer against the real backend after a user-reported
+   mismatch ("dropdown options only showing two", department fields not matching web). Found the
+   real, migrated `Department` model on `origin/demo` has 9 real fields (`short_code`, `dept_type`,
+   `status`, `working_days`, `head`/`deputy_head`, `email`, plus `staff_count` via a real
+   `Count()` annotation) that an earlier pass had incorrectly stripped out assuming they were
+   demo-only/fake — confirmed real via migrations `0014`-`0027` on `apps/hr/models.py`.
+2. Rebuilt `department_entity.dart`/`hr_department_form.dart` to carry and edit all 9 real fields,
+   added `DepartmentTypeEntity` + `/api/v1/hr/department-types/` (list + create-custom-type popup),
+   wired Department Head/Deputy Head to the real active-staff list.
+3. Root-caused the "dropdown shows only two options" report to the real
+   `/api/v1/master/{languages,religions,countries,employment-types}/` endpoints not existing on
+   `main` at all (confirmed via `git ls-tree main -- backend/apps/master` — empty) — a backend
+   deployment gap, not a Flutter bug; disclosed clearly rather than faked.
+
+### HR Staff List & Onboarding (Directory) — filters, actions, and a real crash fix
+4. Added the missing **Present Today** Smart Filter (real, computed from the actual day's
+   `/api/v1/hr/staff-attendance/` records — matches web's own semantics) and an **Employment**
+   filter kept intentionally decorative, matching a confirmed real web limitation (its own
+   Full-time/Part-time/Contract options don't correspond to any real backend field either).
+5. Rebuilt the department accordion's stat row and ring to match the real `HrDirectoryPage` exactly
+   (`X staff / X active / X roles / X present today` chips + a brand-purple percentage donut) —
+   both were completely missing before. Fixed the department list's sort order (real web sorts
+   alphabetically by name; Flutter was trusting unsorted backend order) by adding an explicit
+   client-side sort, since `DepartmentViewSet`'s `staff_count` annotation can silently disrupt the
+   model's own `Meta.ordering`.
+6. Rebuilt the row-level action icons to the real 4-icon set (View/Edit/Documents/More, matching
+   `HrDirectoryPage`'s own icons) with a working overflow menu (Deactivate/Activate, Delete) instead
+   of a bare Delete icon the real web doesn't have.
+7. **Found and fixed a real crash**: tapping the "View" (eye) icon threw an assertion error
+   immediately (`showGeneralDialog` was called with `barrierDismissible: true` but no
+   `barrierLabel` — Flutter requires both together) — user-reported live, then reproduced and fixed
+   via a widget test. Rebuilt the profile drawer's content to match the real drawer exactly: added
+   the genuinely-real `official_email`/`personal_email`/`whatsapp` `Staff` fields (confirmed present
+   on the real serializer, missing from the earlier `StaffEntity`), relabeled Compensation
+   "GROSS MONTHLY" (was "BASIC SALARY"), and confirmed "Type"/"Reports to" should always show "—"
+   since neither `employment_type` nor `reporting_manager` are real `Staff` fields on the backend
+   even on web — a genuine web limitation, matched rather than "improved" on.
+8. Fixed Edit/Documents action buttons, which were navigating to the old 5-tab Staff form instead
+   of the real Onboarding Wizard the web itself uses for editing — repointed to
+   `/hr/onboard?edit={id}` / `?edit={id}&step=9`, adding `?step=` support to the router.
+
+### HR Onboarding Wizard — full build (`/hr/onboard`, 10 steps)
+9. Investigated thoroughly before building anything (two parallel research passes over the real
+   ~4,790-line `hr/onboard/page.tsx` and the corresponding backend) after discovering an earlier
+   assumption — that this wizard's backend was "100% non-functional" — was wrong, mirroring the
+   Department-fields correction above. Confirmed real: `StaffOnboardDraft`/`StaffOnboardDocument`
+   models, reportlab-generated blank/filled PDF views, `/api/v1/master/*`, and the pincode-lookup
+   proxy. Confirmed genuinely decorative even on the real web itself: AI Assist, "Scan to pre-fill",
+   Upload signed, Scan & fill — kept as the same toast-only stubs; substituted the browser-only
+   "Print/PDF" (`window.print()`) with a real filled-form PDF download+share.
+10. Built all 10 steps (Staff identity → Role & placement → Contact & address → Family & emergency
+    → Government identity → Qualifications → Medical & fitness → Payroll setup → Documents →
+    Review & onboard) against the real endpoints: drafts save/resume/delete/list, blank/filled PDF,
+    document upload/list/delete (with the real signature+Aadhaar mandatory-doc gate), master-data
+    dropdowns, PIN code auto-fill, and a shared IFSC bank-lookup helper (deduplicated out of the
+    existing Staff form rather than copy-pasted). Final submit reuses the same real
+    `createStaff`/`updateStaff` endpoint the rest of the app already uses; fields beyond the
+    existing `StaffEntity` schema (nationality, emergency contacts, nominees, qualifications,
+    disability info, etc.) are carried through the real `Staff.custom_field` JSON blob rather than
+    requiring a wider entity rewrite.
+11. Added a compact "Step X/10" progress header + tap-to-jump bottom sheet (grouped
+    Personal/Compliance/Payroll & Files, matching web's sidebar grouping) as the mobile-appropriate
+    replacement for the real page's desktop-only permanent sidebar.
+12. Found and fixed a real overflow bug via a widget test: the header (hero row, stub buttons,
+    banner, step progress) and footer together exceeded the viewport height once squeezed by a
+    narrow layout — fixed by folding the header into the same scrollable region as the step content.
+
+### Dropdown mismatch investigation (read-only; no fixes applied yet, per explicit instruction)
+13. Ran a full, separate investigation (no code changes) auditing all 24 distinct dropdown/select
+    fields across the Onboarding Wizard against the real web and backend. Headline finding: **Mother
+    Tongue, Religion, Nationality, and Employment Type all have a duplicate `"Other"` item** — the
+    real backend's master lists already end with a literal `"Other"` entry, and the wizard's own
+    `_masterOrOther()` helper appends a second one, which will crash `DropdownButton`'s
+    exactly-one-match assertion the moment "Other" is selected. Also found: the Role dropdown was
+    reading from the wrong backend endpoint (`/api/v1/access-control/roles/`, paginated to ~10 and
+    excludes inactive roles) instead of the real one used for this field
+    (`/api/v1/hr/staff/form-options/`); Department/Designation dropdowns similarly used the
+    active-only `form-options` list instead of the real unfiltered dedicated endpoints; Emergency
+    Contact/Nominee "Relationship" should be a dropdown (`Spouse/Parent/Sibling/Child/Friend/
+    Guardian/Other`) but was built as free text; the Degree and Disability Status lists don't match
+    the real web's actual values at all. Full mismatch report with exact file/line targets delivered
+    to the user; fixes intentionally not yet applied, pending direction on which to prioritize.
+
+`flutter analyze`: 0 errors across every change this session (same pre-existing info-level lints
+throughout, none new). Every fix verified with a throwaway Riverpod-override widget test
+(FakeHrRepository pattern) that was deleted immediately after passing. No files outside
+`eskoolia_mobapp` modified; all backend/web verification was read-only (`git show` against
+`origin/demo`/`origin/main`, direct model/serializer/view reads) — no backend, frontend, or database
+changes made. No git operations performed.
