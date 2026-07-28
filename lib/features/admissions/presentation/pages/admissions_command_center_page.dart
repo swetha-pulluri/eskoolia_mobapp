@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../administration/domain/entities/admin_setup_entity.dart';
 import '../../domain/entities/inquiry_entity.dart';
 import '../../domain/entities/school_class_entity.dart';
 import '../providers/admissions_provider.dart';
@@ -180,8 +181,8 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
   Widget build(BuildContext context) {
     final inquiries = ref.watch(inquiriesProvider).maybeWhen(data: (v) => v, orElse: () => const <InquiryEntity>[]);
     final classes = ref.watch(schoolClassesProvider).maybeWhen(data: (v) => v, orElse: () => const <SchoolClassEntity>[]);
-    final sources = ref.watch(admissionSourcesProvider).maybeWhen(data: (v) => v, orElse: () => const []);
-    final references = ref.watch(admissionReferencesProvider).maybeWhen(data: (v) => v, orElse: () => const []);
+    final sources = ref.watch(admissionSourcesProvider).maybeWhen(data: (v) => v, orElse: () => const <AdminSetupEntity>[]);
+    final references = ref.watch(admissionReferencesProvider).maybeWhen(data: (v) => v, orElse: () => const <AdminSetupEntity>[]);
     final selectedClassId = ref.watch(selectedClassIdProvider);
     final showWorkspace = ref.watch(classWorkspaceVisibleProvider);
 

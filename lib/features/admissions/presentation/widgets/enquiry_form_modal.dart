@@ -16,7 +16,8 @@ bool _isValidName(String v) => RegExp(r"^[A-Za-z\s\-']+$").hasMatch(v);
 bool _isValidPhone(String v) => RegExp(r'^[6-9]\d{9}$').hasMatch(v);
 
 /// New / Edit Enquiry — converted from `AdmissionsCommandCenter.tsx`'s
-/// "ADMISSION FORM MODAL". Quick Add (5 fields) for brand-new inquiries,
+/// "ADMISSION FORM MODAL". Quick Add (6 fields, including Reference) for
+/// brand-new inquiries,
 /// or a Full 3-step wizard (Parent/Guardian → Child Details → Preferences)
 /// for edits or when the user switches to "📋 Full". Includes the web's
 /// duplicate-phone detection + merge-into-existing flow on Quick Add.
@@ -421,6 +422,8 @@ class _EnquiryFormModalState extends ConsumerState<EnquiryFormModal> {
         _field('Grade Applying For', child: _classDropdown()),
         const SizedBox(height: 14),
         _field('How did they hear about us?', child: _sourceDropdown()),
+        const SizedBox(height: 14),
+        _field('Reference', child: _referenceDropdown()),
         const SizedBox(height: 14),
         _field('Next Follow-up *', error: _errors['next_follow_up_date'], child: _followUpQuickField()),
       ],

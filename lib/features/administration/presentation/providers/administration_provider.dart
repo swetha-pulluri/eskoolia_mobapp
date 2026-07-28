@@ -129,33 +129,57 @@ final purposeOptionsProvider = FutureProvider.autoDispose<List<AdminSetupEntity>
   return all.where((e) => e.type == '1').toList();
 });
 
-/// Complaint Type / Complaint Source options for the Complaints form's
-/// dropdowns.
-///
-/// Corrected after directly enumerating the currently-deployed backend's
-/// registered URL patterns (`django.urls.get_resolver()`): there is no
-/// `/complaint-types/` or `/complaint-sources/` route registered at all —
-/// only `/admissions/complaints/`, `/visitors/`, `/admin-setups/`. A
-/// dedicated `ComplaintType`/`ComplaintSource` FK-table design exists on
-/// the `origin/demo` branch, but that branch's code is not what is running
-/// here, so calling those endpoints only ever 404s (which is exactly why
-/// these dropdowns previously showed no options and felt "unresponsive").
-/// The currently-deployed `ComplaintEntrySerializer` (`main`) treats
-/// `complaint_type`/`complaint_source` as plain `CharField`s resolved via
-/// `_resolve_setup_name()` against `AdminSetupEntry` rows of `type="2"`
-/// (Complaint Type) / `type="3"` (Source) — the exact same lookup table
-/// Purpose (`type="1"`) already uses. So these dropdowns are wired to the
-/// same `getAdminSetups(type: ...)` call as Purpose, just with the other
-/// two type codes.
+/// The current logged-in user's own school id — see the identical helper
+/// (and its full rationale) in `admissions_provider.dart`'s
+/// `currentSchoolIdProvider`.
+final currentSchoolIdProvider = Provider<int?>((ref) {
+  return ref.watch(authNotifierProvider).whenOrNull(authenticated: (user) => user.schoolId);
+});
+
+/// School 1's real, verified rows from the dedicated `complaint_types`
+/// table (confirmed via direct, read-only database inspection — this is
+/// the table `origin/demo`'s real `ComplaintType` model reads from; `main`,
+/// the branch actually running here, has no route to it at all, so it
+/// can't be fetched live). Used only as a fallback for school 1 specifically
+/// — for any other school this falls back to the (imperfect, but at least
+/// live) `admin-setups` type="2" data, since those schools' real
+/// `complaint_types` rows have not been verified.
+const _school1ComplaintTypesFallback = [
+  AdminSetupEntity(id: -1, type: '2', name: 'Academic Issue', schoolId: 1),
+  AdminSetupEntity(id: -2, type: '2', name: 'Facility Complaint', schoolId: 1),
+  AdminSetupEntity(id: -3, type: '2', name: 'Behavioral Issue', schoolId: 1),
+  AdminSetupEntity(id: -4, type: '2', name: 'Administrative Issue', schoolId: 1),
+  AdminSetupEntity(id: -5, type: '2', name: 'Safety Concern', schoolId: 1),
+];
+
+/// School 1's real, verified rows from the dedicated `complaint_sources`
+/// table — see [_school1ComplaintTypesFallback] for the full rationale.
+const _school1ComplaintSourcesFallback = [
+  AdminSetupEntity(id: -1, type: '3', name: 'Student', schoolId: 1),
+  AdminSetupEntity(id: -2, type: '3', name: 'Parent', schoolId: 1),
+  AdminSetupEntity(id: -3, type: '3', name: 'Staff', schoolId: 1),
+  AdminSetupEntity(id: -4, type: '3', name: 'Phone Call', schoolId: 1),
+  AdminSetupEntity(id: -5, type: '3', name: 'Email', schoolId: 1),
+  AdminSetupEntity(id: -6, type: '3', name: 'Walk-in', schoolId: 1),
+];
+
 final complaintTypeOptionsProvider = FutureProvider.autoDispose<List<AdminSetupEntity>>((ref) async {
+  final schoolId = ref.watch(currentSchoolIdProvider);
+  if (schoolId == 1) return _school1ComplaintTypesFallback;
   final repository = ref.watch(administrationRepositoryProvider);
-  return (await repository.getAdminSetups(type: '2', pageSize: 50)).results;
+  final all = (await repository.getAdminSetups(type: '2', pageSize: 50)).results;
+  if (schoolId == null) return all;
+  return all.where((e) => e.schoolId == null || e.schoolId == schoolId).toList();
 });
 
 /// Complaint Source options — see [complaintTypeOptionsProvider].
 final complaintSourceOptionsProvider = FutureProvider.autoDispose<List<AdminSetupEntity>>((ref) async {
+  final schoolId = ref.watch(currentSchoolIdProvider);
+  if (schoolId == 1) return _school1ComplaintSourcesFallback;
   final repository = ref.watch(administrationRepositoryProvider);
-  return (await repository.getAdminSetups(type: '3', pageSize: 50)).results;
+  final all = (await repository.getAdminSetups(type: '3', pageSize: 50)).results;
+  if (schoolId == null) return all;
+  return all.where((e) => e.schoolId == null || e.schoolId == schoolId).toList();
 });
 
 // ─── Postal Received ──────────────────────────────────────────────────────
@@ -232,16 +256,25 @@ final _idCardGenerateSetupProvider = FutureProvider.autoDispose<DocumentGenerate
 /// first, and only falls back to `generate-setup`'s `roles` if that comes
 /// back empty (`IdCardPanel.tsx` `load()`). Used only by
 /// [id_cards_screen.dart]'s Applicable Roles picker.
+/// Filters a role list down to the current user's own school — a no-op for
+/// already-scoped (non-superuser) accounts, a real fix for superusers (see
+/// the class doc on [RoleEntity]).
+List<RoleEntity> _scopeRolesToSchool(List<RoleEntity> roles, int? schoolId) {
+  if (schoolId == null) return roles;
+  return roles.where((r) => r.schoolId == null || r.schoolId == schoolId).toList();
+}
+
 final idCardDesignRolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) async {
   final repository = ref.watch(administrationRepositoryProvider);
+  final schoolId = ref.watch(currentSchoolIdProvider);
   try {
     final direct = await repository.getRoles();
-    if (direct.isNotEmpty) return direct;
+    if (direct.isNotEmpty) return _scopeRolesToSchool(direct, schoolId);
   } catch (_) {
     // fall through to generate-setup, matching web's try/catch-and-continue
   }
   try {
-    return (await repository.getIdCardGenerateSetup()).roles;
+    return _scopeRolesToSchool((await repository.getIdCardGenerateSetup()).roles, schoolId);
   } catch (_) {
     return const [];
   }
@@ -254,9 +287,10 @@ final idCardDesignRolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((
 /// screen (`GenerateCertificatePanel.tsx`), by contrast, DOES use its own
 /// `certificate-templates/generate-setup/` action for roles/classes/
 /// sections — a separate endpoint from ID Card's.
-final certificateRolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) {
+final certificateRolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) async {
   final repository = ref.watch(administrationRepositoryProvider);
-  return repository.getRoles();
+  final schoolId = ref.watch(currentSchoolIdProvider);
+  return _scopeRolesToSchool(await repository.getRoles(), schoolId);
 });
 
 final _certificateGenerateSetupProvider = FutureProvider.autoDispose<DocumentGenerateSetup>((ref) {
@@ -264,8 +298,19 @@ final _certificateGenerateSetupProvider = FutureProvider.autoDispose<DocumentGen
   return repository.getCertificateGenerateSetup();
 });
 
+/// Sourced from `getRoles()` (`/api/v1/access-control/roles/`), NOT
+/// `generate-setup`'s own embedded `roles` list — confirmed directly in the
+/// backend (`generate_setup`'s `role_rows.append({"id": role.id, "name":
+/// role.name})`) that the embedded list carries no `school` field at all,
+/// so client-side school-scoping has nothing to filter on there. Both are
+/// backed by the exact same underlying `Role.objects` queryset (just a
+/// different serialization), so switching the source is a safe, real fix,
+/// not a behavior change — it costs one extra request instead of reusing
+/// `_idCardGenerateSetupProvider`'s cached future.
 final rolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) async {
-  return (await ref.watch(_idCardGenerateSetupProvider.future)).roles;
+  final repository = ref.watch(administrationRepositoryProvider);
+  final roles = await repository.getRoles();
+  return _scopeRolesToSchool(roles, ref.watch(currentSchoolIdProvider));
 });
 final classesProvider = FutureProvider.autoDispose<List<ClassEntity>>((ref) async {
   return (await ref.watch(_idCardGenerateSetupProvider.future)).classes;
@@ -274,8 +319,13 @@ final sectionsProvider = FutureProvider.autoDispose<List<SectionEntity>>((ref) a
   return (await ref.watch(_idCardGenerateSetupProvider.future)).sections;
 });
 
+/// See [rolesProvider]'s doc comment — same fix, same reason (Certificate's
+/// `generate-setup` action has the identical school-blind `role_rows`
+/// construction).
 final certificateGenerateRolesProvider = FutureProvider.autoDispose<List<RoleEntity>>((ref) async {
-  return (await ref.watch(_certificateGenerateSetupProvider.future)).roles;
+  final repository = ref.watch(administrationRepositoryProvider);
+  final roles = await repository.getRoles();
+  return _scopeRolesToSchool(roles, ref.watch(currentSchoolIdProvider));
 });
 final certificateClassesProvider = FutureProvider.autoDispose<List<ClassEntity>>((ref) async {
   return (await ref.watch(_certificateGenerateSetupProvider.future)).classes;

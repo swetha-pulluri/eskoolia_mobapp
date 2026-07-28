@@ -54,7 +54,19 @@ class HrRemoteDataSource {
       // crash with a confusing `_JsonMap is not a subtype of String?`
       // TypeError that masked the real backend error entirely.
       final rawMessage = data['message'] ?? data['error'] ?? data['detail'];
-      final message = rawMessage is String ? rawMessage : rawMessage?.toString();
+      // Some error bodies nest a `{"code": "...", "message": "..."}` object
+      // under `error` (e.g. a generic 500 envelope) rather than a bare
+      // string — pull the real message out instead of falling through to
+      // `.toString()`, which used to render the raw Dart Map literally
+      // (`{code: internal_server_error, message: ...}`) as the shown error.
+      final String? message;
+      if (rawMessage is String) {
+        message = rawMessage;
+      } else if (rawMessage is Map && rawMessage['message'] is String) {
+        message = rawMessage['message'] as String;
+      } else {
+        message = rawMessage?.toString();
+      }
       final rawErrors = data['errors'];
       final fieldErrors = <String, String>{};
       if (rawErrors is Map) {

@@ -42,17 +42,6 @@ class HrLayout extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.borderPrimary, width: 1))),
-                    child: Row(children: [
-                      IconButton(icon: const Icon(Icons.arrow_back, size: 20), onPressed: () => context.go('/home'), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.badge_outlined, size: 20, color: HrColors.brand),
-                      const SizedBox(width: 8),
-                      const Text('Human Resource', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                    ]),
-                  ),
-                  Container(
                     height: 46,
                     decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.borderPrimary, width: 1))),
                     child: ListView(

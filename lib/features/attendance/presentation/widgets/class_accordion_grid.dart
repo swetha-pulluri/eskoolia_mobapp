@@ -305,7 +305,7 @@ class _ClassCardState extends State<_ClassCard> {
     final levelBorderColor = cls.level == 'primary' ? const Color(0xFF22C55E) : cls.level == 'middle' ? const Color(0xFF4729F4) : const Color(0xFFF59E0B);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -322,21 +322,21 @@ class _ClassCardState extends State<_ClassCard> {
               onTap: () => widget.onToggle(cls.id),
               child: Container(
                 color: widget.isOpen ? const Color(0xFFF8F6FF) : Colors.transparent,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 child: Row(
                   children: [
                     AnimatedRotation(
                       turns: widget.isOpen ? 0.25 : 0,
                       duration: const Duration(milliseconds: 200),
-                      child: const Icon(Icons.chevron_right, size: 18, color: Color(0xFF9CA0AE)),
+                      child: const Icon(Icons.chevron_right, size: 16, color: Color(0xFF9CA0AE)),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(cls.displayLabel, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
-                        if (cls.subLabel.isNotEmpty) Text(cls.subLabel, style: const TextStyle(fontSize: 10, color: Color(0xFF9CA0AE))),
+                        Text(cls.displayLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
+                        if (cls.subLabel.isNotEmpty) Text(cls.subLabel, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
                       ],
                     ),
                     const SizedBox(width: 10),
@@ -369,13 +369,13 @@ class _ClassCardState extends State<_ClassCard> {
                           child: const Text('✓ Mark All Present'),
                         ),
                       ),
-                    AttendanceRing(pct: attendancePct, size: 38, strokeWidth: 3.5),
-                    const SizedBox(width: 6),
+                    AttendanceRing(pct: attendancePct, size: 32, strokeWidth: 3),
+                    const SizedBox(width: 5),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('$attendancePct%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: attendancePct == 0 ? const Color(0xFFEF4444) : const Color(0xFF4729F4))),
-                        const Text('today', style: TextStyle(fontSize: 10, color: Color(0xFF9CA0AE))),
+                        Text('$attendancePct%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: attendancePct == 0 ? const Color(0xFFEF4444) : const Color(0xFF4729F4))),
+                        const Text('today', style: TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
                       ],
                     ),
                   ],
@@ -425,9 +425,9 @@ class _ClassCardState extends State<_ClassCard> {
 
   Widget _pill(String text, Color bg, Color fg, {Color? border}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(color: bg, border: border != null ? Border.all(color: border) : null, borderRadius: BorderRadius.circular(999)),
-      child: Text(text, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
+      child: Text(text, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
@@ -611,13 +611,13 @@ class _SectionInnerBar extends StatelessWidget {
         spacing: 12,
         runSpacing: 6,
         children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            _dot(present, 'present', const Color(0xFF0A8C5A)),
-            const SizedBox(width: 12),
-            _dot(absent, 'absent', const Color(0xFFC2264E)),
-            const SizedBox(width: 12),
-            _dot(late, 'late', const Color(0xFFB4721B)),
-          ]),
+          // Flattened directly into the outer `Wrap` (not grouped into an
+          // inner non-wrapping `Row`) so narrow widths can break between
+          // individual dots instead of forcing all three onto one line and
+          // overflowing.
+          _dot(present, 'present', const Color(0xFF0A8C5A)),
+          _dot(absent, 'absent', const Color(0xFFC2264E)),
+          _dot(late, 'late', const Color(0xFFB4721B)),
           Row(mainAxisSize: MainAxisSize.min, children: [
             SizedBox(
               width: 70,
@@ -669,31 +669,48 @@ class _SectionFooter extends StatefulWidget {
 }
 
 class _SectionFooterState extends State<_SectionFooter> {
-  bool _showResetConfirm = false;
+  Future<void> _confirmReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset Attendance?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
+        content: const Text('This will discard all unsaved changes for this section and reload from the server.', style: TextStyle(fontSize: 12, color: Color(0xFF6B6B7B))),
+        actions: [
+          OutlinedButton(onPressed: () => Navigator.of(context).pop(false), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF3A3A4A), side: const BorderSide(color: Color(0xFFE6E6EC))), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC2264E), foregroundColor: Colors.white),
+            child: const Text('Yes, Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) widget.onReset();
+  }
 
   @override
   Widget build(BuildContext context) {
     final allMarked = widget.total > 0 && (widget.present + widget.absent + widget.late) >= widget.total;
-    return Stack(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          decoration: const BoxDecoration(color: Color(0xFFFAFAFD), border: Border(top: BorderSide(color: Color(0xFFF1F1F5)))),
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 10,
-            runSpacing: 8,
-            alignment: WrapAlignment.spaceBetween,
-            children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                _dot(widget.present, 'present', const Color(0xFF0A8C5A)),
-                const SizedBox(width: 10),
-                _dot(widget.absent, 'absent', const Color(0xFFC2264E)),
-                const SizedBox(width: 10),
-                _dot(widget.late, 'late', const Color(0xFFB4721B)),
-              ]),
-              Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: const BoxDecoration(color: Color(0xFFFAFAFD), border: Border(top: BorderSide(color: Color(0xFFF1F1F5)))),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 10,
+        runSpacing: 8,
+        alignment: WrapAlignment.spaceBetween,
+        children: [
+          // Flattened directly into the outer `Wrap` — see
+          // `_SectionInnerBar`'s identical fix above for why (an inner
+          // non-wrapping `Row` here overflows at narrow widths instead of
+          // letting the dots break onto their own line).
+          Wrap(spacing: 10, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            _dot(widget.present, 'present', const Color(0xFF0A8C5A)),
+            _dot(widget.absent, 'absent', const Color(0xFFC2264E)),
+            _dot(widget.late, 'late', const Color(0xFFB4721B)),
+          ]),
+          Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 Tooltip(
                   message: allMarked ? 'All students already marked' : 'Mark all unmarked students present',
                   child: OutlinedButton(
@@ -714,7 +731,7 @@ class _SectionFooterState extends State<_SectionFooter> {
                   const Text('Auto-saving', style: TextStyle(fontSize: 11, color: Color(0xFF9CA0AE))),
                 ]),
                 OutlinedButton(
-                  onPressed: () => setState(() => _showResetConfirm = true),
+                  onPressed: _confirmReset,
                   style: OutlinedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF3A3A4A), side: const BorderSide(color: Color(0xFFE6E6EC)), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                   child: const Text('Reset'),
                 ),
@@ -726,54 +743,7 @@ class _SectionFooterState extends State<_SectionFooter> {
               ]),
             ],
           ),
-        ),
-        if (_showResetConfirm)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => setState(() => _showResetConfirm = false),
-              child: Container(
-                color: const Color(0x66000000),
-                alignment: Alignment.center,
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 360),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('Reset Attendance?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
-                          const SizedBox(height: 4),
-                          const Text('This will discard all unsaved changes for this section and reload from the server.', style: TextStyle(fontSize: 12, color: Color(0xFF6B6B7B))),
-                        ]),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        color: const Color(0xFFFAFAFD),
-                        child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                          OutlinedButton(onPressed: () => setState(() => _showResetConfirm = false), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF3A3A4A), side: const BorderSide(color: Color(0xFFE6E6EC))), child: const Text('Cancel')),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() => _showResetConfirm = false);
-                              widget.onReset();
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC2264E), foregroundColor: Colors.white),
-                            child: const Text('Yes, Reset'),
-                          ),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+        );
   }
 
   Widget _dot(int count, String label, Color color) {

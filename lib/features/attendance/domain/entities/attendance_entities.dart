@@ -46,6 +46,7 @@ class SectionSummaryEntity {
 
 class ClassInfoEntity {
   final int id;
+  final int? schoolId;
   final String name;
   final String displayLabel;
   final String subLabel;
@@ -62,6 +63,7 @@ class ClassInfoEntity {
 
   const ClassInfoEntity({
     required this.id,
+    this.schoolId,
     required this.name,
     required this.displayLabel,
     this.subLabel = '',
@@ -81,6 +83,13 @@ class ClassInfoEntity {
   /// web's `hooks/useClasses.ts` mapping (`display_label` = name as-is,
   /// `level` derived via the same grade-number heuristic web uses:
   /// Nursery/LKG/UKG or grade ≤5 → primary, ≤8 → middle, else secondary).
+  /// `school` is a real serializer field (`ClassSerializer.Meta.fields`) —
+  /// needed because `ClassViewSet.get_queryset()` returns EVERY school's
+  /// classes unscoped for superusers, so a superuser account genuinely
+  /// receives one row per school for each class name (e.g. 3 separate
+  /// "Nursery" rows for 3 schools) — real, non-duplicate data that
+  /// `classesProvider` filters down to the current user's own school using
+  /// this field (see `attendance_provider.dart`).
   factory ClassInfoEntity.fromJson(Map<String, dynamic> json) {
     final name = json['name'] as String? ?? '';
     final sectionsJson = json['sections'] as List? ?? const [];
@@ -88,6 +97,7 @@ class ClassInfoEntity {
     final totalStudents = (json['total_students'] as num?)?.toInt() ?? sections.fold<int>(0, (s, sec) => s + sec.studentCount);
     return ClassInfoEntity(
       id: json['id'] as int,
+      schoolId: json['school'] as int?,
       name: name,
       displayLabel: name,
       level: _levelFor(name),
@@ -119,6 +129,7 @@ class ClassInfoEntity {
   }) {
     return ClassInfoEntity(
       id: id,
+      schoolId: schoolId,
       name: name,
       displayLabel: displayLabel,
       subLabel: subLabel,

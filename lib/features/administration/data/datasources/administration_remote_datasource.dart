@@ -525,8 +525,16 @@ class AdministrationRemoteDataSource {
   }
 
   // ─── Roles (shared role picker for ID Card / Certificate forms) ──────
+  /// `RoleViewSet` paginates at `ApiPageNumberPagination`'s default
+  /// `page_size=10` — with 33 real roles across all schools (confirmed live),
+  /// an unpaginated request silently returned only the first 10, which is
+  /// exactly why the client-side school-scoping filter in
+  /// `administration_provider.dart` appeared to "lose" most roles: it was
+  /// filtering an already-truncated page, not the full list. `page_size=100`
+  /// is the server's own `max_page_size`, comfortably covering the real
+  /// total.
   Future<List<RoleEntity>> getRoles() async {
-    final response = await _dioClient.get('/api/v1/access-control/roles/');
+    final response = await _dioClient.get('/api/v1/access-control/roles/', queryParameters: {'page_size': 100});
     final data = response.data;
     final list = data is List ? data : (data as Map<String, dynamic>)['results'] as List? ?? const [];
     return list.map((e) => RoleEntity.fromJson(e as Map<String, dynamic>)).toList();

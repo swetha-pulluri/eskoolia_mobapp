@@ -56,11 +56,25 @@ final isEditUnlockedProvider = StateProvider<bool>((ref) => false);
 /// each class's live present/absent/late/overall% from
 /// `/student-attendance/class-summary/?date=...` (mirrors web's
 /// `useClasses`+`class-summary` merge, `hooks/useClasses.ts:241-244`).
+///
+/// `ClassViewSet.get_queryset()` returns EVERY school's classes, completely
+/// unscoped, for superuser accounts (confirmed directly against the
+/// backend: `if user.is_superuser: return qs` — no school filter at all).
+/// A superuser therefore genuinely receives multiple real, distinct rows
+/// per class name — one per school that has a class with that name (e.g.
+/// 3 separate "Nursery" rows for 3 different schools) — not duplicates in
+/// any technical sense, but confusing to show merged together in a
+/// single-school-oriented UI. Filtering to the current user's own
+/// `school_id` here (when the API actually reports one) restores the
+/// single-school view a non-superuser account already gets for free from
+/// the backend's own scoping.
 final classesProvider = FutureProvider.autoDispose<List<ClassInfoEntity>>((ref) async {
   ref.watch(attendanceReloadProvider);
   final date = ref.watch(selectedDateProvider);
   final repository = ref.watch(attendanceRepositoryProvider);
+  final currentSchoolId = ref.watch(authNotifierProvider).maybeWhen(authenticated: (u) => u.schoolId, orElse: () => null);
   final classes = await repository.getClasses();
+  final scoped = currentSchoolId == null ? classes : classes.where((c) => c.schoolId == null || c.schoolId == currentSchoolId).toList();
   List<ClassSummaryTileEntity> tiles;
   try {
     tiles = await repository.getClassSummary(date);
@@ -68,7 +82,7 @@ final classesProvider = FutureProvider.autoDispose<List<ClassInfoEntity>>((ref) 
     tiles = const [];
   }
   final byId = {for (final t in tiles) t.classId: t};
-  return classes.map((c) {
+  return scoped.map((c) {
     final t = byId[c.id];
     if (t == null) return c;
     return c.copyWith(totalPresent: t.present, totalSignedIn: t.signedIn, totalAbsent: t.absent, totalLate: t.late, overallPct: t.pct.round());

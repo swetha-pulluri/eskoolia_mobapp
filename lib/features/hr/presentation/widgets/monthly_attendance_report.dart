@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/utils/logger.dart';
 import '../../domain/entities/attendance_monthly_report_entity.dart';
 import '../../domain/entities/department_entity.dart';
+import '../../domain/entities/staff_entity.dart';
 import '../../domain/repositories/hr_repository.dart';
 import '../providers/hr_provider.dart';
 
@@ -44,15 +45,24 @@ List<_WeekRange> _weekRanges(int month, int year) {
   return ranges;
 }
 
-/// Real port of `StaffMonthlyReport.tsx` on `origin/demo` — the actual live
-/// HR backend's `GET /api/v1/hr/staff-attendance/monthly-report/` (an
-/// earlier pass checked only the stale `main` branch and wrongly concluded
-/// this endpoint didn't exist, so this used to be a reduced-scope,
-/// client-aggregated substitute). Week-donut cards + Monthly Avg, Top
-/// Absent/Leave Reasons, and a per-staff summary table with CSV download.
+/// UI is a real port of `StaffMonthlyReport.tsx` on `origin/demo`. Data,
+/// however, is computed CLIENT-SIDE from the real `getAllAttendance()` list
+/// endpoint (confirmed present on every branch this app has been deployed
+/// against), rather than calling `GET
+/// /api/v1/hr/staff-attendance/monthly-report/` directly: that custom
+/// action only exists on `origin/demo`'s backend — the `main` branch (what
+/// actually runs in this environment) has no route for it at all, so
+/// calling it directly 500s unconditionally. `_generate()` below mirrors
+/// `StaffAttendanceViewSet.monthly_report`'s exact aggregation (per-staff
+/// present/absent/leave/half_day/holiday totals, top-5 absent/leave note
+/// reasons) in Dart over genuine attendance rows, so the numbers are real —
+/// just aggregated here instead of on a server action this deployment
+/// doesn't have. Week-donut cards + Monthly Avg, Top Absent/Leave Reasons,
+/// and a per-staff summary table with CSV download.
 class MonthlyAttendanceReport extends ConsumerStatefulWidget {
   final List<DepartmentEntity> departments;
-  const MonthlyAttendanceReport({super.key, required this.departments});
+  final List<StaffEntity> staff;
+  const MonthlyAttendanceReport({super.key, required this.departments, required this.staff});
 
   @override
   ConsumerState<MonthlyAttendanceReport> createState() => _MonthlyAttendanceReportState();
@@ -84,7 +94,67 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
       _error = null;
     });
     try {
-      final report = await ref.read(hrRepositoryProvider).getMonthlyReport(month: _month, year: _year, departmentId: _deptId);
+      final all = await ref.read(hrRepositoryProvider).getAllAttendance();
+      final staffById = {for (final s in widget.staff) s.id: s};
+      final deptNameById = {for (final d in widget.departments) d.id: d.name};
+
+      final filtered = all.results.where((r) {
+        final date = DateTime.tryParse(r.attendanceDate);
+        if (date == null || date.year != _year || date.month != _month) return false;
+        if (_deptId == null) return true;
+        return staffById[r.staffId]?.departmentId == _deptId;
+      }).toList();
+
+      final records = [for (final r in filtered) AttendanceMonthlyRecordEntity(staffId: r.staffId, attendanceDate: r.attendanceDate, attendanceType: r.attendanceType)];
+
+      final perStaff = <int, ({String name, String staffNo, String departmentName, int present, int absent, int leave, int halfDay, int holiday})>{};
+      final absentReasons = <String, int>{};
+      final leaveReasons = <String, int>{};
+      for (final r in filtered) {
+        final s = staffById[r.staffId];
+        final bucket = perStaff[r.staffId] ?? (name: s?.fullName ?? '', staffNo: s?.staffNo ?? '', departmentName: s?.departmentId != null ? (deptNameById[s!.departmentId] ?? '') : '', present: 0, absent: 0, leave: 0, halfDay: 0, holiday: 0);
+        perStaff[r.staffId] = (
+          name: bucket.name,
+          staffNo: bucket.staffNo,
+          departmentName: bucket.departmentName,
+          present: bucket.present + (r.attendanceType == 'P' ? 1 : 0),
+          absent: bucket.absent + (r.attendanceType == 'A' ? 1 : 0),
+          leave: bucket.leave + (r.attendanceType == 'L' ? 1 : 0),
+          halfDay: bucket.halfDay + (r.attendanceType == 'F' ? 1 : 0),
+          holiday: bucket.holiday + (r.attendanceType == 'H' ? 1 : 0),
+        );
+
+        final note = r.note.trim();
+        if (note.isNotEmpty) {
+          if (r.attendanceType == 'A') {
+            absentReasons[note] = (absentReasons[note] ?? 0) + 1;
+          } else if (r.attendanceType == 'L') {
+            leaveReasons[note] = (leaveReasons[note] ?? 0) + 1;
+          }
+        }
+      }
+
+      List<AttendanceReasonInsightEntity> top(Map<String, int> reasons) {
+        final sorted = reasons.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+        return [for (final e in sorted.take(5)) AttendanceReasonInsightEntity(reason: e.key, count: e.value)];
+      }
+
+      final rows = [
+        for (final entry in perStaff.entries)
+          AttendanceMonthlyRowEntity(
+            staffId: entry.key,
+            name: entry.value.name,
+            staffNo: entry.value.staffNo,
+            departmentName: entry.value.departmentName,
+            present: entry.value.present,
+            absent: entry.value.absent,
+            leave: entry.value.leave,
+            halfDay: entry.value.halfDay,
+            holiday: entry.value.holiday,
+          ),
+      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+      final report = AttendanceMonthlyReportEntity(records: records, rows: rows, topAbsentReasons: top(absentReasons), topLeaveReasons: top(leaveReasons));
       if (mounted) setState(() => _report = report);
     } catch (e, st) {
       // Not an HrApiException — a client-side bug (bad parsing, unexpected
@@ -172,7 +242,7 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
                     initialValue: _pendingYear,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Year', border: OutlineInputBorder(), isDense: true),
-                    items: [for (var y = DateTime.now().year - 3; y <= DateTime.now().year + 1; y++) DropdownMenuItem(value: y, child: Text('$y'))],
+                    items: [for (var y = DateTime.now().year + 1; y >= DateTime.now().year - 3; y--) DropdownMenuItem(value: y, child: Text('$y'))],
                     onChanged: (v) => setState(() => _pendingYear = v ?? _pendingYear),
                   ),
                 ),
@@ -206,13 +276,19 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: _error != null
+            child: _loading
+                ? Row(children: [for (var i = 0; i < 6; i++) Expanded(child: Opacity(opacity: 1 - i * 0.12, child: Container(height: 148, margin: EdgeInsets.only(right: i < 5 ? 8 : 0), decoration: BoxDecoration(color: const Color(0xFFF0F0F5), borderRadius: BorderRadius.circular(16)))))])
+                : _error != null
                 ? Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: const Color(0xFFFFF0F3), border: Border.all(color: const Color(0xFFFBCFE8)), borderRadius: BorderRadius.circular(12)),
                     child: Row(children: [
                       Expanded(child: Text(_error!, style: const TextStyle(color: Color(0xFFC2264E), fontSize: 12))),
-                      TextButton(onPressed: _generate, child: const Text('Retry')),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFC2264E), minimumSize: const Size(0, 28), padding: const EdgeInsets.symmetric(horizontal: 12)),
+                        onPressed: _generate,
+                        child: const Text('Retry', style: TextStyle(fontSize: 11)),
+                      ),
                     ]),
                   )
                 : Column(
@@ -228,12 +304,19 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
                       const SizedBox(height: 20),
                       LayoutBuilder(builder: (context, constraints) {
                         final wide = constraints.maxWidth >= 700;
-                        final reasons = [
-                          Expanded(child: _reasonsCard('Top Absent Reasons', 'Ranked from attendance notes for the selected period.', report?.topAbsentReasons ?? const [], const Color(0xFFFFF0F3), const Color(0xFFC2264E), const Color(0xFFFFF7F9))),
-                          const SizedBox(width: 16, height: 16),
-                          Expanded(child: _reasonsCard('Top Leave Reasons', 'Frequent leave reasons captured during attendance.', report?.topLeaveReasons ?? const [], const Color(0xFFEFF6FF), const Color(0xFF2563EB), const Color(0xFFF5F9FF))),
-                        ];
-                        return wide ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: reasons) : Column(crossAxisAlignment: CrossAxisAlignment.start, children: reasons);
+                        final absentCard = _reasonsCard('Top Absent Reasons', 'Ranked from attendance notes for the selected period.', 'No absent-note insights for the selected filters.', report?.topAbsentReasons ?? const [], const Color(0xFFFFF0F3), const Color(0xFFC2264E), const Color(0xFFFFF7F9));
+                        final leaveCard = _reasonsCard('Top Leave Reasons', 'Frequent leave reasons captured during attendance.', 'No leave-note insights for the selected filters.', report?.topLeaveReasons ?? const [], const Color(0xFFEFF6FF), const Color(0xFF2563EB), const Color(0xFFF5F9FF));
+                        // `Expanded` is only valid on the `Row` branch (bounded width). The
+                        // narrow `Column` branch sits inside this page's own unbounded-height
+                        // scroll view, so `Expanded` there throws "RenderFlex children have
+                        // non-zero flex but incoming height constraints are unbounded" — a
+                        // real crash that corrupts the render tree and breaks hit-testing for
+                        // the rest of the page. `SizedBox(width: double.infinity)` gives the
+                        // same full-width look without requiring a bounded height.
+                        if (wide) {
+                          return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: absentCard), const SizedBox(width: 16), Expanded(child: leaveCard)]);
+                        }
+                        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: double.infinity, child: absentCard), const SizedBox(height: 16), SizedBox(width: double.infinity, child: leaveCard)]);
                       }),
                       const SizedBox(height: 20),
                       if (rows.isNotEmpty) ...[
@@ -377,7 +460,7 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
     );
   }
 
-  Widget _reasonsCard(String title, String sub, List<AttendanceReasonInsightEntity> reasons, Color badgeBg, Color badgeColor, Color rowBg) {
+  Widget _reasonsCard(String title, String sub, String emptyText, List<AttendanceReasonInsightEntity> reasons, Color badgeBg, Color badgeColor, Color rowBg) {
     return Container(
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(bottom: 12),
@@ -398,7 +481,7 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
         ]),
         const SizedBox(height: 10),
         if (reasons.isEmpty)
-          Text('No ${title.toLowerCase()} insights for the selected filters.', style: const TextStyle(fontSize: 11, color: _muted))
+          Text(emptyText, style: const TextStyle(fontSize: 11, color: _muted))
         else
           for (final r in reasons)
             Container(

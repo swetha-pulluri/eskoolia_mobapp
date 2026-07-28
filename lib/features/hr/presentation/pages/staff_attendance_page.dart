@@ -324,7 +324,7 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
             else
               Column(children: [for (final d in filteredDepartments) _buildDeptCard(d, staffByDept[d.id] ?? const [], date)]),
             const SizedBox(height: 24),
-            MonthlyAttendanceReport(departments: departments),
+            MonthlyAttendanceReport(departments: departments, staff: allStaff),
           ],
         ),
       ),
