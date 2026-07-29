@@ -421,12 +421,12 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
                     context.push('/students');
                   },
                 ),
-                // Exam Schedule / Staff Payroll / Library Issues have no
-                // registered route yet (Examination/HR modules are
-                // `comingSoon: true` in module_entity.dart, matching the
-                // real web app's own unfinished state) — shows the same
-                // "Coming Soon" affordance used for comingSoon module tiles
-                // elsewhere, instead of a silent no-op.
+                // Exam Schedule / Library Issues have no registered route
+                // yet (Examination module is `comingSoon: true` in
+                // module_entity.dart; Library was never ported to this app
+                // at all) — shows the same "Coming Soon" affordance used for
+                // comingSoon module tiles elsewhere, instead of a silent
+                // no-op.
                 QuickActionButton(
                   label: 'Exam Schedule',
                   color: AppColors.quickActionExam,
@@ -442,9 +442,11 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
                   color: AppColors.quickActionPayroll,
                   backgroundColor: AppColors.quickActionPayrollBg,
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Staff Payroll - Coming Soon')),
-                    );
+                    // HR module is live (`comingSoon: false`) with its own
+                    // tile already pointing at '/hr/setup' — matches
+                    // module_entity.dart's 'hr' entry exactly.
+                    recordModuleVisit(ref, '/hr/setup');
+                    context.push('/hr/setup');
                   },
                 ),
                 QuickActionButton(

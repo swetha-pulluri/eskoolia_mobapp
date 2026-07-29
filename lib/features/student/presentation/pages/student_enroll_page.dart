@@ -799,7 +799,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
   }
 
   Future<void> _pickAndUploadPhoto() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png'],
       withData: true,
@@ -897,7 +897,7 @@ class _StudentEnrollPageState extends ConsumerState<StudentEnrollPage> {
       _comingSoon('Document upload before enrollment');
       return;
     }
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'pdf'],
       withData: true,

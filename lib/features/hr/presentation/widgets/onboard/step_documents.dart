@@ -41,7 +41,7 @@ class _StepDocumentsState extends ConsumerState<StepDocuments> {
   final Set<String> _uploading = {};
 
   Future<void> _upload(String docKey, String docLabel) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], withData: true);
     final file = result?.files.firstOrNull;
     if (file?.bytes == null) return;
     if (file!.size > 5 * 1024 * 1024) {

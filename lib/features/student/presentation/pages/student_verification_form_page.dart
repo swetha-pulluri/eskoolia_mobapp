@@ -103,7 +103,7 @@ class _StudentVerificationFormPageState extends ConsumerState<StudentVerificatio
       setState(() => _signedUploadError = 'Student must be saved before uploading a signed form.');
       return;
     }
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
       withData: true,

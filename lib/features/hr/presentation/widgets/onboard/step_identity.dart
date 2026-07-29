@@ -105,7 +105,7 @@ class _StepIdentityState extends ConsumerState<StepIdentity> {
   }
 
   Future<void> _pickPhoto() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.image, withData: true);
     final file = result?.files.firstOrNull;
     if (file?.bytes == null) return;
     widget.onPhotoChanged(PickedAttachment(name: file!.name, bytes: file.bytes!, size: file.size));

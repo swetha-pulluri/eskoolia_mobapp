@@ -43,7 +43,7 @@ class _CertificatesScreenState extends ConsumerState<CertificatesScreen> {
   String? _existingBackgroundUrl;
 
   Future<void> _pickBackground() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['png', 'jpg', 'jpeg'],
       withData: true,

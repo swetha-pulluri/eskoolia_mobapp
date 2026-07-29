@@ -60,7 +60,7 @@ class _VisitorBookScreenState extends ConsumerState<VisitorBookScreen> {
   static const _allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
 
   Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: _allowedExtensions,
       withData: true,

@@ -602,7 +602,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
       final csv = await repository.exportGstr1();
       final bytes = Uint8List.fromList(utf8.encode(csv));
       final stamp = DateTime.now().toIso8601String().substring(0, 10);
-      await FilePicker.platform.saveFile(
+      await FilePicker.saveFile(
         dialogTitle: 'Save GSTR-1 export',
         fileName: 'gstr1-report-$stamp.csv',
         bytes: bytes,

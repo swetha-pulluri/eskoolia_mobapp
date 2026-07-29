@@ -145,7 +145,7 @@ class _VerificationFormSettingsPanelState extends State<VerificationFormSettings
   }
 
   Future<void> _pickImage({required bool isLetterhead}) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
       withData: true,

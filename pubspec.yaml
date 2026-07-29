@@ -47,7 +47,7 @@ dependencies:
   shared_preferences: ^2.3.2
 
   # File Picking (Administration attachments, Attendance import dialog)
-  file_picker: ^8.1.2
+  file_picker: ^11.0.2
 
   # Native camera capture (Student Enroll "Take photo" — the mobile
   # equivalent of the frontend's in-browser getUserMedia camera modal;

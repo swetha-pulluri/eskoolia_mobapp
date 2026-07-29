@@ -44,7 +44,7 @@ class _StudentAttendanceImportDialogState extends ConsumerState<StudentAttendanc
   }
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'xlsx', 'xls'], withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'xlsx', 'xls'], withData: true);
     if (result != null && result.files.isNotEmpty) {
       setState(() {
         _file = result.files.first;

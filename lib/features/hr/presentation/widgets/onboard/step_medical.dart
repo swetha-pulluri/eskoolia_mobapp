@@ -33,7 +33,7 @@ class _StepMedicalState extends State<StepMedical> {
   String? _disabCertFileName;
 
   Future<void> _pick(void Function(String?) onPicked) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png']);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png']);
     onPicked(result?.files.firstOrNull?.name);
   }
 

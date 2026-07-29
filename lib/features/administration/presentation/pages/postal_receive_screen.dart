@@ -52,7 +52,7 @@ class _PostalReceiveScreenState extends ConsumerState<PostalReceiveScreen> {
   static const _allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'];
 
   Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: _allowedExtensions, withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: _allowedExtensions, withData: true);
     final file = result?.files.singleOrNull;
     if (file == null || file.bytes == null) return;
     setState(() {

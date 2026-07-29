@@ -187,7 +187,7 @@ class _StaffFormPageState extends ConsumerState<StaffFormPage> with SingleTicker
   }
 
   Future<void> _pickFile(void Function(PickedAttachment) onPicked, {List<String>? extensions}) async {
-    final result = await FilePicker.platform.pickFiles(type: extensions == null ? FileType.any : FileType.custom, allowedExtensions: extensions, withData: true);
+    final result = await FilePicker.pickFiles(type: extensions == null ? FileType.any : FileType.custom, allowedExtensions: extensions, withData: true);
     final file = result?.files.firstOrNull;
     if (file?.bytes != null) {
       onPicked(PickedAttachment(name: file!.name, bytes: file.bytes!, size: file.size));
@@ -195,7 +195,7 @@ class _StaffFormPageState extends ConsumerState<StaffFormPage> with SingleTicker
   }
 
   Future<void> _pickOtherDocuments() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true, withData: false);
+    final result = await FilePicker.pickFiles(allowMultiple: true, withData: false);
     if (result == null) return;
     setState(() {
       _otherDocuments.addAll(result.files.map((f) => PickedOtherDocument(f.name)));

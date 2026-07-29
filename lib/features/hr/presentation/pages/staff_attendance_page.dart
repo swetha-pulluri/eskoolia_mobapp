@@ -1049,7 +1049,7 @@ class _ImportAttendanceDialogState extends ConsumerState<_ImportAttendanceDialog
   AttendanceImportResultEntity? _result;
 
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls', 'csv'], withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls', 'csv'], withData: true);
     final picked = result?.files.firstOrNull;
     if (picked?.bytes == null) return;
     setState(() => _file = PickedAttachment(name: picked!.name, bytes: picked.bytes!, size: picked.size));

@@ -74,7 +74,7 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
   static const _allowedExtensions = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
 
   Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: _allowedExtensions, withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: _allowedExtensions, withData: true);
     final file = result?.files.singleOrNull;
     if (file == null || file.bytes == null) return;
     setState(() {

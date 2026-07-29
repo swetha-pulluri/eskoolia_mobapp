@@ -8,6 +8,7 @@ import '../providers/roles_providers.dart';
 import '../providers/roles_state.dart';
 import '../widgets/role_card.dart';
 import '../widgets/add_role_card.dart';
+import '../widgets/role_create_dialog.dart';
 import '../widgets/role_edit_dialog.dart';
 import '../widgets/role_delete_confirm_dialog.dart';
 import '../widgets/assign_permissions_section.dart';
@@ -65,10 +66,24 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
     ref.read(rolesNotifierProvider.notifier).updateSearch(value);
   }
 
-  void _onAddRole() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Add Role - Coming Soon')));
+  Future<void> _onAddRole() async {
+    final created = await RoleCreateDialog.show(context);
+    if (created == null || !mounted) return;
+    // Matches RoleManagementPanel.tsx's submit(): after a successful create
+    // it skips reloading the list and immediately sends the admin to
+    // Assign Permissions for the new role (`router.push('/roles/assign-
+    // permission?roleId=...')`). This page keeps that same tab, rather than
+    // a separate route (see _MainTab doc comment), so the equivalent is
+    // `_onAssignPermissions`. `refresh()` beforehand is the one addition:
+    // on web, navigating back to `/roles` later remounts the component and
+    // refetches for free; here the Roles tab is never unmounted, so an
+    // explicit refresh is needed for the new role to show up when the admin
+    // returns to it — same end result as the frontend, adapted for the
+    // tab-based (not route-based) navigation this page already uses.
+    await ref.read(rolesNotifierProvider.notifier).refresh();
+    if (!mounted) return;
+    _showToast('"${created.name}" created.', success: true);
+    _onAssignPermissions(created);
   }
 
   Future<void> _onEditRole(RoleData role) async {

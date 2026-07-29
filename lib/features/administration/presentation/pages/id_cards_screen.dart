@@ -57,7 +57,7 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
     int maxBytes = 2 * 1024 * 1024,
     List<String> extensions = const ['png', 'jpg', 'jpeg'],
   }) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: extensions,
       withData: true,

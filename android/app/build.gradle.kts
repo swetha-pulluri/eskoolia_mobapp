@@ -1,5 +1,9 @@
 plugins {
     id("com.android.application")
+    // Applied explicitly because AGP is pinned below 9 here (see
+    // android/settings.gradle.kts) — AGP < 9 has no built-in Kotlin support,
+    // so MainActivity.kt needs the classic Kotlin Gradle plugin to compile.
+    id("org.jetbrains.kotlin.android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
