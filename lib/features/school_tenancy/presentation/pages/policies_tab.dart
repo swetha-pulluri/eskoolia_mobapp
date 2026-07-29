@@ -2,9 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/policy_entity.dart';
 import '../providers/school_tenancy_provider.dart';
 import '../widgets/school_tenancy_layout.dart';
+
+/// Matches web's `CAT_CONFIG` exactly (`policies/page.tsx:16-21`) — the
+/// per-category header (icon badge + label + description) shown above each
+/// tab's policy list, previously missing from Flutter entirely (each tab
+/// just showed the bare policy rows with no heading).
+class _CategoryMeta {
+  final String label;
+  final String description;
+  final IconData icon;
+  final Color color;
+
+  const _CategoryMeta({required this.label, required this.description, required this.icon, required this.color});
+}
+
+const _kCategoryMeta = {
+  'security': _CategoryMeta(label: 'Security', description: 'Authentication, session & access controls', icon: Icons.shield_outlined, color: Color(0xFFDC2626)),
+  'data_isolation': _CategoryMeta(label: 'Data Isolation', description: 'Tenancy boundaries & audit retention', icon: Icons.storage_outlined, color: Color(0xFF0369A1)),
+  'billing': _CategoryMeta(label: 'Billing', description: 'GST rates & invoice payment terms', icon: Icons.bolt_outlined, color: Color(0xFF6D28D9)),
+  'system': _CategoryMeta(label: 'System', description: 'Infrastructure, backups & tenancy switches', icon: Icons.settings_outlined, color: Color(0xFF059669)),
+};
 
 /// Super Admin Policies Page
 /// Exact conversion of web frontend policies structure
@@ -21,6 +42,27 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
   final Map<String, num> _draftNumbers = {};
   final Map<String, TextEditingController> _numberControllers = {};
   bool _saving = false;
+  bool _exportingFormat = false;
+
+  /// Exports policies as JSON/YAML — mirrors web's `exportPolicies()`
+  /// (`GET /policies/export/?format=`).
+  Future<void> _handleExportPolicies(String format) async {
+    setState(() => _exportingFormat = true);
+    try {
+      final repository = ref.read(schoolTenancyRepositoryProvider);
+      final bytes = await repository.exportPolicies(format);
+      await saveBytesForDownload(bytes: bytes, filename: 'policies.$format');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Policies exported.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _exportingFormat = false);
+    }
+  }
 
   @override
   void initState() {
@@ -298,9 +340,7 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('JSON export is not yet available on mobile.')),
-                        ),
+                        onPressed: _exportingFormat ? null : () => _handleExportPolicies('json'),
                         icon: const Icon(Icons.download, size: 14),
                         label: const Text('JSON'),
                         style: OutlinedButton.styleFrom(
@@ -312,9 +352,7 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('YAML export is not yet available on mobile.')),
-                        ),
+                        onPressed: _exportingFormat ? null : () => _handleExportPolicies('yaml'),
                         icon: const Icon(Icons.download, size: 14),
                         label: const Text('YAML'),
                         style: OutlinedButton.styleFrom(
@@ -347,7 +385,7 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                 indicatorWeight: 2,
                 tabs: [
                   _buildCategoryTab(Icons.shield_outlined, 'Security', const Color(0xFFDC2626)),
-                  _buildCategoryTab(Icons.storage_outlined, 'Data', const Color(0xFF0369A1)),
+                  _buildCategoryTab(Icons.storage_outlined, 'Data Isolation', const Color(0xFF0369A1)),
                   _buildCategoryTab(Icons.bolt_outlined, 'Billing', const Color(0xFF6D28D9)),
                   _buildCategoryTab(Icons.settings_outlined, 'System', const Color(0xFF059669)),
                 ],
@@ -359,14 +397,10 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Security
-                  _buildCategoryContent(policiesState.security),
-                  // Data Isolation
-                  _buildCategoryContent(policiesState.dataIsolation),
-                  // Billing
-                  _buildCategoryContent(policiesState.billing),
-                  // System
-                  _buildCategoryContent(policiesState.system),
+                  _buildCategoryContent(policiesState.security, _kCategoryMeta['security']!),
+                  _buildCategoryContent(policiesState.dataIsolation, _kCategoryMeta['data_isolation']!),
+                  _buildCategoryContent(policiesState.billing, _kCategoryMeta['billing']!),
+                  _buildCategoryContent(policiesState.system, _kCategoryMeta['system']!),
                 ],
               ),
             ),
@@ -653,36 +687,67 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     );
   }
 
-  Widget _buildCategoryContent(List<PolicyEntity> policies) {
-    if (policies.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.settings_outlined, size: 28, color: AppColors.textTertiary),
-            const SizedBox(height: 10),
-            Text('No policies loaded', style: AppTextStyles.sectionSubtitle),
-          ],
-        ),
-      );
-    }
+  Widget _buildCategoryContent(List<PolicyEntity> policies, _CategoryMeta meta) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: policies.map<Widget>((policy) {
-          final isDirty = (_draftToggles.containsKey(policy.key) && _draftToggles[policy.key] != policy.value) ||
-              (_draftNumbers.containsKey(policy.key) && _draftNumbers[policy.key] != policy.value);
+        children: [
+          // Category header — matches web's icon badge + label + description
+          // block shown above every category's policy list
+          // (`policies/page.tsx:344-360`).
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: meta.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                child: Icon(meta.icon, size: 18, color: meta.color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(meta.label, style: AppTextStyles.boardLabel.copyWith(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(meta.description, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-          return _buildPolicyRow(
-            key: policy.key,
-            description: policy.description,
-            isToggle: policy.isToggle,
-            isOverridable: policy.isOverridable,
-            value: policy.value,
-            isDirty: isDirty,
-          );
-        }).toList(),
+          if (policies.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.settings_outlined, size: 28, color: AppColors.textTertiary),
+                    const SizedBox(height: 10),
+                    Text('No policies loaded', style: AppTextStyles.sectionSubtitle),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...policies.map<Widget>((policy) {
+              final isDirty = (_draftToggles.containsKey(policy.key) && _draftToggles[policy.key] != policy.value) ||
+                  (_draftNumbers.containsKey(policy.key) && _draftNumbers[policy.key] != policy.value);
+
+              return _buildPolicyRow(
+                key: policy.key,
+                description: policy.description,
+                isToggle: policy.isToggle,
+                isOverridable: policy.isOverridable,
+                value: policy.value,
+                isDirty: isDirty,
+              );
+            }),
+        ],
       ),
     );
   }

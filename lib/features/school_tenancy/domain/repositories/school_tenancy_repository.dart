@@ -19,9 +19,38 @@ abstract class SchoolTenancyRepository {
     String? plan,
     String? region,
     String? state,
+    String? healthFlag,
   });
 
   Future<SchoolEntity> getSchool(String tenantId);
+
+  /// Export schools matching the current filters as an Excel (.xlsx) file
+  /// — mirrors web's `handleExportSchoolsXlsx()`.
+  Future<List<int>> exportSchoolsXlsx({
+    String? search,
+    String? status,
+    String? board,
+    String? plan,
+    String? region,
+    String? state,
+    String? healthFlag,
+  });
+
+  /// Export platform policies as JSON or YAML — mirrors web's
+  /// `exportPolicies()`. [format] is `'json'` or `'yaml'`.
+  Future<List<int>> exportPolicies(String format);
+
+  /// Get LLM access registry — mirrors web's `getLLMStates()`, keyed by
+  /// `tenant_id`.
+  Future<Map<String, LLMSchoolStateEntity>> getLLMStates();
+
+  /// Toggle LLM access for a school — mirrors web's `toggleSchoolLLM()`.
+  /// [schoolId] is the ERP `School` integer primary key (not the tenant_id).
+  Future<bool> toggleSchoolLLM(int schoolId, bool enabled);
+
+  /// Reset a school's admin password — mirrors web's
+  /// `resetSchoolAdminPassword()`. Returns the new credentials once.
+  Future<ResetAdminPasswordResultEntity> resetSchoolAdminPassword(String tenantId);
 
   /// Provision a new school tenant — mirrors web's `provisionSchool()`.
   Future<ProvisionSchoolResultEntity> provisionSchool(Map<String, dynamic> data);
@@ -83,8 +112,10 @@ abstract class SchoolTenancyRepository {
   /// schema; this bumps a `draft` invoice to `sent` and logs the action.
   Future<InvoiceReminderResultEntity> sendInvoiceReminder(String invoiceId);
 
-  /// Fetch the GSTR-1 export as raw CSV text — mirrors web's `exportGstr1()`.
-  Future<String> exportGstr1();
+  /// Fetch the GSTR-1 export — mirrors web's `exportGstr1()`. Real bytes of
+  /// an .xlsx workbook (`BillingGSTR1ExportView` builds it with openpyxl),
+  /// not CSV/plain text.
+  Future<List<int>> exportGstr1();
 
   /// Get the subscription plans catalog — mirrors web's `getPlans()`.
   Future<PlansCatalogEntity> getPlans();
@@ -107,6 +138,17 @@ abstract class SchoolTenancyRepository {
     String? action,
     String? tenantId,
     String? severity,
+    String? dateFrom,
+    String? dateTo,
+    String? search,
+  });
+
+  /// Real filtered CSV export — mirrors web's `exportAuditCsv()`, returning
+  /// every row matching the filters, not just the current page.
+  Future<List<int>> exportAuditCsv({
+    String? action,
+    String? severity,
+    String? search,
     String? dateFrom,
     String? dateTo,
   });

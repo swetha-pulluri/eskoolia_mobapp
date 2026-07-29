@@ -32,6 +32,7 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
     String? plan,
     String? region,
     String? state,
+    String? healthFlag,
   }) async {
     try {
       final dto = await _remoteDataSource.getSchools(
@@ -43,6 +44,7 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
         plan: plan,
         region: region,
         state: state,
+        healthFlag: healthFlag,
       );
       return dto.toEntity();
     } catch (e) {
@@ -58,6 +60,52 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  @override
+  Future<List<int>> exportSchoolsXlsx({
+    String? search,
+    String? status,
+    String? board,
+    String? plan,
+    String? region,
+    String? state,
+    String? healthFlag,
+  }) {
+    return _remoteDataSource.exportSchoolsXlsx(
+      search: search,
+      status: status,
+      board: board,
+      plan: plan,
+      region: region,
+      state: state,
+      healthFlag: healthFlag,
+    );
+  }
+
+  @override
+  Future<List<int>> exportPolicies(String format) {
+    return _remoteDataSource.exportPolicies(format);
+  }
+
+  @override
+  Future<Map<String, LLMSchoolStateEntity>> getLLMStates() {
+    return _remoteDataSource.getLLMStates();
+  }
+
+  @override
+  Future<bool> toggleSchoolLLM(int schoolId, bool enabled) {
+    return _remoteDataSource.toggleSchoolLLM(schoolId, enabled);
+  }
+
+  @override
+  Future<ResetAdminPasswordResultEntity> resetSchoolAdminPassword(String tenantId) async {
+    final response = await _remoteDataSource.resetSchoolAdminPassword(tenantId);
+    return ResetAdminPasswordResultEntity(
+      adminUsername: response['admin_username'] as String,
+      adminPassword: response['admin_password'] as String,
+      message: response['message'] as String? ?? '',
+    );
   }
 
   @override
@@ -196,7 +244,7 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
   }
 
   @override
-  Future<String> exportGstr1() async {
+  Future<List<int>> exportGstr1() async {
     try {
       return await _remoteDataSource.exportGstr1();
     } catch (e) {
@@ -241,6 +289,7 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
     String? severity,
     String? dateFrom,
     String? dateTo,
+    String? search,
   }) async {
     try {
       final dto = await _remoteDataSource.getAuditEvents(
@@ -252,8 +301,30 @@ class SchoolTenancyRepositoryImpl implements SchoolTenancyRepository {
         severity: severity,
         dateFrom: dateFrom,
         dateTo: dateTo,
+        search: search,
       );
       return dto.toEntity();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<List<int>> exportAuditCsv({
+    String? action,
+    String? severity,
+    String? search,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      return await _remoteDataSource.exportAuditCsv(
+        action: action,
+        severity: severity,
+        search: search,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+      );
     } catch (e) {
       rethrow;
     }

@@ -1,20 +1,19 @@
-import 'dart:convert';
 import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../../core/utils/inr_formatter.dart';
 import '../../../../core/widgets/kpi_card.dart';
 import '../../../../core/widgets/status_chip_widget.dart';
 import '../../domain/entities/invoice_entity.dart';
 import '../providers/school_tenancy_provider.dart';
-import '../widgets/edit_invoice_sheet.dart';
 import '../widgets/new_invoice_sheet.dart';
 import '../widgets/plan_form_sheet.dart';
 import '../widgets/record_payment_sheet.dart';
 import '../widgets/school_tenancy_layout.dart';
+import '../utils/invoice_pdf.dart';
 
 /// Super Admin Billing Page
 /// Exact conversion of web frontend billing structure
@@ -32,6 +31,29 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
   /// 597-598, 868`) rather than opening a modal per row. This mirrors that
   /// "selected invoice" state.
   String? _selectedInvoiceId;
+
+  // The Tax Invoice card (showing the `selected` invoice) sits well above
+  // Recent Invoices on this scroll-everything mobile layout. Selecting a row
+  // updated state correctly but gave no visible feedback when the user was
+  // scrolled down to Recent Invoices, which read as "View does nothing" —
+  // this key lets us scroll the card into view on selection.
+  final GlobalKey _taxInvoiceKey = GlobalKey();
+
+  // Neither Export button showed any state change on tap while the network
+  // request/file dialog was in flight — with no spinner or disabled state,
+  // a slow response (or one that silently hung) looked exactly like "the
+  // button does nothing".
+  bool _exportBusy = false;
+
+  void _selectInvoice(String invoiceId) {
+    setState(() => _selectedInvoiceId = invoiceId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _taxInvoiceKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.05);
+      }
+    });
+  }
 
   String _formatINR(double amount, {bool compact = true, bool symbol = true, int fraction = 2}) =>
       formatINR(amount, compact: compact, symbol: symbol, fraction: fraction);
@@ -222,8 +244,10 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                         // "Export GSTR-1" and "New invoice" — no Refresh
                         // button at all (`billing/page.tsx:663-680`).
                         OutlinedButton.icon(
-                          onPressed: _exportGstr1,
-                          icon: const Icon(Icons.download, size: 14),
+                          onPressed: _exportBusy ? null : _exportGstr1,
+                          icon: _exportBusy
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.download, size: 14),
                           label: const Text('Export GSTR-1'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.textPrimary,
@@ -414,22 +438,30 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
 
               // TAX INVOICE — always visible inline, showing the currently
               // `selected` invoice (`billing/page.tsx:800-806`), not a modal.
-              selected == null
-                  ? Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgPrimary,
-                        border: Border.all(color: AppColors.borderPrimary, style: BorderStyle.solid),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'No invoice selected. Tap a row in "Recent invoices" to preview it here.',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.sectionSubtitle,
-                      ),
-                    )
-                  : _buildTaxInvoiceCard(selected, sellerGstin, sellerState),
+              // Wrapped in KeyedSubtree so `_selectInvoice`'s
+              // Scrollable.ensureVisible can actually find this section —
+              // previously the key was declared but never attached to
+              // anything, so `_taxInvoiceKey.currentContext` was always
+              // null and the scroll silently did nothing.
+              KeyedSubtree(
+                key: _taxInvoiceKey,
+                child: selected == null
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgPrimary,
+                          border: Border.all(color: AppColors.borderPrimary, style: BorderStyle.solid),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'No invoice selected. Tap a row in "Recent invoices" to preview it here.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.sectionSubtitle,
+                        ),
+                      )
+                    : _buildTaxInvoiceCard(selected, sellerGstin, sellerState),
+              ),
 
               const SizedBox(height: 24),
 
@@ -509,7 +541,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
       isScrollControlled: true,
       backgroundColor: AppColors.bgPrimary,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) => EditInvoiceSheet(invoice: invoice),
+      builder: (context) => NewInvoiceSheet(invoice: invoice),
     ).then((updated) {
       if (updated is InvoiceEntity && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -594,23 +626,24 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
   }
 
   /// Real call to `GET /billing/export/gstr1/` — mirrors web's
-  /// `exportGstr1()`/`downloadFile()`. On mobile there's no browser download
-  /// prompt, so the fetched CSV is handed to the OS save-file picker instead.
+  /// `exportGstr1()`/`downloadFile()`. Uses the app-wide `saveBytesForDownload`
+  /// helper (the established convention for every other export in this app)
+  /// instead of `file_picker`'s `saveFile()`, which throws `UnimplementedError`
+  /// on web and opens an unwanted interactive "Save As" dialog on mobile —
+  /// this instead does a zero-dialog Blob+anchor-click download on web,
+  /// matching the real web app's own `<a download>` mechanism exactly.
   Future<void> _exportGstr1() async {
+    if (_exportBusy) return;
+    setState(() => _exportBusy = true);
     try {
       final repository = ref.read(schoolTenancyRepositoryProvider);
-      final csv = await repository.exportGstr1();
-      final bytes = Uint8List.fromList(utf8.encode(csv));
+      final bytes = Uint8List.fromList(await repository.exportGstr1());
       final stamp = DateTime.now().toIso8601String().substring(0, 10);
-      await FilePicker.platform.saveFile(
-        dialogTitle: 'Save GSTR-1 export',
-        fileName: 'gstr1-report-$stamp.csv',
-        bytes: bytes,
-      );
-      // Matches web's exact toast text — `toast.success('GSTR-1 exported.')`
-      // (`billing/page.tsx:617`).
+      await saveBytesForDownload(bytes: bytes, filename: 'gstr1-report-$stamp.xlsx');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
+          // Matches web's exact toast text — `toast.success('GSTR-1
+          // exported.')` (`billing/page.tsx:617`).
           const SnackBar(content: Text('GSTR-1 exported.')),
         );
       }
@@ -620,6 +653,8 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
           SnackBar(content: Text('GSTR-1 export failed: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _exportBusy = false);
     }
   }
 
@@ -936,12 +971,10 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               Text('INVOICE ACTIONS', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
               const SizedBox(height: 10),
               // Web itself uses the browser's native window.print() for this
-              // (`handleDownloadPdf`) — no PDF-generation endpoint exists,
-              // and no PDF package is set up in this app. Disclosed
-              // placeholder, not a fake success.
-              _actionRow(context, Icons.download_outlined, 'Download PDF', () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('PDF export needs a print/PDF package not yet added to the mobile app.')),
-                  )),
+              // (`handleDownloadPdf`) on the same on-screen invoice — this
+              // builds an equivalent real PDF from the same data and hands
+              // it to the native print/share sheet.
+              _actionRow(context, Icons.download_outlined, 'Download PDF', () => shareInvoicePdf(invoice, sellerGstin: sellerGstin, sellerState: sellerState)),
               // Real call to POST /billing/invoices/{id}/reminder/.
               _actionRow(context, Icons.send_outlined, 'Send to buyer', () => _sendReminder(invoice)),
               // Real call — opens Record Payment, which posts to
@@ -1011,8 +1044,10 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
-                onPressed: _exportGstr1,
-                icon: const Icon(Icons.download, size: 13),
+                onPressed: _exportBusy ? null : _exportGstr1,
+                icon: _exportBusy
+                    ? const SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.download, size: 13),
                 label: const Text('Export'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
@@ -1046,13 +1081,15 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               // exactly the kind of ambiguity that can swallow taps on the
               // inner icons, so this avoids that entirely rather than
               // relying on gesture-arena resolution to sort it out.
-              return Container(
+              return Card(
                 margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.purpleTint : AppColors.bgSecondary,
-                  border: Border.all(color: isSelected ? AppColors.primaryPurple : AppColors.borderPrimary),
+                elevation: 0,
+                color: isSelected ? AppColors.purpleTint : AppColors.bgSecondary,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: isSelected ? AppColors.primaryPurple : AppColors.borderPrimary),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
                     Material(
@@ -1062,7 +1099,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                         // Matches web's row click exactly — `onClick={() =>
                         // setSelected(inv)}` (`billing/page.tsx:868`) — a
                         // silent selection, no toast/popup of any kind.
-                        onTap: () => setState(() => _selectedInvoiceId = invoice.id),
+                        onTap: () => _selectInvoice(invoice.id),
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
                           child: Column(
@@ -1129,15 +1166,19 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                           _rowActionIcon(
                             icon: Icons.visibility_outlined,
                             tooltip: 'View',
-                            onTap: () => setState(() => _selectedInvoiceId = invoice.id),
+                            onTap: () => _selectInvoice(invoice.id),
                           ),
                           const SizedBox(width: 6),
                           _rowActionIcon(
                             icon: Icons.download_outlined,
                             tooltip: 'Download PDF',
-                            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('PDF export needs a print/PDF package not yet added to the mobile app.')),
-                            ),
+                            // shareInvoicePdf already falls back to the
+                            // invoice's own seller fields when these are
+                            // empty (`invoice_pdf.dart`), so this is
+                            // equivalent to the main Invoice Actions panel's
+                            // call once `sellerGstin`/`sellerState` (sourced
+                            // from `mrr`) are unset for this invoice.
+                            onTap: () => shareInvoicePdf(invoice, sellerGstin: '', sellerState: ''),
                           ),
                           const SizedBox(width: 6),
                           _rowActionIcon(
