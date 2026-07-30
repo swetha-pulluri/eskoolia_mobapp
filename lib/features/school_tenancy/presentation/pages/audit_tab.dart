@@ -215,7 +215,15 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                       style: AppTextStyles.pageSubtitle,
                     ),
                     const SizedBox(height: 16),
-                    Row(
+                    // `Wrap` (not a bare `Row`) — at narrow phone widths or
+                    // larger text-scale settings, "Refresh" + "Exporting…"
+                    // together could exceed the available row width with
+                    // neither button able to shrink; matches the same
+                    // header-button convention already used elsewhere in
+                    // School Tenancy (Policies/Schools tabs).
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
                           onPressed: refreshing ? null : () => ref.invalidate(auditEventsProvider),
@@ -231,7 +239,6 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                             textStyle: AppTextStyles.buttonSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         OutlinedButton.icon(
                           onPressed: _exportBusy ? null : () => _handleExportCsv(filters),
                           icon: _exportBusy
@@ -252,15 +259,17 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 ),
               ),
 
-              // KPI CARDS
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 14,
-                crossAxisSpacing: 14,
-                childAspectRatio: 1.1,
-                children: [
+              // KPI CARDS — `KpiCardGrid` (width-constrained, height-
+              // intrinsic tiles), not a fixed-`childAspectRatio` `GridView`,
+              // which forces every tile to a height derived only from
+              // width/aspect-ratio math regardless of actual text content —
+              // a real, already-diagnosed-elsewhere `RenderFlex overflowed
+              // on the bottom` at narrow widths / larger text-scale
+              // settings (see `KpiCardGrid`'s own doc comment;
+              // Dashboard/Schools tabs already use this fix).
+              KpiCardGrid(
+                spacing: 14,
+                cards: [
                   KpiCard(
                     label: 'Total Events',
                     value: '${page.count}',
@@ -348,40 +357,50 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
 
               // ACTION FILTER TOGGLE — matches web's `Filter` icon + label
               // button (`audit/page.tsx:322-333`), previously missing
-              // entirely from Flutter.
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () => setState(() => _showActionOptions = !_showActionOptions),
-                    icon: const Icon(Icons.filter_list, size: 14),
-                    label: Text(filters.action ?? 'Action'),
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleTint : AppColors.bgSecondary,
-                      side: BorderSide(color: (_showActionOptions || filters.action != null) ? AppColors.purpleSoft : AppColors.borderPrimary),
-                      foregroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleDeep : AppColors.textSecondary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                    ),
+              // entirely from Flutter. `LayoutBuilder` drops the date-range
+              // group to its own row below "Action" once the combined
+              // content (action button + 2 date fields + a clear-dates
+              // icon, all with real minimum widths that can't shrink to
+              // zero) wouldn't fit a single row at narrow phone widths —
+              // a plain `Row` here could genuinely overflow on a 320dp
+              // screen once both dates are set (clear-dates icon appears).
+              LayoutBuilder(builder: (context, constraints) {
+                final actionButton = OutlinedButton.icon(
+                  onPressed: () => setState(() => _showActionOptions = !_showActionOptions),
+                  icon: const Icon(Icons.filter_list, size: 14),
+                  label: Text(filters.action ?? 'Action', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleTint : AppColors.bgSecondary,
+                    side: BorderSide(color: (_showActionOptions || filters.action != null) ? AppColors.purpleSoft : AppColors.borderPrimary),
+                    foregroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleDeep : AppColors.textSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(child: _dateField(context, 'From', filters.dateFrom, () => _pickDate(context, isFrom: true, filters: filters))),
-                        const SizedBox(width: 6),
-                        Expanded(child: _dateField(context, 'To', filters.dateTo, () => _pickDate(context, isFrom: false, filters: filters))),
-                        if (filters.dateFrom != null || filters.dateTo != null)
-                          IconButton(
-                            icon: const Icon(Icons.close, size: 16),
-                            tooltip: 'Clear dates',
-                            onPressed: () => _applyFilters(dateFrom: null, dateTo: null),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                );
+                final dateRangeRow = Row(
+                  children: [
+                    Expanded(child: _dateField(context, 'From', filters.dateFrom, () => _pickDate(context, isFrom: true, filters: filters))),
+                    const SizedBox(width: 6),
+                    Expanded(child: _dateField(context, 'To', filters.dateTo, () => _pickDate(context, isFrom: false, filters: filters))),
+                    if (filters.dateFrom != null || filters.dateTo != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        tooltip: 'Clear dates',
+                        onPressed: () => _applyFilters(dateFrom: null, dateTo: null),
+                      ),
+                  ],
+                );
+                if (constraints.maxWidth < 380) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [actionButton, const SizedBox(height: 8), dateRangeRow],
+                  );
+                }
+                return Row(
+                  children: [actionButton, const SizedBox(width: 8), Expanded(child: dateRangeRow)],
+                );
+              }),
 
               // Action filter option pills — matches web's expanded panel
               // (`audit/page.tsx:362-379`).
@@ -454,9 +473,11 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ActionBadge(
-                                action: event.action,
-                                color: AppColors.primaryPurple,
+                              Flexible(
+                                child: ActionBadge(
+                                  action: event.action,
+                                  color: AppColors.primaryPurple,
+                                ),
                               ),
                               const Spacer(),
                               Text(
@@ -496,9 +517,13 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                             children: [
                               const Icon(Icons.lan_outlined, size: 14, color: AppColors.textTertiary),
                               const SizedBox(width: 4),
-                              Text(
-                                event.actorIp.isEmpty ? '—' : event.actorIp,
-                                style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11),
+                              Expanded(
+                                child: Text(
+                                  event.actorIp.isEmpty ? '—' : event.actorIp,
+                                  style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
@@ -509,9 +534,16 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                               children: [
                                 const Icon(Icons.business_outlined, size: 14, color: AppColors.textTertiary),
                                 const SizedBox(width: 4),
-                                Text(
-                                  event.schoolName!,
-                                  style: AppTextStyles.sectionSubtitle,
+                                // A real school name can be long — without
+                                // `Expanded`+ellipsis this row could overflow
+                                // horizontally on a 320dp screen.
+                                Expanded(
+                                  child: Text(
+                                    event.schoolName!,
+                                    style: AppTextStyles.sectionSubtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),
@@ -535,7 +567,19 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Page ${filters.page} of $totalPages', style: AppTextStyles.sectionSubtitle),
+                    // `Expanded`+ellipsis — with neither side of a
+                    // `spaceBetween` Row able to shrink the other, a 3-digit
+                    // page count ("Page 100 of 328") combined with the 4
+                    // fixed-size nav buttons could overflow on a 320dp
+                    // screen without this.
+                    Expanded(
+                      child: Text(
+                        'Page ${filters.page} of $totalPages',
+                        style: AppTextStyles.sectionSubtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     Row(
                       children: [
                         _pageNavButton(Icons.first_page, filters.page > 1 ? () => _applyFilters(page: 1) : null),

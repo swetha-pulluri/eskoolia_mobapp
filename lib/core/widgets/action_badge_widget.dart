@@ -70,6 +70,8 @@ class ActionBadge extends StatelessWidget {
       ),
       child: Text(
         action.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTextStyles.chipLabel(color: actionColor).copyWith(
           fontSize: 10.5,
           fontWeight: FontWeight.w600,

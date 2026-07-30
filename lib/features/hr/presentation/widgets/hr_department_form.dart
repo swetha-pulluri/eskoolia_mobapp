@@ -244,13 +244,22 @@ class _HrDepartmentFormState extends ConsumerState<HrDepartmentForm> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                Text(widget.stepLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: HrColors.brand)),
-                if (!_isEdit) ...[
-                  const SizedBox(width: 12),
-                  const Text('Independent step', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
-                ],
-              ]),
+              // Wrapped in Expanded (was a bare Row here) — on a 320dp
+              // screen, stepLabel + "Independent step" + the close
+              // IconButton leaves only a few px of margin; Expanded lets the
+              // "Independent step" text ellipsize instead of forcing the
+              // whole header Row past the close button into overflow.
+              Expanded(
+                child: Row(children: [
+                  Text(widget.stepLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: HrColors.brand)),
+                  if (!_isEdit) ...[
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text('Independent step', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF94A3B8))),
+                    ),
+                  ],
+                ]),
+              ),
               IconButton(onPressed: widget.onCancel, icon: const Icon(Icons.close, size: 16), color: const Color(0xFF94A3B8)),
             ],
           ),

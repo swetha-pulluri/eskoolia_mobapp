@@ -39,19 +39,39 @@ Widget onboardText({
   int? maxLength,
   int maxLines = 1,
   TextCapitalization textCapitalization = TextCapitalization.none,
+  /// Matches web's `readOnly` grey "Staff Code" `<HrInput>` exactly
+  /// (`bg-[#F1F5F9] cursor-not-allowed !text-[#94A3B8]`,
+  /// `hr/onboard/page.tsx:507-513`) — auto-generated fields the user can
+  /// see and copy but not type into.
+  bool readOnly = false,
 }) {
   return HrField(
     label: label,
     required: required,
     error: error,
     child: TextFormField(
+      // `TextFormField.initialValue` only applies on first build — for an
+      // editable field that's fine (the user's own typing is the only thing
+      // that should change it), but a `readOnly` field's value can change
+      // purely from parent state (e.g. Staff Code arriving async from
+      // `next-staff-no`), which needs a new key to actually repaint.
+      key: readOnly ? ValueKey(value) : null,
       initialValue: value,
       onChanged: onChanged,
+      readOnly: readOnly,
       keyboardType: keyboardType,
       maxLength: maxLength,
       maxLines: maxLines,
       textCapitalization: textCapitalization,
-      decoration: InputDecoration(border: const OutlineInputBorder(), hintText: hint, isDense: true, counterText: maxLength != null ? '' : null),
+      style: readOnly ? const TextStyle(color: Color(0xFF94A3B8)) : null,
+      decoration: InputDecoration(
+        border: const OutlineInputBorder(),
+        hintText: hint,
+        isDense: true,
+        counterText: maxLength != null ? '' : null,
+        filled: readOnly,
+        fillColor: readOnly ? const Color(0xFFF1F5F9) : null,
+      ),
     ),
   );
 }
@@ -119,7 +139,12 @@ Widget onboardDateField(
 Widget onboardSectionLabel(String text) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 10),
-    child: Text(text.toUpperCase(), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 1, color: Color(0xFF94A3B8))),
+    child: Text(
+      text.toUpperCase(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 1, color: Color(0xFF94A3B8)),
+    ),
   );
 }
 

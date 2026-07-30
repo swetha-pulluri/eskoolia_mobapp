@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/department_entity.dart';
 import '../../domain/entities/designation_entity.dart';
 import '../../domain/entities/staff_attendance_entity.dart';
@@ -95,28 +95,41 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
         }
       });
 
+  /// Direct file download — matches web's own `<a download>` CSV export
+  /// exactly, via the app-wide `saveBytesForDownload` helper (the same
+  /// convention already used for School Tenancy's exports): zero-dialog
+  /// Blob+anchor-click download on web, no share-to-other-apps sheet.
   Future<void> _exportCsv(List<StaffEntity> rows) async {
-    String quote(String v) => '"${v.replaceAll('"', '""')}"';
-    final headers = ['Staff ID', 'First Name', 'Last Name', 'Department', 'Designation', 'Joining Date', 'Status', 'Mobile', 'Email'];
-    final departments = ref.read(allDepartmentsProvider).valueOrNull?.results ?? const <DepartmentEntity>[];
-    final designations = ref.read(designationsProvider).valueOrNull?.results ?? const <DesignationEntity>[];
-    String deptName(int? id) => departments.where((d) => d.id == id).map((d) => d.name).firstOrNull ?? '';
-    String desigName(int? id) => designations.where((d) => d.id == id).map((d) => d.name).firstOrNull ?? '';
-    final lines = rows.map((s) => [
-          quote(s.staffNo),
-          quote(s.firstName),
-          quote(s.lastName),
-          quote(deptName(s.departmentId)),
-          quote(desigName(s.designationId)),
-          quote(s.joinDate),
-          quote(s.status),
-          quote(s.phone),
-          quote(s.email),
-        ].join(','));
-    final csv = [headers.join(','), ...lines].join('\n');
-    final bytes = Uint8List.fromList(utf8.encode(csv));
-    final filename = 'staff_directory_${DateTime.now().toIso8601String().split('T').first}.csv';
-    await Share.shareXFiles([XFile.fromData(bytes, name: filename, mimeType: 'text/csv')]);
+    try {
+      String quote(String v) => '"${v.replaceAll('"', '""')}"';
+      final headers = ['Staff ID', 'First Name', 'Last Name', 'Department', 'Designation', 'Joining Date', 'Status', 'Mobile', 'Email'];
+      final departments = ref.read(allDepartmentsProvider).valueOrNull?.results ?? const <DepartmentEntity>[];
+      final designations = ref.read(designationsProvider).valueOrNull?.results ?? const <DesignationEntity>[];
+      String deptName(int? id) => departments.where((d) => d.id == id).map((d) => d.name).firstOrNull ?? '';
+      String desigName(int? id) => designations.where((d) => d.id == id).map((d) => d.name).firstOrNull ?? '';
+      final lines = rows.map((s) => [
+            quote(s.staffNo),
+            quote(s.firstName),
+            quote(s.lastName),
+            quote(deptName(s.departmentId)),
+            quote(desigName(s.designationId)),
+            quote(s.joinDate),
+            quote(s.status),
+            quote(s.phone),
+            quote(s.email),
+          ].join(','));
+      final csv = [headers.join(','), ...lines].join('\n');
+      final bytes = Uint8List.fromList(utf8.encode(csv));
+      final filename = 'staff_directory_${DateTime.now().toIso8601String().split('T').first}.csv';
+      await saveBytesForDownload(bytes: bytes, filename: filename);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Staff directory exported.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
   }
 
   Future<void> _bulkDeactivate(List<StaffEntity> selectedStaff) async {
@@ -186,7 +199,11 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
             position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
             child: Material(
               child: SizedBox(
-                width: 360,
+                // Was a hardcoded `width: 360` — wider than a 320-360dp
+                // phone screen, so it wouldn't fit on real narrow devices.
+                // Cap to the actual screen width so the drawer never asks
+                // for more room than exists.
+                width: math.min(MediaQuery.sizeOf(context).width, 360.0),
                 height: double.infinity,
                 child: SafeArea(
                   child: SingleChildScrollView(
@@ -608,7 +625,11 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(g.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                    // Department name is real, unbounded-length data (unlike
+                    // the fixed English chip labels below it) — cap to one
+                    // line with ellipsis so a long name can't push the fixed
+                    // "Add staff" button/ring past the row's edge.
+                    Text(g.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Wrap(spacing: 6, children: [
@@ -771,26 +792,37 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
   }
 
   Widget _buildBulkBar(List<StaffEntity> selectedStaff) {
+    // The floating pill's Row(mainAxisSize.min) of label + up to 4 action
+    // buttons has no wrap/scroll protection — on a 320dp screen "N selected"
+    // + Deactivate/Delete/Export/Clear can together exceed the available
+    // width and throw a RenderFlex overflow. Constrain to the screen width
+    // and let the pill scroll horizontally instead, so it always fits.
     return Positioned(
       left: 0,
       right: 0,
       bottom: 16,
       child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(999), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8))]),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('${selectedStaff.length} selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12.5)),
-            const SizedBox(width: 10),
-            if (_bulkBusy)
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
-            else ...[
-              _bulkBtn('Deactivate', () => _bulkDeactivate(selectedStaff)),
-              _bulkBtn('Delete', () => _bulkDelete(selectedStaff)),
-              _bulkBtn('Export', () => _exportCsv(selectedStaff)),
-              TextButton(onPressed: () => setState(() => _selected.clear()), child: const Text('Clear', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700))),
-            ],
-          ]),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 32),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(999), boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 20, offset: Offset(0, 8))]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('${selectedStaff.length} selected', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12.5)),
+                const SizedBox(width: 10),
+                if (_bulkBusy)
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)))
+                else ...[
+                  _bulkBtn('Deactivate', () => _bulkDeactivate(selectedStaff)),
+                  _bulkBtn('Delete', () => _bulkDelete(selectedStaff)),
+                  _bulkBtn('Export', () => _exportCsv(selectedStaff)),
+                  TextButton(onPressed: () => setState(() => _selected.clear()), child: const Text('Clear', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700))),
+                ],
+              ]),
+            ),
+          ),
         ),
       ),
     );

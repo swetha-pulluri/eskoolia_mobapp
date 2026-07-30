@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/department_entity.dart';
 import '../../domain/entities/designation_entity.dart';
 import '../../domain/entities/staff_lite_entity.dart';
@@ -239,15 +240,21 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
           ),
         if (count > 10) ...[
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Was a plain Row(spaceBetween) — the "Showing X–Y of Z" label has
+          // no Expanded/Flexible and the nav-button Row has no wrap, so on a
+          // 320dp screen the two sides' combined width can exceed the
+          // available space and throw a RenderFlex overflow. Wrap lets the
+          // nav controls drop to their own line instead of overflowing.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               Text('Showing ${(page - 1) * 10 + 1}–${(page * 10).clamp(0, count)} of $count', style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B))),
-              Row(children: [
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
                 OutlinedButton(onPressed: page > 1 ? () => ref.read(deptPageProvider.notifier).state = page - 1 : null, child: const Text('← Prev')),
-                const SizedBox(width: 8),
                 Text('Page $page of $totalPages', style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B))),
-                const SizedBox(width: 8),
                 OutlinedButton(onPressed: page < totalPages ? () => ref.read(deptPageProvider.notifier).state = page + 1 : null, child: const Text('Next →')),
               ]),
             ],
@@ -335,15 +342,20 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
           ),
           if (hierCount > 5) ...[
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Same fix as the Step 1 pager above: Row(spaceBetween) with an
+            // unwrapped Text + nav-button Row overflows at 320dp once the
+            // "…of N departments" label grows; Wrap lets it fall to a new
+            // line instead of forcing a RenderFlex overflow.
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 Text('Showing ${(desigPage - 1) * 5 + 1}–${(desigPage * 5).clamp(0, hierCount)} of $hierCount departments', style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B))),
-                Row(children: [
+                Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
                   OutlinedButton(onPressed: desigPage > 1 ? () => ref.read(desigDeptPageProvider.notifier).state = desigPage - 1 : null, child: const Text('← Prev')),
-                  const SizedBox(width: 8),
                   Text('Page $desigPage of $totalPages', style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B))),
-                  const SizedBox(width: 8),
                   OutlinedButton(onPressed: desigPage < totalPages ? () => ref.read(desigDeptPageProvider.notifier).state = desigPage + 1 : null, child: const Text('Next →')),
                 ]),
               ],
@@ -389,7 +401,12 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
             OutlinedButton(onPressed: () => setState(() => _step = 1), child: const Text('Edit Setup')),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
-              onPressed: () => showHrToast(context, 'Staff Onboarding is not built yet in the app', type: 'info'),
+              // Matches web's `onClick={() => { window.location.href =
+              // "/hr/onboard"; }}` (`hr/setup/page.tsx:927`) — the real
+              // 10-step onboarding wizard, already fully built and routed
+              // in this app (`staff_directory_page.dart`'s own "Add Staff"
+              // button uses the same route).
+              onPressed: () => context.push('/hr/onboard'),
               child: const Text('Start Onboarding'),
             ),
           ]),

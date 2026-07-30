@@ -256,9 +256,10 @@ class AdminFileField extends StatelessWidget {
   final String placeholder;
   final String? helper;
   /// Optional field label rendered above the picker (e.g. Complaints'
-  /// `<label htmlFor="c-attachment">Attachment</label>`). Omitted by
-  /// default since several web panels (Visitor Book, Postal) render this
-  /// as a bare, unlabeled `<input type="file">`.
+  /// `<label htmlFor="c-attachment">Attachment</label>`). Every web panel
+  /// with a file field (Complaints, Postal Receive/Dispatch, Visitor Book)
+  /// actually renders a real `<label>Attachment</label>` above its
+  /// `<input type="file">` — always pass this, don't omit it.
   final String? label;
   /// When editing a record that already has a saved file and no new file
   /// has been picked yet, shows a "View existing file" link above the

@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../administration/domain/entities/picked_attachment.dart';
+import '../../../../student/presentation/utils/camera_capture_helper.dart';
 import '../../../domain/entities/master_option_entity.dart';
 import '../../providers/hr_provider.dart';
 import '../hr_theme.dart';
@@ -68,9 +69,12 @@ List<MasterOptionEntity> _withFallback(List<MasterOptionEntity> live, List<Strin
 /// `mother_tongue`/`religion`/`nationality` (+ free-text `_other` fallback,
 /// bound to the real `/api/v1/master/{languages,religions,countries}/`
 /// endpoints), `status`, `biometric_rfid`, `staff_no` (auto-fetched from the
-/// real `next-staff-no` endpoint). "Take photo" (camera capture) is a real
-/// gap vs. the web's `getUserMedia` flow — no camera package is installed
-/// in this app, so only file/gallery picking is offered.
+/// real `next-staff-no` endpoint, always read-only here — matches web's own
+/// `readOnly` "Staff Code" `<HrInput>`, `hr/onboard/page.tsx:507-513`).
+/// "Take photo" reuses the Student Enroll flow's own platform-conditional
+/// camera capture (`camera_capture_helper.dart`): native OS camera on
+/// mobile/desktop, an in-page `getUserMedia` modal on web — mirroring the
+/// real web's own `onCameraClick`/camera modal exactly.
 class StepIdentity extends ConsumerStatefulWidget {
   final Map<String, dynamic> form;
   final void Function(String key, dynamic value) onChange;
@@ -85,6 +89,7 @@ class StepIdentity extends ConsumerStatefulWidget {
 
 class _StepIdentityState extends ConsumerState<StepIdentity> {
   bool _fetchingStaffNo = false;
+  String? _photoError;
 
   @override
   void initState() {
@@ -108,7 +113,32 @@ class _StepIdentityState extends ConsumerState<StepIdentity> {
     final result = await FilePicker.pickFiles(type: FileType.image, withData: true);
     final file = result?.files.firstOrNull;
     if (file?.bytes == null) return;
+    setState(() => _photoError = null);
     widget.onPhotoChanged(PickedAttachment(name: file!.name, bytes: file.bytes!, size: file.size));
+  }
+
+  /// "Take photo" — matches web's `onCameraClick` exactly (reuses the same
+  /// platform-conditional capture already built for Student Enroll: native
+  /// OS camera on mobile/desktop, in-page camera modal on web).
+  Future<void> _takePhoto() async {
+    Uint8List? bytes;
+    try {
+      bytes = await captureStudentPhotoViaCamera(context);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _photoError = 'Could not open the camera: $e');
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    setState(() => _photoError = null);
+    widget.onPhotoChanged(PickedAttachment(name: 'staff-photo-${DateTime.now().millisecondsSinceEpoch}.jpg', bytes: bytes, size: bytes.length));
+  }
+
+  /// Matches web's red "X" remove button on the photo circle exactly
+  /// (`onPhotoRemove`, `hr/onboard/page.tsx:482-491`).
+  void _removePhoto() {
+    setState(() => _photoError = null);
+    widget.onPhotoChanged(null);
   }
 
   @override
@@ -125,21 +155,53 @@ class _StepIdentityState extends ConsumerState<StepIdentity> {
         children: [
           onboardStepHeader('Staff identity', 'Basic profile, DOB, photo'),
           Row(children: [
-            GestureDetector(
-              onTap: _pickPhoto,
-              child: CircleAvatar(
-                radius: 38,
-                backgroundColor: const Color(0xFFF1F5F9),
-                backgroundImage: widget.photo != null ? MemoryImage(Uint8List.fromList(widget.photo!.bytes)) : null,
-                child: widget.photo == null ? const Icon(Icons.add_a_photo_outlined, color: Color(0xFF94A3B8)) : null,
-              ),
+            // Photo circle + red "X" remove badge — matches web's
+            // `.onboard-photo-circle` + `onPhotoRemove` button exactly
+            // (`hr/onboard/page.tsx:466-492`).
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GestureDetector(
+                  onTap: _pickPhoto,
+                  child: CircleAvatar(
+                    radius: 38,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundImage: widget.photo != null ? MemoryImage(Uint8List.fromList(widget.photo!.bytes)) : null,
+                    child: widget.photo == null ? const Icon(Icons.add_a_photo_outlined, color: Color(0xFF94A3B8)) : null,
+                  ),
+                ),
+                if (widget.photo != null)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: InkWell(
+                      onTap: _removePhoto,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                        child: const Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Staff photo', style: TextStyle(fontWeight: FontWeight.w800, color: HrColors.ink)),
-                const Text('Square JPG or PNG, at least 400×400px.', style: TextStyle(fontSize: 12, color: HrColors.muted)),
-                TextButton(onPressed: _pickPhoto, child: Text(widget.photo == null ? 'Upload file' : 'Change photo')),
+                const Text('Square JPG or PNG, at least 400×400px. Used for ID card, directory, payroll and attendance.', style: TextStyle(fontSize: 12, color: HrColors.muted)),
+                if (_photoError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(_photoError!, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                  ),
+                Wrap(spacing: 4, children: [
+                  TextButton(onPressed: _pickPhoto, child: Text(widget.photo == null ? 'Upload file' : 'Change')),
+                  TextButton(onPressed: _takePhoto, child: const Text('Take photo')),
+                ]),
               ]),
             ),
           ]),
@@ -147,9 +209,12 @@ class _StepIdentityState extends ConsumerState<StepIdentity> {
           onboardFieldGrid([
             onboardText(
               label: 'Staff Code',
-              value: form['staff_no'] as String? ?? '',
-              onChanged: (v) => widget.onChange('staff_no', v),
-              hint: _fetchingStaffNo ? 'Loading…' : null,
+              required: true,
+              readOnly: true,
+              value: (form['staff_no'] as String?)?.isNotEmpty == true
+                  ? form['staff_no'] as String
+                  : (_fetchingStaffNo ? 'Generating…' : 'Auto generated on save'),
+              onChanged: (_) {},
             ),
             onboardText(label: 'Biometric / RFID Code', value: form['biometric_rfid'] as String? ?? '', maxLength: 30, onChanged: (v) => widget.onChange('biometric_rfid', v.replaceAll(RegExp(r'[^A-Za-z0-9]'), ''))),
             onboardDropdown<String>(

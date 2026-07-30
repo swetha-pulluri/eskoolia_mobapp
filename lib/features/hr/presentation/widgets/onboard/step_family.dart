@@ -135,12 +135,18 @@ class StepFamily extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE8E8EE)), borderRadius: BorderRadius.circular(10)),
-      child: Row(children: [
-        Expanded(child: onboardText(label: 'Name', required: true, value: row['name'] as String? ?? '', onChanged: (v) => update('name', v))),
-        const SizedBox(width: 10),
-        Expanded(child: onboardText(label: 'Relationship', value: row['relationship'] as String? ?? '', onChanged: (v) => update('relationship', v))),
-        const SizedBox(width: 10),
-        SizedBox(width: 90, child: onboardText(label: 'Share %', value: row['share'] as String? ?? '', keyboardType: TextInputType.number, onChanged: (v) => update('share', v))),
+      // A fixed Row of 3 text fields + delete button used to squeeze the Name/
+      // Relationship fields down to ~50px on a 320dp screen. Reusing the same
+      // responsive grid the emergency-contact rows already use lets these
+      // stack to a single readable column on narrow phones instead.
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: onboardFieldGrid([
+            onboardText(label: 'Name', required: true, value: row['name'] as String? ?? '', onChanged: (v) => update('name', v)),
+            onboardText(label: 'Relationship', value: row['relationship'] as String? ?? '', onChanged: (v) => update('relationship', v)),
+            onboardText(label: 'Share %', value: row['share'] as String? ?? '', keyboardType: TextInputType.number, onChanged: (v) => update('share', v)),
+          ], minFieldWidth: 140),
+        ),
         IconButton(
           icon: const Icon(Icons.close, size: 16),
           onPressed: rows.length > 1 ? () => _setList('nominees', [for (var i = 0; i < rows.length; i++) if (i != index) rows[i]]) : null,

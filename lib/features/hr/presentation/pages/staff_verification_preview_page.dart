@@ -116,7 +116,14 @@ class _StaffVerificationPreviewPageState extends ConsumerState<StaffVerification
                       child: const Text('🏫', style: TextStyle(fontSize: 24)),
                     ),
                     const SizedBox(width: 12),
-                    const Text('Your School', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: HrColors.ink)),
+                    const Flexible(
+                      child: Text(
+                        'Your School',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: HrColors.ink),
+                      ),
+                    ),
                   ]),
                   const SizedBox(height: 16),
                   const Divider(height: 1),
@@ -314,7 +321,15 @@ class _StaffVerificationPreviewPageState extends ConsumerState<StaffVerification
       padding: const EdgeInsets.symmetric(vertical: 9),
       decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9)))),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(fontSize: 13.5, color: Color(0xFF475569))),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13.5, color: Color(0xFF475569)),
+          ),
+        ),
+        const SizedBox(width: 12),
         Flexible(child: Text(value, textAlign: TextAlign.right, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: HrColors.ink))),
       ]),
     );

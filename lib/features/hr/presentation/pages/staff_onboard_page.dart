@@ -560,7 +560,15 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
                               onTap: _showStepJumpSheet,
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                  Text('Step $step/$onboardTotalSteps: ${stepInfo.label}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: HrColors.ink)),
+                                  Expanded(
+                                    child: Text(
+                                      'Step $step/$onboardTotalSteps: ${stepInfo.label}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: HrColors.ink),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
                                   const Icon(Icons.unfold_more, size: 16, color: HrColors.muted),
                                 ]),
                                 const SizedBox(height: 6),

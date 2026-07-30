@@ -377,6 +377,7 @@ class _VisitorBookScreenState extends ConsumerState<VisitorBookScreen> {
                         ],
                       ),
                       AdminFileField(
+                        label: 'Attachment',
                         fileName: _attachment?.name,
                         errorText: _attachmentError,
                         onTap: _pickAttachment,

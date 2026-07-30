@@ -177,12 +177,21 @@ class HrStepWizard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < steps.length; i++) ...[
-          _StepCircle(
-            step: steps[i],
-            num: i + 1,
-            done: (i + 1) < currentStep,
-            active: (i + 1) == currentStep,
-            onTap: onStepTap == null ? null : () => onStepTap!(i + 1),
+          // Wrapped in Expanded (was a bare fixed-width `_StepCircle`
+          // directly in the Row): 3 steps x their inner SizedBox(width: 100)
+          // alone need 300px, which no longer fits once a 320dp screen's
+          // page padding is subtracted (~288px available) — causing a
+          // "RenderFlex overflowed" error. Expanded lets each circle share
+          // the row proportionally instead of demanding a fixed width.
+          Expanded(
+            flex: 3,
+            child: _StepCircle(
+              step: steps[i],
+              num: i + 1,
+              done: (i + 1) < currentStep,
+              active: (i + 1) == currentStep,
+              onTap: onStepTap == null ? null : () => onStepTap!(i + 1),
+            ),
           ),
           if (i < steps.length - 1)
             Expanded(

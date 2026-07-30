@@ -1559,12 +1559,4 @@ product's richer HR schema and pages live on `origin/demo`/`origin/BugFix`.
     active-only `form-options` list instead of the real unfiltered dedicated endpoints; Emergency
     Contact/Nominee "Relationship" should be a dropdown (`Spouse/Parent/Sibling/Child/Friend/
     Guardian/Other`) but was built as free text; the Degree and Disability Status lists don't match
-    the real web's actual values at all. Full mismatch report with exact file/line targets delivered
-    to the user; fixes intentionally not yet applied, pending direction on which to prioritize.
-
-`flutter analyze`: 0 errors across every change this session (same pre-existing info-level lints
-throughout, none new). Every fix verified with a throwaway Riverpod-override widget test
-(FakeHrRepository pattern) that was deleted immediately after passing. No files outside
-`eskoolia_mobapp` modified; all backend/web verification was read-only (`git show` against
-`origin/demo`/`origin/main`, direct model/serializer/view reads) — no backend, frontend, or database
-changes made. No git operations performed.
+    the real web's actual values at all. Full mismatch report with exact file/line targets deliveredHR Module → Staff List → Onboard Staff

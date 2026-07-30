@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 const _quickReasons = ['Personal leave', 'Medical/Sick leave', 'No intimation'];
@@ -68,8 +70,11 @@ class _AttendanceAbsentDialogState extends State<AttendanceAbsentDialog> {
         const SizedBox(width: 10),
         Expanded(child: Text('Mark ${widget.staffName} Absent', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
       ]),
-      content: SizedBox(
-        width: 380,
+      content: ConstrainedBox(
+        // A hardcoded desktop width overflows a 320-360dp phone screen once
+        // the dialog's own insets are subtracted; cap it to whichever is
+        // smaller.
+        constraints: BoxConstraints(maxWidth: math.min(380, MediaQuery.sizeOf(context).width - 32)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -105,10 +105,10 @@ class _StepDocumentsState extends ConsumerState<StepDocuments> {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(docLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: HrColors.ink)),
+              Flexible(child: Text(docLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: HrColors.ink))),
               if (required) const Padding(padding: EdgeInsets.only(left: 4), child: Text('*', style: TextStyle(color: HrColors.red, fontWeight: FontWeight.w900))),
             ]),
-            if (doc != null) Text(doc.fileName as String, style: const TextStyle(fontSize: 11.5, color: HrColors.muted), overflow: TextOverflow.ellipsis),
+            if (doc != null) Text(doc.fileName as String, maxLines: 1, style: const TextStyle(fontSize: 11.5, color: HrColors.muted), overflow: TextOverflow.ellipsis),
           ]),
         ),
         if (isUploading)

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -332,31 +333,39 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
   }
 
   Widget _buildHeader(List<StaffEntity> allStaff, String date) {
-    return Row(
+    final title = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: _ink),
-                  children: [TextSpan(text: 'Staff '), TextSpan(text: 'Attendance', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text('Track and manage daily staff attendance by department', style: TextStyle(fontSize: 13, color: _muted)),
-            ],
+        RichText(
+          text: const TextSpan(
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: _ink),
+            children: [TextSpan(text: 'Staff '), TextSpan(text: 'Attendance', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
           ),
         ),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OutlinedButton.icon(onPressed: _downloadingSample ? null : _downloadSample, icon: const Icon(Icons.download, size: 15), label: const Text('Download Sample')),
-          OutlinedButton.icon(onPressed: () => _openImportDialog(date), icon: const Icon(Icons.upload_outlined, size: 15), label: const Text('Import')),
-          OutlinedButton.icon(onPressed: _exporting ? null : () => _export(date), icon: const Icon(Icons.ios_share, size: 15), label: const Text('Export')),
-        ]),
+        const SizedBox(height: 2),
+        const Text('Track and manage daily staff attendance by department', style: TextStyle(fontSize: 13, color: _muted)),
       ],
     );
+    final buttons = Wrap(spacing: 8, runSpacing: 8, children: [
+      OutlinedButton.icon(onPressed: _downloadingSample ? null : _downloadSample, icon: const Icon(Icons.download, size: 15), label: const Text('Download Sample')),
+      OutlinedButton.icon(onPressed: () => _openImportDialog(date), icon: const Icon(Icons.upload_outlined, size: 15), label: const Text('Import')),
+      OutlinedButton.icon(onPressed: _exporting ? null : () => _export(date), icon: const Icon(Icons.ios_share, size: 15), label: const Text('Export')),
+    ]);
+    // `Wrap` only wraps its children when it is itself given a bounded
+    // width. Nested directly as a non-flex child of a `Row` (the previous
+    // layout) it receives an unbounded main-axis constraint, so it never
+    // wraps and instead lays every button out on one line — on a narrow
+    // phone the combined width of the title (squeezed by `Expanded` down to
+    // its minimum) and the three buttons exceeds the screen, producing a
+    // real `RenderFlex` overflow. Below ~640px stack the title above a
+    // full-width button `Wrap` instead of placing them side by side.
+    return LayoutBuilder(builder: (context, constraints) {
+      if (constraints.maxWidth < 640) {
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 12), buttons]);
+      }
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: title), buttons]);
+    });
   }
 
   /// Real source is `daily-summary` (school-scoped active-staff total +
@@ -598,7 +607,13 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
               child: Row(children: [
                 AnimatedRotation(turns: open ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.keyboard_arrow_down)),
                 const SizedBox(width: 10),
-                Text(dept.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink)),
+                // A long department name here is unbounded (a plain `Text`
+                // as a non-flex `Row` child takes its full intrinsic width),
+                // which combined with the badges `Expanded` and the trailing
+                // ring/label can push the row past the screen width and
+                // trigger a real overflow. `Flexible` lets it shrink and
+                // ellipsize instead.
+                Flexible(child: Text(dept.name, overflow: TextOverflow.ellipsis, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink))),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Wrap(spacing: 6, runSpacing: 6, children: [
@@ -903,8 +918,11 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
     final isEditing = widget.initialNote.isNotEmpty;
     return AlertDialog(
       title: Text(isEditing ? 'Edit Note' : 'Add Note'),
-      content: SizedBox(
-        width: 340,
+      content: ConstrainedBox(
+        // A hardcoded desktop width overflows a 320-360dp phone screen once
+        // the dialog's own insets are subtracted; cap it to whichever is
+        // smaller.
+        constraints: BoxConstraints(maxWidth: math.min(340, MediaQuery.sizeOf(context).width - 32)),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(widget.staffName, style: const TextStyle(fontSize: 12, color: _muted)),
           const SizedBox(height: 10),
@@ -953,8 +971,11 @@ class _ViewNotesDialogState extends State<_ViewNotesDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Notes'),
-      content: SizedBox(
-        width: 380,
+      content: ConstrainedBox(
+        // A hardcoded desktop width overflows a 320-360dp phone screen once
+        // the dialog's own insets are subtracted; cap it to whichever is
+        // smaller.
+        constraints: BoxConstraints(maxWidth: math.min(380, MediaQuery.sizeOf(context).width - 32)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1077,8 +1098,11 @@ class _ImportAttendanceDialogState extends ConsumerState<_ImportAttendanceDialog
     final result = _result;
     return AlertDialog(
       title: const Text('Import Attendance'),
-      content: SizedBox(
-        width: 380,
+      content: ConstrainedBox(
+        // A hardcoded desktop width overflows a 320-360dp phone screen once
+        // the dialog's own insets are subtracted; cap it to whichever is
+        // smaller.
+        constraints: BoxConstraints(maxWidth: math.min(380, MediaQuery.sizeOf(context).width - 32)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

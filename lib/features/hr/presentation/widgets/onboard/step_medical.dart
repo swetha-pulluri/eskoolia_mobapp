@@ -89,7 +89,7 @@ class _StepMedicalState extends State<StepMedical> {
 
   Widget _fileRow(String label, String? fileName, VoidCallback onPick) {
     return Row(children: [
-      Expanded(child: Text(fileName ?? label, style: TextStyle(fontSize: 12.5, color: fileName != null ? Colors.black87 : Colors.grey.shade600))),
+      Expanded(child: Text(fileName ?? label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: fileName != null ? Colors.black87 : Colors.grey.shade600))),
       TextButton(onPressed: onPick, child: Text(fileName == null ? 'Upload' : 'Replace')),
     ]);
   }
