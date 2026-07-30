@@ -141,23 +141,55 @@ class SchoolDto {
   }
 }
 
-@JsonSerializable()
+/// Manually parsed (not `@JsonSerializable`) so it can also carry the
+/// `status_counts`/`health_flags_counts` objects the backend appends onto
+/// the paginated envelope (`SchoolTenantListView.get()`).
 class PaginatedSchoolsDto {
   final int count;
   final String? next;
   final String? previous;
   final List<SchoolDto> results;
+  final SchoolStatusCountsEntity? statusCounts;
+  final HealthFlagsCountsEntity? healthFlagsCounts;
 
   PaginatedSchoolsDto({
     required this.count,
     this.next,
     this.previous,
     required this.results,
+    this.statusCounts,
+    this.healthFlagsCounts,
   });
 
-  factory PaginatedSchoolsDto.fromJson(Map<String, dynamic> json) => _$PaginatedSchoolsDtoFromJson(json);
-  
-  Map<String, dynamic> toJson() => _$PaginatedSchoolsDtoToJson(this);
+  factory PaginatedSchoolsDto.fromJson(Map<String, dynamic> json) {
+    final statusCountsJson = json['status_counts'] as Map<String, dynamic>?;
+    final healthFlagsJson = json['health_flags_counts'] as Map<String, dynamic>?;
+    return PaginatedSchoolsDto(
+      count: json['count'] as int? ?? 0,
+      next: json['next'] as String?,
+      previous: json['previous'] as String?,
+      results: (json['results'] as List<dynamic>? ?? const [])
+          .map((e) => SchoolDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      statusCounts: statusCountsJson == null
+          ? null
+          : SchoolStatusCountsEntity(
+              all: statusCountsJson['all'] as int? ?? 0,
+              active: statusCountsJson['active'] as int? ?? 0,
+              trial: statusCountsJson['trial'] as int? ?? 0,
+              suspended: statusCountsJson['suspended'] as int? ?? 0,
+              archived: statusCountsJson['archived'] as int? ?? 0,
+            ),
+      healthFlagsCounts: healthFlagsJson == null
+          ? null
+          : HealthFlagsCountsEntity(
+              billingOverdue: healthFlagsJson['billing_overdue'] as int? ?? 0,
+              storage80: healthFlagsJson['storage_80'] as int? ?? 0,
+              trialEnding: healthFlagsJson['trial_ending'] as int? ?? 0,
+              gstinMissing: healthFlagsJson['gstin_missing'] as int? ?? 0,
+            ),
+    );
+  }
 
   PaginatedSchoolsEntity toEntity() {
     return PaginatedSchoolsEntity(
@@ -165,6 +197,8 @@ class PaginatedSchoolsDto {
       next: next,
       previous: previous,
       results: results.map((e) => e.toEntity()).toList(),
+      statusCounts: statusCounts,
+      healthFlagsCounts: healthFlagsCounts,
     );
   }
 }

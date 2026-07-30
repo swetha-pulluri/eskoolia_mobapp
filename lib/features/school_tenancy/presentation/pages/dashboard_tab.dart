@@ -1,12 +1,64 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../../core/widgets/kpi_card.dart';
 import '../../../../core/widgets/progress_bar_widget.dart';
+import '../../domain/entities/dashboard_entity.dart';
 import '../providers/school_tenancy_provider.dart';
 import '../widgets/school_tenancy_layout.dart';
+
+/// Client-side CSV from the already-loaded dashboard snapshot — mirrors
+/// web's own `exportDashboardCsv()` exactly (`dashboard/page.tsx`), which
+/// is itself purely client-side (no backend export endpoint for this).
+///
+/// Uses the app-wide `saveBytesForDownload` helper (already the convention
+/// for every other export in this app — Fee Year-End reports, Student
+/// list) instead of `file_picker`'s `saveFile()`: on web that call throws
+/// `UnimplementedError` (file_picker has no web "save with bytes"
+/// implementation), and on mobile it opens an interactive native
+/// "Save As" dialog — exactly the popup the user does not want. The shared
+/// helper instead does a zero-dialog Blob+anchor-click browser download on
+/// web (matching the real web app's own `<a download>` mechanism exactly).
+Future<void> _exportDashboardCsv(BuildContext context, DashboardEntity d) async {
+  try {
+    final rows = [
+      ['Metric', 'Value'],
+      ['Total Schools', d.totalSchools],
+      ['Active Schools', d.activeSchools],
+      ['Total Students', d.totalStudents],
+      ['Active Students', d.activeStudents],
+      ['Inactive Students', d.inactiveStudents],
+      ['Total Staff', d.totalStaff],
+      ['MRR (INR)', d.mrr.current],
+      ['MRR Trend (%)', d.mrr.trend],
+      ['Alert Count', d.alertCount],
+      ['Overdue Invoices', d.overdueCount],
+      ['Blocked Tenants', d.blockedCount],
+    ];
+    final csv = rows.map((r) => r.map((c) => '"$c"').join(',')).join('\n');
+    final bytes = Uint8List.fromList(utf8.encode(csv));
+    await saveBytesForDownload(
+      bytes: bytes,
+      filename: 'eskoolia-dashboard-${DateTime.now().toIso8601String().split('T').first}.csv',
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Dashboard exported.')),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dashboard export failed: $e')),
+      );
+    }
+  }
+}
 
 /// Super Admin Dashboard Page
 /// Exact conversion of web frontend dashboard structure
@@ -212,7 +264,7 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton.icon(
-                          onPressed: () {},
+                          onPressed: () => _exportDashboardCsv(context, dashboard),
                           icon: const Icon(Icons.download, size: 14),
                           label: const Text('Export'),
                           style: OutlinedButton.styleFrom(

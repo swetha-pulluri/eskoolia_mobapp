@@ -56,7 +56,22 @@ final schoolsProvider = FutureProvider<PaginatedSchoolsEntity>((ref) {
     plan: filters.plan,
     region: filters.region,
     state: filters.state,
+    healthFlag: filters.healthFlag,
   );
+});
+
+/// LLM access registry, keyed by tenant_id — mirrors web's
+/// `getLLMStates()` call on mount (`schools/page.tsx`).
+final llmStatesProvider = FutureProvider<Map<String, LLMSchoolStateEntity>>((ref) {
+  final repository = ref.watch(schoolTenancyRepositoryProvider);
+  return repository.getLLMStates();
+});
+
+/// Single-school detail — mirrors web's `/super-admin/schools/[tenantId]`
+/// page, backed by the same `getSchool()` the Edit form already uses.
+final schoolDetailProvider = FutureProvider.autoDispose.family<SchoolEntity, String>((ref, tenantId) {
+  final repository = ref.watch(schoolTenancyRepositoryProvider);
+  return repository.getSchool(tenantId);
 });
 
 /// Global (unfiltered) school stats used for KPI cards + status-pill counts
@@ -122,14 +137,67 @@ final schoolsForInvoicePickerProvider = FutureProvider<PaginatedSchoolsEntity>((
   return repository.getSchools(pageSize: 200);
 });
 
-/// Audit Provider — [AuditEventEntity] already matches field-for-field, so
-/// this just unwraps the pagination envelope into [AuditStateEntity].
-final auditProvider = FutureProvider<AuditStateEntity>((ref) async {
+/// Audit Log filters + pagination — mirrors web's own filter/page state
+/// (`audit/page.tsx`'s `useState`s) driving a real server-side paginated
+/// fetch (`PAGE_SIZE = 25`). Previously Flutter fetched a flat batch of up
+/// to 200 events once and filtered/severity-matched client-side over just
+/// that window — which silently missed anything outside the 200 most
+/// recent events (so e.g. tapping "Critical" could show zero results even
+/// with plenty of real critical events further back) and had no real
+/// pagination at all.
+const kAuditPageSize = 25;
+const Object _auditUnset = Object();
+
+class AuditFilters {
+  final int page;
+  final String? search;
+  final String? action;
+  final String? severity; // 'critical' | 'warning' | 'info' — matches web's SEV_OPTS values exactly.
+  final String? dateFrom;
+  final String? dateTo;
+
+  const AuditFilters({
+    this.page = 1,
+    this.search,
+    this.action,
+    this.severity,
+    this.dateFrom,
+    this.dateTo,
+  });
+
+  AuditFilters copyWith({
+    int? page,
+    Object? search = _auditUnset,
+    Object? action = _auditUnset,
+    Object? severity = _auditUnset,
+    Object? dateFrom = _auditUnset,
+    Object? dateTo = _auditUnset,
+  }) {
+    return AuditFilters(
+      page: page ?? this.page,
+      search: search == _auditUnset ? this.search : search as String?,
+      action: action == _auditUnset ? this.action : action as String?,
+      severity: severity == _auditUnset ? this.severity : severity as String?,
+      dateFrom: dateFrom == _auditUnset ? this.dateFrom : dateFrom as String?,
+      dateTo: dateTo == _auditUnset ? this.dateTo : dateTo as String?,
+    );
+  }
+}
+
+final auditFiltersProvider = StateProvider<AuditFilters>((ref) => const AuditFilters());
+
+final auditEventsProvider = FutureProvider<PaginatedAuditEventsEntity>((ref) {
+  final filters = ref.watch(auditFiltersProvider);
   final repository = ref.watch(schoolTenancyRepositoryProvider);
-  // Matches web's own `getAuditEvents({ page: 1, page_size: 200 })` —
-  // `audit/page.tsx:177` — both apps filter client-side over this one batch.
-  final events = await repository.getAuditEvents(pageSize: 200);
-  return AuditStateEntity(events: events.results);
+  return repository.getAuditEvents(
+    page: filters.page,
+    pageSize: kAuditPageSize,
+    search: filters.search,
+    action: filters.action,
+    severity: filters.severity,
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+  );
 });
 
 /// Policies Provider — regroups the backend's generic
@@ -167,6 +235,7 @@ class SchoolFilters {
   final String? plan;
   final String? region;
   final String? state;
+  final String? healthFlag;
 
   const SchoolFilters({
     this.page,
@@ -178,6 +247,7 @@ class SchoolFilters {
     this.plan,
     this.region,
     this.state,
+    this.healthFlag,
   });
 
   SchoolFilters copyWith({
@@ -189,6 +259,7 @@ class SchoolFilters {
     String? plan,
     String? region,
     String? state,
+    String? healthFlag,
   }) {
     return SchoolFilters(
       page: page ?? this.page,
@@ -199,6 +270,7 @@ class SchoolFilters {
       plan: plan ?? this.plan,
       region: region ?? this.region,
       state: state ?? this.state,
+      healthFlag: healthFlag ?? this.healthFlag,
     );
   }
 }

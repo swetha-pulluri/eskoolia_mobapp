@@ -315,6 +315,11 @@ class _PlanFormSheetState extends ConsumerState<PlanFormSheet> {
                         ),
                       );
                     }),
+
+                    const SizedBox(height: 20),
+                    _sectionHead('4', 'Preview'),
+                    const SizedBox(height: 12),
+                    _buildPreview(gstAmount, grandTotal),
                   ],
                 ),
               ),
@@ -356,6 +361,102 @@ class _PlanFormSheetState extends ConsumerState<PlanFormSheet> {
           ],
         );
       },
+    );
+  }
+
+  /// Live preview card — matches web's real "Preview" aside exactly
+  /// (`NewPlanDrawer.tsx:388-431`): name/code, "Popular" badge, description,
+  /// price with billing-cycle suffix, GST + total line, then the features
+  /// list with checkmarks — all read live off the same form state.
+  Widget _buildPreview(double gstAmount, double grandTotal) {
+    final name = _nameController.text.trim();
+    final code = _codeController.text.trim();
+    final description = _descriptionController.text.trim();
+    final features = _cleanFeatures;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.bgPrimary,
+        border: Border.all(color: _popular ? AppColors.primaryPurple : AppColors.borderPrimary, width: _popular ? 1.5 : 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  name.isEmpty ? 'Plan name' : name,
+                  style: AppTextStyles.boardLabel.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (_popular)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: AppColors.purpleSoft, borderRadius: BorderRadius.circular(999)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, size: 10, color: AppColors.purpleDeep),
+                      const SizedBox(width: 3),
+                      Text('Popular', style: AppTextStyles.chipLabel(color: AppColors.purpleDeep).copyWith(fontSize: 10, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          Text(code.isEmpty ? 'code' : code, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5, fontFamily: 'monospace')),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(description, style: AppTextStyles.boardLabel.copyWith(fontSize: 12)),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                formatINR(_priceInr, compact: false, fraction: 0),
+                style: AppTextStyles.sectionTitle.copyWith(fontSize: 22, fontFamily: 'serif', fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(width: 4),
+              Text('/ ${_billingCycle == 'monthly' ? 'mo' : 'yr'}', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11)),
+            ],
+          ),
+          Text(
+            '+ GST 18% = ${formatINR(gstAmount, compact: false)} · Total ${formatINR(grandTotal, compact: false)}',
+            style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5),
+          ),
+          if (features.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.only(top: 10),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.borderPrimary))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: features
+                    .map((f) => Padding(
+                          padding: const EdgeInsets.only(bottom: 5),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 2),
+                                child: Icon(Icons.check, size: 12, color: AppColors.primaryPurple),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(child: Text(f, style: AppTextStyles.boardLabel.copyWith(fontSize: 12))),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

@@ -1,7 +1,9 @@
-import 'dart:typed_data';
+import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dropdown.dart';
@@ -66,20 +68,69 @@ const _kBoardOptions = [
   ['OTHER', 'IB / Cambridge / Other'],
 ];
 
+// Full real state/UT list — verbatim from the backend's own
+// `SchoolFormChoicesView._STATES` (`apps/super_admin/views.py`), sorted by
+// name to match. The live `main` backend (what the local dev server
+// actually runs) has no `schools/form-choices/` route to fetch this from
+// at runtime — that endpoint only exists on the unmerged `demo` branch —
+// so this is the same real, hardcoded-server-side list ported directly,
+// not an invented one.
 const _kStateOptions = [
-  ['36', 'Telangana'],
+  ['35', 'Andaman and Nicobar Islands'],
   ['37', 'Andhra Pradesh'],
-  ['29', 'Karnataka'],
-  ['33', 'Tamil Nadu'],
-  ['27', 'Maharashtra'],
+  ['12', 'Arunachal Pradesh'],
+  ['18', 'Assam'],
+  ['10', 'Bihar'],
+  ['04', 'Chandigarh'],
+  ['22', 'Chhattisgarh'],
+  ['26', 'Dadra and Nagar Haveli and Daman and Diu'],
   ['07', 'Delhi'],
+  ['30', 'Goa'],
+  ['24', 'Gujarat'],
+  ['06', 'Haryana'],
+  ['02', 'Himachal Pradesh'],
+  ['01', 'Jammu and Kashmir'],
+  ['20', 'Jharkhand'],
+  ['29', 'Karnataka'],
+  ['32', 'Kerala'],
+  ['38', 'Ladakh'],
+  ['31', 'Lakshadweep'],
+  ['23', 'Madhya Pradesh'],
+  ['27', 'Maharashtra'],
+  ['14', 'Manipur'],
+  ['17', 'Meghalaya'],
+  ['15', 'Mizoram'],
+  ['13', 'Nagaland'],
+  ['21', 'Odisha'],
+  ['34', 'Puducherry'],
+  ['03', 'Punjab'],
+  ['08', 'Rajasthan'],
+  ['11', 'Sikkim'],
+  ['33', 'Tamil Nadu'],
+  ['36', 'Telangana'],
+  ['16', 'Tripura'],
+  ['09', 'Uttar Pradesh'],
+  ['05', 'Uttarakhand'],
+  ['19', 'West Bengal'],
 ];
 
+// Matches the live backend's actual `ProvisionSchoolRequestSerializer.plan`
+// `ChoiceField(["trial", "premium", "enterprise", "custom"])` exactly
+// (`apps/super_admin/serializers.py` on `main`). The previous 'standard'
+// option isn't a valid choice there — selecting it made every submission
+// with that plan fail with a 400 "is not a valid choice" the backend never
+// surfaced to the user (see the plain `rethrow` in
+// `school_tenancy_remote_datasource.dart`'s `provisionSchool`).
 const _kPlanOptions = [
-  ['trial', 'Starter — ₹4,500/mo'],
-  ['standard', 'Standard — ₹9,000/mo'],
+  ['trial', 'Trial — ₹4,500/mo'],
   ['premium', 'Premium — ₹19,500/mo'],
   ['enterprise', 'Enterprise — ₹34,500/mo'],
+  ['custom', 'Custom — contact sales'],
+];
+
+const _kMonths = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
@@ -95,6 +146,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
   final _seatsController = TextEditingController();
   final _adminUsernameController = TextEditingController();
   final _adminPasswordController = TextEditingController();
+  final _mobileController = TextEditingController();
 
   String _board = 'OTHER';
   String? _stateCode;
@@ -111,6 +163,30 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
 
   bool _submitting = false;
   String? _error;
+  String? _mobileError;
+
+  // ── Academic year start — a real, interactive field matching web's
+  // "Academic year start" picker (`schools/page.tsx` `acadYears`/
+  // `addingAcadYear`/`acadYearDraft`), including its real behavior: never
+  // actually submitted (`ProvisionSchoolRequestSerializer` has no such
+  // field either), purely a client-side convenience list.
+  List<String> _acadYears = _defaultAcadYears();
+  String? _acadYearSelected;
+  bool _addingAcadYear = false;
+  String _acadStartMonth = 'June';
+  String _acadEndMonth = 'May';
+  final _acadStartYearController = TextEditingController();
+  final _acadEndYearController = TextEditingController();
+
+  static List<String> _defaultAcadYears() {
+    final y = DateTime.now().year;
+    return [
+      'June $y – May ${y + 1}',
+      'April $y – March ${y + 1}',
+      'June ${y - 1} – May $y',
+      'April ${y - 1} – March $y',
+    ];
+  }
 
   // ── Decorative-only fields (visible on web, never actually submitted —
   // see class doc comment) — kept as a single bag of ephemeral values so
@@ -120,6 +196,10 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
   @override
   void initState() {
     super.initState();
+    final y = DateTime.now().year;
+    _acadStartYearController.text = y.toString();
+    _acadEndYearController.text = (y + 1).toString();
+    _acadYearSelected = _acadYears.first;
     final school = widget.editSchool;
     if (school != null) {
       _nameController.text = school.name;
@@ -129,8 +209,11 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
       _gstinController.text = school.gstin ?? '';
       _panController.text = school.pan ?? '';
       _seatsController.text = school.seats > 0 ? school.seats.toString() : '';
-      _board = school.board ?? 'OTHER';
-      _stateCode = school.state;
+      _board = (school.board == null || school.board!.isEmpty) ? 'OTHER' : school.board!;
+      // An empty string (the model's real blank=True default) must become
+      // an actual `null`, not stay `''` — `AppDropdown`'s hint only shows
+      // for a `null` value; `''` matches no item and crashes instead.
+      _stateCode = (school.state?.isEmpty ?? true) ? null : school.state;
       _plan = school.plan.isEmpty ? 'trial' : school.plan;
       _shardRegion = school.shardRegion.isEmpty
           ? 'ap-south-1'
@@ -140,11 +223,19 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
       _apiAccess = school.apiAccess ? 'enabled' : 'disabled';
       _brandColor = school.brandColor ?? _kPaletteColors[0];
       _existingLogoUrl = school.logoUrl;
+    } else {
+      _restoreDraft();
     }
+    // Live-updates the Admin username placeholder to reflect the current
+    // subdomain, matching web's `${subdomain}_admin` dynamic placeholder.
+    _subdomainController.addListener(_onSubdomainChanged);
   }
+
+  void _onSubdomainChanged() => setState(() {});
 
   @override
   void dispose() {
+    _subdomainController.removeListener(_onSubdomainChanged);
     _nameController.dispose();
     _shortCodeController.dispose();
     _subdomainController.dispose();
@@ -154,7 +245,95 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     _seatsController.dispose();
     _adminUsernameController.dispose();
     _adminPasswordController.dispose();
+    _mobileController.dispose();
+    _acadStartYearController.dispose();
+    _acadEndYearController.dispose();
     super.dispose();
+  }
+
+  static const _draftPrefsKey = 'school_add_draft';
+
+  Future<void> _restoreDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_draftPrefsKey);
+      if (raw == null || !mounted) return;
+      final draft = jsonDecode(raw) as Map<String, dynamic>;
+      setState(() {
+        _nameController.text = draft['name'] as String? ?? '';
+        _shortCodeController.text = draft['short_code'] as String? ?? '';
+        _subdomainController.text = draft['subdomain_url'] as String? ?? '';
+        _udiseController.text = draft['udise_code'] as String? ?? '';
+        _gstinController.text = draft['gstin'] as String? ?? '';
+        _panController.text = draft['pan'] as String? ?? '';
+        _seatsController.text = draft['seats'] as String? ?? '';
+        _adminUsernameController.text =
+            draft['admin_username'] as String? ?? '';
+        _board = draft['board'] as String? ?? _board;
+        _stateCode = draft['state'] as String? ?? _stateCode;
+        _plan = draft['plan'] as String? ?? _plan;
+        _shardRegion = draft['shard_region'] as String? ?? _shardRegion;
+        _backupRetention =
+            draft['backup_retention'] as int? ?? _backupRetention;
+        _ssoMethod = draft['sso_method'] as String? ?? _ssoMethod;
+        _apiAccess = draft['api_access'] as String? ?? _apiAccess;
+        _brandColor = draft['brand_color'] as String? ?? _brandColor;
+      });
+    } catch (_) {
+      // Storage unavailable or malformed draft — ignore, matching web's
+      // own `try { ... } catch { /* storage unavailable */ }`.
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _draftPrefsKey,
+        jsonEncode({
+          'name': _nameController.text,
+          'short_code': _shortCodeController.text,
+          'subdomain_url': _subdomainController.text,
+          'udise_code': _udiseController.text,
+          'gstin': _gstinController.text,
+          'pan': _panController.text,
+          'seats': _seatsController.text,
+          'admin_username': _adminUsernameController.text,
+          'board': _board,
+          'state': _stateCode,
+          'plan': _plan,
+          'shard_region': _shardRegion,
+          'backup_retention': _backupRetention,
+          'sso_method': _ssoMethod,
+          'api_access': _apiAccess,
+          'brand_color': _brandColor,
+        }),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Draft saved — your progress is preserved for this session.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save draft.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_draftPrefsKey);
+    } catch (_) {
+      // Storage unavailable — nothing to clear.
+    }
   }
 
   Future<void> _pickLogo() async {
@@ -320,6 +499,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
 
       ref.invalidate(schoolsProvider);
       ref.invalidate(schoolsGlobalStatsProvider);
+      await _clearDraft();
       if (mounted) {
         await _showCredentialsDialog(result);
         if (mounted) widget.onSaved();
@@ -510,10 +690,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'Academic year start',
-              child: _decorativeDropdown('ay_start', const [
-                'June 2025 – May 2026',
-                'April 2025 – March 2026',
-              ]),
+              child: _acadYearField(),
             ),
           ]),
 
@@ -523,14 +700,17 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               required: true,
               child: AppDropdown<String>(
                 value: _board,
-                items: _kBoardOptions
-                    .map(
-                      (o) => DropdownMenuItem(
-                        value: o[0],
-                        child: Text(o[1], overflow: TextOverflow.ellipsis),
-                      ),
-                    )
-                    .toList(),
+                items: _withCurrentValue(
+                  _kBoardOptions
+                      .map(
+                        (o) => DropdownMenuItem(
+                          value: o[0],
+                          child: Text(o[1], overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  _board,
+                ),
                 onChanged: (v) => setState(() => _board = v ?? 'OTHER'),
               ),
             ),
@@ -563,14 +743,17 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                   'Select state…',
                   style: TextStyle(fontSize: 13),
                 ),
-                items: _kStateOptions
-                    .map(
-                      (o) => DropdownMenuItem(
-                        value: o[0],
-                        child: Text('${o[1]} (${o[0]})'),
-                      ),
-                    )
-                    .toList(),
+                items: _withCurrentValue(
+                  _kStateOptions
+                      .map(
+                        (o) => DropdownMenuItem(
+                          value: o[0],
+                          child: Text('${o[1]} (${o[0]})'),
+                        ),
+                      )
+                      .toList(),
+                  _stateCode,
+                ),
                 onChanged: (v) => setState(() => _stateCode = v),
               ),
             ),
@@ -609,18 +792,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             _field(
               'Mobile',
               required: true,
-              child: Row(
-                children: [
-                  _urlAffix('+91'),
-                  Expanded(
-                    child: _decorativeText(
-                      'mobile',
-                      hint: '98765 43210',
-                      noBorder: true,
-                    ),
-                  ),
-                ],
-              ),
+              child: _mobileField(),
             ),
             _field(
               'Alternate contact',
@@ -736,14 +908,17 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               required: true,
               child: AppDropdown<String>(
                 value: _plan,
-                items: _kPlanOptions
-                    .map(
-                      (o) => DropdownMenuItem(
-                        value: o[0],
-                        child: Text(o[1], overflow: TextOverflow.ellipsis),
-                      ),
-                    )
-                    .toList(),
+                items: _withCurrentValue(
+                  _kPlanOptions
+                      .map(
+                        (o) => DropdownMenuItem(
+                          value: o[0],
+                          child: Text(o[1], overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
+                  _plan,
+                ),
                 onChanged: (v) => setState(() => _plan = v ?? 'trial'),
               ),
             ),
@@ -803,7 +978,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               'DB shard region',
               child: AppDropdown<String>(
                 value: _shardRegion,
-                items: const [
+                items: _withCurrentValue(const [
                   DropdownMenuItem(
                     value: 'ap-south-1',
                     child: Text('ap-south-1 · Mumbai'),
@@ -812,7 +987,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                     value: 'ap-south-2',
                     child: Text('ap-south-2 · Hyderabad'),
                   ),
-                ],
+                ], _shardRegion),
                 onChanged: (v) =>
                     setState(() => _shardRegion = v ?? 'ap-south-1'),
               ),
@@ -829,14 +1004,14 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               'Backup retention',
               child: AppDropdown<String>(
                 value: _backupRetention.toString(),
-                items: const [
+                items: _withCurrentValue(const [
                   DropdownMenuItem(
                     value: '30',
                     child: Text('30 days · daily snapshots'),
                   ),
                   DropdownMenuItem(value: '90', child: Text('90 days')),
                   DropdownMenuItem(value: '365', child: Text('1 year')),
-                ],
+                ], _backupRetention.toString()),
                 onChanged: (v) => setState(
                   () => _backupRetention = int.tryParse(v ?? '30') ?? 30,
                 ),
@@ -846,7 +1021,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               'SSO method',
               child: AppDropdown<String>(
                 value: _ssoMethod,
-                items: const [
+                items: _withCurrentValue(const [
                   DropdownMenuItem(
                     value: 'native',
                     child: Text('Email + password'),
@@ -860,7 +1035,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                     child: Text('Microsoft 365'),
                   ),
                   DropdownMenuItem(value: 'saml', child: Text('SAML 2.0')),
-                ],
+                ], _ssoMethod),
                 onChanged: (v) => setState(() => _ssoMethod = v ?? 'native'),
               ),
             ),
@@ -904,10 +1079,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               _field(
                 'Admin username',
                 hint: 'Lowercase · no spaces · e.g. vasavi_admin',
-                child: _textCtl(
-                  _adminUsernameController,
-                  'Auto: subdomain_admin',
-                ),
+                child: _adminUsernameField(),
               ),
               _field(
                 'Admin password',
@@ -985,6 +1157,18 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                   child: const Text('Cancel'),
                 ),
               ),
+              if (!_isEdit) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _submitting ? null : _saveDraft,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: const Text('Save as draft'),
+                  ),
+                ),
+              ],
               const SizedBox(width: 12),
               Expanded(
                 flex: 2,
@@ -1098,6 +1282,27 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     );
   }
 
+  /// Appends [value] as an extra item (labeled with its own raw string) if
+  /// it isn't already among [base]'s values. Without this, editing a real
+  /// school whose stored value predates the current fixed option list (e.g.
+  /// `plan: 'starter'`/`'standard'` — real values seen in the
+  /// `subscription_plans` table but not in `main`'s create-time
+  /// `ProvisionSchoolRequestSerializer` choices — or `shard_region:
+  /// 'default'`, the literal fallback `SchoolTenantProvisionView` writes
+  /// when a region isn't supplied) crashes with `DropdownButton`'s "exactly
+  /// one item with this value" assertion, since a value with zero matching
+  /// items is just as invalid as one with two. This keeps the school's real
+  /// stored value visible and preserved on save instead of silently
+  /// snapping it to a default the moment the form opens.
+  List<DropdownMenuItem<String>> _withCurrentValue(
+    List<DropdownMenuItem<String>> base,
+    String? value,
+  ) {
+    if (value == null || value.isEmpty) return base;
+    if (base.any((item) => item.value == value)) return base;
+    return [...base, DropdownMenuItem(value: value, child: Text(value))];
+  }
+
   InputDecoration _fieldDecoration({String? hintText, bool noBorder = false}) {
     final border = noBorder
         ? InputBorder.none
@@ -1156,6 +1361,86 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     );
   }
 
+  /// Admin username — matches web's real behavior exactly: manual and
+  /// optional (left blank, the backend auto-generates
+  /// `{subdomain}_admin` — `SchoolTenantProvisionView.post()`), with a
+  /// placeholder that live-updates to the actual subdomain, and live
+  /// lowercase + underscore formatting as you type
+  /// (`e.target.value.toLowerCase().replace(/\s/g, '_')` in
+  /// `schools/page.tsx`).
+  Widget _adminUsernameField() {
+    final sub = _subdomainController.text.trim().toLowerCase();
+    final placeholder = sub.isNotEmpty
+        ? '${sub.replaceAll('-', '_')}_admin'
+        : 'Auto: subdomain_admin';
+    return TextField(
+      controller: _adminUsernameController,
+      style: const TextStyle(fontSize: 13),
+      decoration: _fieldDecoration(hintText: placeholder).copyWith(
+        counterText: '',
+      ),
+      onChanged: (v) {
+        final formatted = v.toLowerCase().replaceAll(RegExp(r'\s'), '_');
+        if (formatted != v) {
+          _adminUsernameController.value = _adminUsernameController.value
+              .copyWith(
+                text: formatted,
+                selection: TextSelection.collapsed(offset: formatted.length),
+              );
+        }
+      },
+    );
+  }
+
+  /// Principal mobile — real, validated field matching web's exact rule
+  /// (`RE_MOBILE_IN = /^[6-9]\d{9}$/` in `schools/page.tsx`): digits only,
+  /// exactly 10, must start 6-9. Still not part of the create payload —
+  /// neither `main` nor `demo`'s `SchoolTenant` model has a
+  /// `principal_phone` column reachable from `ProvisionSchoolRequestSerializer`
+  /// on the currently-running backend (`main`), so, like the other
+  /// decorative fields in this class, it's genuinely validated but not
+  /// submitted.
+  Widget _mobileField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _mobileController,
+          keyboardType: TextInputType.number,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          style: const TextStyle(fontSize: 13),
+          decoration: _fieldDecoration(hintText: '98765 43210', noBorder: true)
+              .copyWith(counterText: ''),
+          onChanged: (v) => setState(() {
+            if (v.isEmpty) {
+              _mobileError = null;
+            } else if (!RegExp(r'^[6-9]\d{9}$').hasMatch(v)) {
+              _mobileError = v.length < 10
+                  ? 'Enter 10 digits.'
+                  : 'Must start with 6-9.';
+            } else {
+              _mobileError = null;
+            }
+          }),
+        ),
+        if (_mobileError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              _mobileError!,
+              style: const TextStyle(
+                color: AppColors.dangerRed,
+                fontSize: 11,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   /// A field visible and interactive on web but never read by
   /// `handleProvisionSubmit`/`updateSchool` — see class doc comment.
   Widget _decorativeText(
@@ -1179,6 +1464,166 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         hintText: hint,
         noBorder: noBorder,
       ).copyWith(counterText: ''),
+    );
+  }
+
+  /// "Academic year start" picker matching web's real behavior exactly:
+  /// a dropdown of computed year labels plus a "+" button that opens an
+  /// inline start/end month+year add-form (same duplicate / same-month /
+  /// end-before-start checks as `schools/page.tsx`'s `acadYearDraft`
+  /// validation). Purely client-side — never submitted (see class doc
+  /// comment; `ProvisionSchoolRequestSerializer` has no such field).
+  Widget _acadYearField() {
+    if (_addingAcadYear) {
+      final startYear = _acadStartYearController.text;
+      final endYear = _acadEndYearController.text;
+      final label = '$_acadStartMonth $startYear – $_acadEndMonth $endYear';
+      final isDup = _acadYears.contains(label);
+      final startVal =
+          (int.tryParse(startYear) ?? 0) * 12 +
+          _kMonths.indexOf(_acadStartMonth);
+      final endVal =
+          (int.tryParse(endYear) ?? 0) * 12 + _kMonths.indexOf(_acadEndMonth);
+      final isSameMonth = endVal == startVal;
+      final isEndBefore = endVal < startVal;
+      final hasError = isDup || isSameMonth || isEndBefore;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _monthYearPicker(isStart: true)),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                child: Text('–'),
+              ),
+              Expanded(child: _monthYearPicker(isStart: false)),
+            ],
+          ),
+          if (isEndBefore)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'End month must come after start month.',
+                style: TextStyle(color: AppColors.dangerRed, fontSize: 11),
+              ),
+            ),
+          if (isSameMonth)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'Start and end cannot be the same month.',
+                style: TextStyle(color: AppColors.dangerRed, fontSize: 11),
+              ),
+            ),
+          if (isDup)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '"$label" is already in the list.',
+                style: const TextStyle(color: Colors.amber, fontSize: 11),
+              ),
+            ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              OutlinedButton(
+                onPressed: hasError
+                    ? null
+                    : () => setState(() {
+                        _acadYears = [label, ..._acadYears];
+                        _acadYearSelected = label;
+                        _addingAcadYear = false;
+                      }),
+                child: const Text('Add'),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => setState(() => _addingAcadYear = false),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    final options = _acadYears.toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+    if (_acadYearSelected == null || !options.contains(_acadYearSelected)) {
+      _acadYearSelected = options.isNotEmpty ? options.first : null;
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: AppDropdown<String>(
+            value: _acadYearSelected,
+            items: options
+                .map(
+                  (o) => DropdownMenuItem(
+                    value: o,
+                    child: Text(o, overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: (v) => setState(() => _acadYearSelected = v),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 36,
+          height: 36,
+          child: OutlinedButton(
+            onPressed: () => setState(() => _addingAcadYear = true),
+            style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
+            child: const Icon(Icons.add, size: 16),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _monthYearPicker({required bool isStart}) {
+    final month = isStart ? _acadStartMonth : _acadEndMonth;
+    final yearController = isStart
+        ? _acadStartYearController
+        : _acadEndYearController;
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: AppDropdown<String>(
+            value: month,
+            items: _kMonths
+                .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                .toList(),
+            onChanged: (v) => setState(() {
+              if (v == null) return;
+              if (isStart) {
+                _acadStartMonth = v;
+              } else {
+                _acadEndMonth = v;
+              }
+            }),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: yearController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(4),
+            ],
+            style: const TextStyle(fontSize: 13),
+            decoration: _fieldDecoration(hintText: 'YYYY').copyWith(
+              counterText: '',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1262,6 +1707,40 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     );
   }
 
+  /// Gradient initials avatar — the logo picker's empty/error state.
+  /// Matches web's own fallback exactly: real initials computed from the
+  /// entered school name, falling back to the literal 'VV' placeholder
+  /// only when no name has been typed yet
+  /// (`provisionForm.name ? schoolInitials(provisionForm.name) : 'VV'`).
+  Widget _logoPlaceholder() {
+    final name = _nameController.text.trim();
+    final words = name.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final initials = words.isEmpty
+        ? 'VV'
+        : words.length >= 2
+            ? '${words[0][0]}${words[1][0]}'.toUpperCase()
+            : words[0].substring(0, words[0].length < 2 ? 1 : 2).toUpperCase();
+    return Container(
+      width: 44,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF7C5BFF), Color(0xFF5836E0)],
+        ),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Text(
+        initials,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+      ),
+    );
+  }
+
   Widget _logoPicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1290,7 +1769,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                       fit: BoxFit.contain,
                     ),
                   )
-                else if (_existingLogoUrl != null)
+                else if (_existingLogoUrl != null && _existingLogoUrl!.isNotEmpty)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(9),
                     child: Image.network(
@@ -1298,28 +1777,16 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                       width: 44,
                       height: 44,
                       fit: BoxFit.contain,
+                      // The backend's `logo_url` is `blank=True` (empty
+                      // string, not null) for schools without a logo, and
+                      // some stored URLs 404 to an HTML error page rather
+                      // than an image — both crashed this widget with an
+                      // `ImageCodecException` before this fallback existed.
+                      errorBuilder: (context, error, stackTrace) => _logoPlaceholder(),
                     ),
                   )
                 else
-                  Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF7C5BFF), Color(0xFF5836E0)],
-                      ),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: const Text(
-                      'VV',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
+                  _logoPlaceholder(),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

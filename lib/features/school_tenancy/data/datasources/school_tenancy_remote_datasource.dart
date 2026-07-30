@@ -1,17 +1,60 @@
 import 'package:dio/dio.dart';
 import '../../../../data/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
+import '../../domain/entities/school_entity.dart';
 import '../models/dashboard_dto.dart';
 import '../models/school_dto.dart';
 import '../models/invoice_dto.dart';
 import '../models/audit_dto.dart';
 import '../models/policy_dto.dart';
 
+/// Thrown by [SchoolTenancyRemoteDataSource] with the real backend-provided
+/// message extracted out of the DRF error envelope, instead of callers
+/// seeing a raw, unreadable `DioException [bad response]: ...` string.
+class SchoolTenancyApiException implements Exception {
+  final String message;
+  const SchoolTenancyApiException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 /// School Tenancy Remote Data Source
 class SchoolTenancyRemoteDataSource {
   final DioClient _dioClient;
 
   SchoolTenancyRemoteDataSource(this._dioClient);
+
+  /// Extracts the real backend error message out of a failed response
+  /// instead of letting a raw `DioException` (whose `toString()` is a long,
+  /// unhelpful internal description) surface to the UI. Handles both DRF's
+  /// plain `{"detail": "..."}` shape (used by `SchoolTenantProvisionView`'s
+  /// duplicate-subdomain/plan-validation/500 responses) and per-field
+  /// validation errors (`{"field": ["msg", ...]}`, raised by
+  /// `serializer.is_valid(raise_exception=True)`).
+  Never _throwApiException(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final detail = data['detail'];
+      if (detail is String && detail.isNotEmpty) {
+        throw SchoolTenancyApiException(detail);
+      }
+      final fieldMessages = <String>[];
+      data.forEach((key, value) {
+        if (value is List && value.isNotEmpty) {
+          fieldMessages.add('$key: ${value.first}');
+        } else if (value is String) {
+          fieldMessages.add('$key: $value');
+        }
+      });
+      if (fieldMessages.isNotEmpty) {
+        throw SchoolTenancyApiException(fieldMessages.join('; '));
+      }
+    }
+    throw SchoolTenancyApiException(
+      e.message ?? 'Something went wrong. Please try again.',
+    );
+  }
 
   /// Get Dashboard Data
   Future<DashboardDto> getDashboard() async {
@@ -34,10 +77,11 @@ class SchoolTenancyRemoteDataSource {
     String? plan,
     String? region,
     String? state,
+    String? healthFlag,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      
+
       if (page != null) queryParams['page'] = page.toString();
       if (pageSize != null) queryParams['page_size'] = pageSize.toString();
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
@@ -46,6 +90,7 @@ class SchoolTenancyRemoteDataSource {
       if (plan != null && plan.isNotEmpty) queryParams['plan'] = plan;
       if (region != null && region.isNotEmpty) queryParams['region'] = region;
       if (state != null && state.isNotEmpty) queryParams['state'] = state;
+      if (healthFlag != null && healthFlag.isNotEmpty) queryParams['health_flag'] = healthFlag;
 
       final response = await _dioClient.get(
         '/api/super-admin/schools/',
@@ -55,6 +100,55 @@ class SchoolTenancyRemoteDataSource {
       return PaginatedSchoolsDto.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       AppLogger.error('Get schools error', e);
+      rethrow;
+    }
+  }
+
+  /// Export schools matching the current filters as an Excel (.xlsx) file —
+  /// mirrors web's `handleExportSchoolsXlsx()`
+  /// (`GET /api/super-admin/schools/export-xlsx/`).
+  Future<List<int>> exportSchoolsXlsx({
+    String? search,
+    String? status,
+    String? board,
+    String? plan,
+    String? region,
+    String? state,
+    String? healthFlag,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+      if (board != null && board.isNotEmpty) queryParams['board'] = board;
+      if (plan != null && plan.isNotEmpty) queryParams['plan'] = plan;
+      if (region != null && region.isNotEmpty) queryParams['region'] = region;
+      if (state != null && state.isNotEmpty) queryParams['state'] = state;
+      if (healthFlag != null && healthFlag.isNotEmpty) queryParams['health_flag'] = healthFlag;
+      final response = await _dioClient.get(
+        '/api/super-admin/schools/export-xlsx/',
+        queryParameters: queryParams,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data as List<int>;
+    } catch (e) {
+      AppLogger.error('Export schools xlsx error', e);
+      rethrow;
+    }
+  }
+
+  /// Export platform policies as JSON or YAML — mirrors web's
+  /// `exportPolicies()` (`GET /api/super-admin/policies/export/?format=`).
+  Future<List<int>> exportPolicies(String format) async {
+    try {
+      final response = await _dioClient.get(
+        '/api/super-admin/policies/export/',
+        queryParameters: {'format': format},
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data as List<int>;
+    } catch (e) {
+      AppLogger.error('Export policies error', e);
       rethrow;
     }
   }
@@ -70,12 +164,67 @@ class SchoolTenancyRemoteDataSource {
     }
   }
 
+  /// Get LLM access registry — mirrors web's `getLLMStates()`
+  /// (`GET /api/super-admin/llm/schools/`), keyed by `tenant_id`.
+  Future<Map<String, LLMSchoolStateEntity>> getLLMStates() async {
+    try {
+      final response = await _dioClient.get('/api/super-admin/llm/schools/');
+      final data = response.data as Map<String, dynamic>;
+      final results = (data['results'] as List<dynamic>? ?? const [])
+          .map((e) => LLMSchoolStateEntity.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return {
+        for (final s in results)
+          if (s.tenantId.isNotEmpty) s.tenantId: s,
+      };
+    } catch (e) {
+      AppLogger.error('Get LLM states error', e);
+      rethrow;
+    }
+  }
+
+  /// Toggle LLM access for a school — mirrors web's `toggleSchoolLLM()`
+  /// (`POST /api/super-admin/llm/schools/{schoolId}/`).
+  Future<bool> toggleSchoolLLM(int schoolId, bool enabled) async {
+    try {
+      final response = await _dioClient.post(
+        '/api/super-admin/llm/schools/$schoolId/',
+        data: {'enabled': enabled},
+      );
+      final data = response.data as Map<String, dynamic>;
+      return data['llm_enabled'] as bool? ?? enabled;
+    } catch (e) {
+      AppLogger.error('Toggle school LLM error', e);
+      rethrow;
+    }
+  }
+
+  /// Reset a school's admin password — mirrors web's
+  /// `resetSchoolAdminPassword()`
+  /// (`POST /api/super-admin/schools/{tenantId}/reset-admin-password/`).
+  /// The new password is returned once and never stored server-side.
+  Future<Map<String, dynamic>> resetSchoolAdminPassword(String tenantId) async {
+    try {
+      final response = await _dioClient.post('/api/super-admin/schools/$tenantId/reset-admin-password/');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      AppLogger.error('Reset admin password error', e);
+      _throwApiException(e);
+    } catch (e) {
+      AppLogger.error('Reset admin password error', e);
+      rethrow;
+    }
+  }
+
   /// Provision a new school tenant — mirrors web's `provisionSchool()`
   /// (`POST /api/super-admin/schools/provision/`).
   Future<Map<String, dynamic>> provisionSchool(Map<String, dynamic> data) async {
     try {
       final response = await _dioClient.post('/api/super-admin/schools/provision/', data: data);
       return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      AppLogger.error('Provision school error', e);
+      _throwApiException(e);
     } catch (e) {
       AppLogger.error('Provision school error', e);
       rethrow;
@@ -253,13 +402,18 @@ class SchoolTenancyRemoteDataSource {
 
   /// Fetch the GSTR-1 export as raw CSV text — mirrors web's `exportGstr1()`
   /// (`GET /billing/export/gstr1/`, `text/csv` response).
-  Future<String> exportGstr1() async {
+  Future<List<int>> exportGstr1() async {
     try {
+      // The real backend returns a binary .xlsx workbook (`BillingGSTR1ExportView`
+      // builds it with openpyxl), not CSV/plain text — `ResponseType.plain`
+      // here used to try to decode those binary bytes as a UTF-8 string,
+      // which corrupted the file and usually threw outright, surfacing as
+      // "GSTR-1 export failed" with no real cause shown.
       final response = await _dioClient.get(
         '/api/super-admin/billing/export/gstr1/',
-        options: Options(responseType: ResponseType.plain),
+        options: Options(responseType: ResponseType.bytes),
       );
-      return response.data as String;
+      return response.data as List<int>;
     } catch (e) {
       AppLogger.error('Export GSTR-1 error', e);
       rethrow;
@@ -322,6 +476,7 @@ class SchoolTenancyRemoteDataSource {
     String? severity,
     String? dateFrom,
     String? dateTo,
+    String? search,
   }) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -334,6 +489,7 @@ class SchoolTenancyRemoteDataSource {
       if (severity != null && severity.isNotEmpty) queryParams['severity'] = severity;
       if (dateFrom != null && dateFrom.isNotEmpty) queryParams['date_from'] = dateFrom;
       if (dateTo != null && dateTo.isNotEmpty) queryParams['date_to'] = dateTo;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final response = await _dioClient.get(
         '/api/super-admin/audit/',
@@ -343,6 +499,37 @@ class SchoolTenancyRemoteDataSource {
       return PaginatedAuditEventsDto.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       AppLogger.error('Get audit events error', e);
+      rethrow;
+    }
+  }
+
+  /// Real call to `GET /audit/export/` — mirrors web's `exportAuditCsv()`
+  /// (`audit/page.tsx`'s `handleExport`), which applies the SAME
+  /// action/severity/search/date filters server-side and returns every
+  /// matching row, not just whatever's on the currently-loaded page.
+  Future<List<int>> exportAuditCsv({
+    String? action,
+    String? severity,
+    String? search,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (action != null && action.isNotEmpty) queryParams['action'] = action;
+      if (severity != null && severity.isNotEmpty) queryParams['severity'] = severity;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+      if (dateFrom != null && dateFrom.isNotEmpty) queryParams['date_from'] = dateFrom;
+      if (dateTo != null && dateTo.isNotEmpty) queryParams['date_to'] = dateTo;
+
+      final response = await _dioClient.get(
+        '/api/super-admin/audit/export/',
+        queryParameters: queryParams,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data as List<int>;
+    } catch (e) {
+      AppLogger.error('Export audit CSV error', e);
       rethrow;
     }
   }

@@ -91,9 +91,16 @@ class SeverityBadge extends StatelessWidget {
 
   Color _getColorForSeverity() {
     switch (severity.toLowerCase()) {
+      // Real audit events carry 'error'/'warning'/'info' (the Super Admin
+      // API's own `get_severity()` vocabulary) — 'critical'/'high'/'medium'/
+      // 'low' below never actually occur on a real event, so without these
+      // cases every severity dot silently rendered gray regardless of
+      // actual severity.
       case 'critical':
+      case 'error':
         return AppColors.dangerRed;
       case 'high':
+      case 'warning':
         return AppColors.warningAmber;
       case 'medium':
         return AppColors.infoBlue;

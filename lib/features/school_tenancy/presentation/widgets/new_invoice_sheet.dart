@@ -20,11 +20,27 @@ import '../providers/school_tenancy_provider.dart';
 /// `POST /api/super-admin/billing/invoices/` submission with the same
 /// duplicate-invoice (409) confirmation flow as a fallback.
 ///
+/// Web's drawer is a SINGLE component for both "New" and "Edit" — passing
+/// [invoice] switches this into the same edit mode: School/Subscription
+/// plan/line items become locked (re-issue for corrections), the footer
+/// collapses to one "Save changes" action, and submit only PATCHes the
+/// safely-editable fields (`status`/`due_date`/`notes`/`terms_conditions`
+/// — `InvoiceUpdateSerializer`, "Intentionally restricted to fields that do
+/// not change GST-relevant amounts"). Previously this was a second,
+/// independently-hand-built `EditInvoiceSheet` widget that inevitably drifted
+/// out of sync with the real page (missing School/Plan/GSTIN/State, the Line
+/// items table, and the Tax summary/Tax logic panels) — mirroring the web's
+/// own single-component design instead keeps both modes sharing one source
+/// of truth for layout.
+///
 /// Seller identity (`SELLER_DEFAULTS` in the web source) is hardcoded on web
 /// itself, not fetched from any API — replicated verbatim here rather than
 /// invented.
 class NewInvoiceSheet extends ConsumerStatefulWidget {
-  const NewInvoiceSheet({super.key});
+  const NewInvoiceSheet({super.key, this.invoice});
+
+  /// When provided, opens in edit mode pre-filled from this invoice.
+  final InvoiceEntity? invoice;
 
   @override
   ConsumerState<NewInvoiceSheet> createState() => _NewInvoiceSheetState();
@@ -59,19 +75,21 @@ class _LineDraft {
 }
 
 class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
+  bool get _isEditMode => widget.invoice != null;
+
   String? _tenantId;
   String? _planCode;
   DateTime _invoiceDate = DateTime.now();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 15));
   late String _invoiceNumber;
   bool _reverseCharge = false;
-  String _status = 'draft';
+  late String _status;
   String? _submittingStatus;
   final _notesController = TextEditingController();
   final _termsController = TextEditingController(
     text: 'Payment due within 15 days. Late payments attract interest @ 1.5% per month.',
   );
-  final List<_LineDraft> _lines = [_LineDraft()];
+  final List<_LineDraft> _lines = [];
   bool _submitting = false;
   Map<String, dynamic>? _duplicateWarning;
   bool _forceCreate = false;
@@ -80,7 +98,30 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
   @override
   void initState() {
     super.initState();
-    _invoiceNumber = _generateInvoiceNumber();
+    final invoice = widget.invoice;
+    if (invoice != null) {
+      // Edit mode — hydrate from the existing invoice
+      // (`NewInvoiceDrawer.tsx:194-211`).
+      _tenantId = invoice.tenantId;
+      _planCode = null; // web always resets planCode to '' in edit mode
+      _invoiceDate = DateTime.tryParse(invoice.invoiceDate) ?? DateTime.now();
+      _dueDate = DateTime.tryParse(invoice.dueDate) ?? DateTime.now().add(const Duration(days: 15));
+      _invoiceNumber = invoice.invoiceNumber;
+      _reverseCharge = false; // web hardcodes this on edit-mode hydrate too
+      _status = invoice.status;
+      _notesController.text = invoice.notes ?? '';
+      _termsController.text = invoice.termsConditions ?? '';
+      _lines.addAll(invoice.lineItems.map((li) => _LineDraft(
+            description: li.description,
+            sacCode: li.sacCode,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+          )));
+    } else {
+      _invoiceNumber = _generateInvoiceNumber();
+      _status = 'draft';
+      _lines.add(_LineDraft());
+    }
     // Web refetches schools + plans every time the drawer opens so newly
     // created plans/schools appear (`NewInvoiceDrawer.tsx:191-207`) — this
     // sheet is a fresh widget instance per open, but the underlying
@@ -118,6 +159,25 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
       if (s.tenantId == _tenantId) return s;
     }
     return null;
+  }
+
+  /// Matches web's `selectedSchool?.gstin || invoice?.buyer_gstin`
+  /// (`NewInvoiceDrawer.tsx:620`) — the freshly-fetched school record wins
+  /// when it has a GSTIN, falling back to what's stored on the invoice
+  /// (relevant in edit mode if the school isn't in the fetched list, e.g.
+  /// archived).
+  String _effectiveGstin(SchoolEntity? school) {
+    final g = school?.gstin;
+    if (g != null && g.isNotEmpty) return g;
+    return widget.invoice?.buyerGstin ?? '';
+  }
+
+  /// Matches web's `selectedSchool?.state || invoice?.buyer_state`
+  /// (`NewInvoiceDrawer.tsx:347`).
+  String _effectiveBuyerState(SchoolEntity? school) {
+    final s = school?.state;
+    if (s != null && s.isNotEmpty) return s;
+    return widget.invoice?.buyerState ?? '';
   }
 
   SubscriptionPlanEntity? _selectedPlan(PlansCatalogEntity? catalog) {
@@ -169,9 +229,12 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
   /// queries invoices for this school within the invoice date's billing
   /// month and flags the first non-cancelled one whose first line-item
   /// description matches the current line 1 (or any, if line 1 is blank).
-  /// This is best-effort — the backend's own 409 guard on submit is the
-  /// real enforcement (`_extractDuplicateInvoice`).
+  /// Skipped entirely in edit mode (`isEditMode` short-circuits web's own
+  /// effect) — in practice this never fires here either, since none of its
+  /// triggers (school picker, invoice-date picker, line-1 description field)
+  /// are interactive once locked.
   void _scheduleDuplicateCheck() {
+    if (_isEditMode) return;
     _dupTimer?.cancel();
     if (_tenantId == null) {
       setState(() {
@@ -306,6 +369,34 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
     }
   }
 
+  /// Edit-mode submit — only the same safely-editable fields the real web
+  /// sends are PATCHed (`NewInvoiceDrawer.tsx:394-407`); School/line items/
+  /// amounts/GST are never touched once an invoice is issued.
+  Future<void> _submitEdit() async {
+    final invoice = widget.invoice;
+    if (invoice == null) return;
+    setState(() => _submitting = true);
+    try {
+      final repository = ref.read(schoolTenancyRepositoryProvider);
+      final updated = await repository.updateInvoice(invoice.id, {
+        'status': _status,
+        'due_date': _isoDate(_dueDate),
+        'notes': _notesController.text.trim(),
+        'terms_conditions': _termsController.text.trim(),
+      });
+      ref.invalidate(invoicesProvider);
+      if (mounted) Navigator.pop(context, updated);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save changes: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   /// Detects the backend's 409 duplicate-invoice guard
   /// (`{code: 'duplicate_invoice', existing_invoice: {...}}`,
   /// `views.py:883-900`) so the user can confirm overriding it with `force`.
@@ -385,23 +476,29 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
     final schools = schoolsAsync.value?.results ?? const <SchoolEntity>[];
     final catalog = plansAsync.value;
     final school = _selectedSchool(schools);
-    final inter = _isInterState(school?.state ?? '');
+    final buyerState = _effectiveBuyerState(school);
+    final inter = _isInterState(buyerState);
     final subtotal = _subtotal;
     final gstPercent = catalog?.gstPercent ?? 18;
     final igst = inter ? subtotal * gstPercent / 100 : 0.0;
     final cgst = !inter ? subtotal * gstPercent / 200 : 0.0;
     final sgst = !inter ? subtotal * gstPercent / 200 : 0.0;
     final grandTotal = subtotal + igst + cgst + sgst;
-    final buyerCode = _stateCode(school?.state ?? '');
+    final buyerCode = _stateCode(buyerState);
     final sellerCode = _stateCode(NewInvoiceSheet.sellerState);
 
-    final canSubmit = school != null &&
-        catalog != null &&
-        _lines.isNotEmpty &&
-        _lines.every((l) => l.description.trim().isNotEmpty && l.quantity > 0) &&
-        subtotal > 0 &&
-        !_submitting &&
-        (_duplicateWarning == null || _forceCreate);
+    final invoiceDateStr = _isoDate(_invoiceDate);
+    final canSubmit = _isEditMode
+        ? false
+        : school != null &&
+            catalog != null &&
+            _lines.isNotEmpty &&
+            _lines.every((l) => l.description.trim().isNotEmpty && l.quantity > 0) &&
+            subtotal > 0 &&
+            !_submitting &&
+            (_duplicateWarning == null || _forceCreate);
+    final isPaidLocked = _isEditMode && widget.invoice!.status == 'paid';
+    final canSubmitEdit = _isEditMode && !_submitting && !isPaidLocked && _isoDate(_dueDate).compareTo(invoiceDateStr) >= 0;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.92,
@@ -411,8 +508,8 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
       builder: (context, scrollController) {
         return Column(
           children: [
-            // HEADER — matches web's icon + "New Invoice" (italic accent) +
-            // GST subtitle (`NewInvoiceDrawer.tsx:415-437`).
+            // HEADER — matches web's icon + "New"/"Edit Invoice" (italic
+            // accent) + GST subtitle (`NewInvoiceDrawer.tsx:415-437,497-510`).
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
               child: Row(
@@ -422,7 +519,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     height: 36,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: AppColors.purpleSoft, borderRadius: BorderRadius.circular(9)),
-                    child: const Icon(Icons.description_outlined, size: 17, color: AppColors.purpleDeep),
+                    child: Icon(_isEditMode ? Icons.edit_outlined : Icons.description_outlined, size: 17, color: AppColors.purpleDeep),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -431,12 +528,14 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                       children: [
                         Row(
                           children: [
-                            Text('New ', style: AppTextStyles.sectionTitle.copyWith(fontSize: 17, fontWeight: FontWeight.w700)),
+                            Text(_isEditMode ? 'Edit ' : 'New ', style: AppTextStyles.sectionTitle.copyWith(fontSize: 17, fontWeight: FontWeight.w700)),
                             Text('Invoice', style: AppTextStyles.pageTitleAccent.copyWith(fontSize: 19)),
                           ],
                         ),
                         Text(
-                          'GST-compliant tax invoice · SAC ${catalog?.sacCode ?? '998313'} · GST ${gstPercent.toStringAsFixed(0)}%',
+                          _isEditMode
+                              ? 'Invoice $_invoiceNumber · SAC ${catalog?.sacCode ?? '998313'} · GST ${gstPercent.toStringAsFixed(0)}%'
+                              : 'GST-compliant tax invoice · SAC ${catalog?.sacCode ?? '998313'} · GST ${gstPercent.toStringAsFixed(0)}%',
                           style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11),
                         ),
                       ],
@@ -459,6 +558,28 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                         child: LinearProgressIndicator(),
                       ),
 
+                    // Lock banners — matches `NewInvoiceDrawer.tsx:533-564`.
+                    // Only 'paid' hard-locks submission; every other status
+                    // (including 'cancelled') just shows the amber notice and
+                    // stays saveable — a real, verified quirk of the web app,
+                    // not something to "fix" here.
+                    if (_isEditMode && widget.invoice!.status == 'paid')
+                      _banner(
+                        color: AppColors.dangerRed,
+                        title: 'This invoice is paid and cannot be edited',
+                        body: 'Paid invoices are locked to preserve the audit trail and GST compliance. '
+                            'To make corrections, cancel this invoice and re-issue a new one.',
+                      )
+                    else if (_isEditMode)
+                      _banner(
+                        color: AppColors.warningAmber,
+                        title: 'Editing an issued invoice',
+                        body: 'School, line items, amounts and GST cannot be modified once issued. To correct '
+                            'those, cancel this invoice and create a new one. You can still update status, '
+                            'due date, notes and payment terms here.',
+                      ),
+                    if (_isEditMode) const SizedBox(height: 4),
+
                     // 1. BILLED TO
                     _sectionHead('1', 'Billed to'),
                     const SizedBox(height: 12),
@@ -467,13 +588,28 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     AppDropdown<String>(
                       value: _tenantId,
                       hint: const Text('Select a school…', style: TextStyle(fontSize: 13)),
-                      items: schools
-                          .map((s) => DropdownMenuItem(
-                                value: s.tenantId,
-                                child: Text('${s.name}${(s.state ?? '').isNotEmpty ? ' · ${s.state}' : ''}', overflow: TextOverflow.ellipsis),
-                              ))
-                          .toList(),
-                      onChanged: (v) => _onSchoolChanged(v, schools, catalog),
+                      // In edit mode the school is locked — a single
+                      // synthetic item mirrors web's `disabled={isEditMode}`
+                      // <select> without risking a "value doesn't match any
+                      // item" crash if the real school isn't in the fetched
+                      // (active-schools-only) picker list.
+                      items: _isEditMode
+                          ? [
+                              DropdownMenuItem(
+                                value: _tenantId,
+                                child: Text(
+                                  widget.invoice!.buyerName.isNotEmpty ? widget.invoice!.buyerName : widget.invoice!.schoolName,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ]
+                          : schools
+                              .map((s) => DropdownMenuItem(
+                                    value: s.tenantId,
+                                    child: Text('${s.name}${(s.state ?? '').isNotEmpty ? ' · ${s.state}' : ''}', overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                      onChanged: _isEditMode ? null : (v) => _onSchoolChanged(v, schools, catalog),
                     ),
                     const SizedBox(height: 14),
 
@@ -482,10 +618,14 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     AppDropdown<String>(
                       value: _planCode,
                       hint: const Text('— No plan —', style: TextStyle(fontSize: 13)),
-                      items: (catalog?.plans ?? const <SubscriptionPlanEntity>[])
-                          .map((p) => DropdownMenuItem(value: p.code, child: Text('${p.name} · ${formatINR(p.priceInr, compact: false, fraction: 0)}/${p.billingCycle == 'monthly' ? 'mo' : 'yr'}')))
-                          .toList(),
-                      onChanged: catalog == null
+                      // Web always resets this to blank in edit mode too
+                      // (`NewInvoiceDrawer.tsx:196`) — locked, no options.
+                      items: _isEditMode
+                          ? const <DropdownMenuItem<String>>[]
+                          : (catalog?.plans ?? const <SubscriptionPlanEntity>[])
+                              .map((p) => DropdownMenuItem(value: p.code, child: Text('${p.name} · ${formatINR(p.priceInr, compact: false, fraction: 0)}/${p.billingCycle == 'monthly' ? 'mo' : 'yr'}')))
+                              .toList(),
+                      onChanged: _isEditMode || catalog == null
                           ? null
                           : (v) => setState(() {
                                 _planCode = v;
@@ -504,12 +644,12 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
 
                     Text('GSTIN', style: _label),
                     const SizedBox(height: 6),
-                    _readonlyField(school?.gstin ?? '', placeholder: 'Auto from school', mono: true),
+                    _readonlyField(_effectiveGstin(school), placeholder: 'Auto from school', mono: true),
                     const SizedBox(height: 14),
 
                     Text('STATE', style: _label),
                     const SizedBox(height: 6),
-                    _readonlyField(school?.state ?? '', placeholder: 'Auto from school'),
+                    _readonlyField(buyerState, placeholder: 'Auto from school'),
                     const SizedBox(height: 3),
                     Text(
                       buyerCode.isNotEmpty ? 'State code $buyerCode' : 'Selected school\'s state',
@@ -534,7 +674,9 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
 
                     Row(
                       children: [
-                        Expanded(child: _buildDateField('INVOICE DATE', _invoiceDate, () => _pickDate(true))),
+                        // Invoice date is locked in edit mode
+                        // (`readOnly={isEditMode}`, `NewInvoiceDrawer.tsx:708`).
+                        Expanded(child: _buildDateField('INVOICE DATE', _invoiceDate, _isEditMode ? null : () => _pickDate(true))),
                         const SizedBox(width: 12),
                         Expanded(child: _buildDateField('DUE DATE', _dueDate, () => _pickDate(false))),
                       ],
@@ -545,9 +687,20 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     const SizedBox(height: 6),
                     AppDropdown<String>(
                       value: _status,
-                      items: const [
-                        DropdownMenuItem(value: 'draft', child: Text('Draft')),
-                        DropdownMenuItem(value: 'sent', child: Text('Sent')),
+                      // Matches web's exact conditional option list
+                      // (`NewInvoiceDrawer.tsx:732-737`) — Paid/Overdue/
+                      // Cancelled only show up once editing an existing
+                      // invoice. 'Partially Paid' is added defensively (not
+                      // in the web list) since it's a real live status and
+                      // Flutter's DropdownButton crashes outright on a value
+                      // with no matching item, unlike an HTML <select>.
+                      items: [
+                        const DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                        const DropdownMenuItem(value: 'sent', child: Text('Sent')),
+                        if (_isEditMode) const DropdownMenuItem(value: 'partially_paid', child: Text('Partially Paid')),
+                        if (_isEditMode) const DropdownMenuItem(value: 'paid', child: Text('Paid')),
+                        if (_isEditMode) const DropdownMenuItem(value: 'overdue', child: Text('Overdue')),
+                        if (_isEditMode) const DropdownMenuItem(value: 'cancelled', child: Text('Cancelled')),
                       ],
                       onChanged: (v) => setState(() => _status = v ?? 'draft'),
                     ),
@@ -570,19 +723,22 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     _readonlyField('INR'),
 
                     const SizedBox(height: 20),
-                    // 3. LINE ITEMS
+                    // 3. LINE ITEMS — "Add line" only in create mode; rows
+                    // are locked in edit mode (`NewInvoiceDrawer.tsx:757-851`).
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _sectionHead('3', 'Line items'),
-                        TextButton.icon(
-                          onPressed: () => setState(() => _lines.add(_LineDraft(sacCode: catalog?.sacCode ?? '998313'))),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text('Add line'),
-                        ),
+                        if (!_isEditMode)
+                          TextButton.icon(
+                            onPressed: () => setState(() => _lines.add(_LineDraft(sacCode: catalog?.sacCode ?? '998313'))),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: const Text('Add line'),
+                          ),
                       ],
                     ),
-                    ..._lines.asMap().entries.map((entry) => _buildLineEditor(entry.key, entry.value)),
+                    _lineItemsHeader(),
+                    ..._lines.asMap().entries.map((entry) => _buildLineEditor(entry.key, entry.value, readOnly: _isEditMode)),
 
                     const SizedBox(height: 20),
                     // 4. NOTES & TERMS
@@ -651,7 +807,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                       child: Column(
                         children: [
                           _logicRow('Seller state', '${sellerCode.isNotEmpty ? '$sellerCode ' : ''}${NewInvoiceSheet.sellerState}'),
-                          _logicRow('Buyer state', '${buyerCode.isNotEmpty ? '$buyerCode ' : ''}${school?.state?.isNotEmpty == true ? school!.state : '—'}'),
+                          _logicRow('Buyer state', '${buyerCode.isNotEmpty ? '$buyerCode ' : ''}${buyerState.isNotEmpty ? buyerState : '—'}'),
                           _logicRow('Supply type', inter ? 'Inter-state' : 'Intra-state'),
                           _logicRow('Applied', inter ? 'IGST' : 'CGST + SGST', accent: true),
                           _logicRow('Reverse charge', _reverseCharge ? 'Yes' : 'No'),
@@ -663,10 +819,9 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 ),
               ),
             ),
-            // FOOTER — total payable + the two save actions (Cancel is the
-            // header's close button; three buttons don't fit comfortably at
-            // mobile width, matching `NewInvoiceDrawer.tsx:793-824`'s intent
-            // with the primary "Save as draft" / "Save & send" pair).
+            // FOOTER — total payable + save action(s). Edit mode collapses
+            // to a single "Save changes" (plus Cancel) instead of the
+            // draft/send pair, matching `NewInvoiceDrawer.tsx:937-981`.
             Container(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
               decoration: const BoxDecoration(
@@ -688,36 +843,68 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: canSubmit ? () => _submit('draft', schools, catalog) : null,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.borderPrimary),
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                  if (_isEditMode)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _submitting ? null : () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: const BorderSide(color: AppColors.borderPrimary),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                            ),
+                            child: const Text('Cancel'),
                           ),
-                          child: Text(_submitting && _submittingStatus == 'draft' ? 'Saving…' : 'Save as draft'),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: canSubmit ? () => _submit('sent', schools, catalog) : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryPurple,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: canSubmitEdit ? _submitEdit : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryPurple,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                            ),
+                            child: Text(_submitting ? 'Saving…' : 'Save changes'),
                           ),
-                          child: Text(_submitting && _submittingStatus == 'sent' ? 'Sending…' : 'Save & send'),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: canSubmit ? () => _submit('draft', schools, catalog) : null,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.textPrimary,
+                              side: const BorderSide(color: AppColors.borderPrimary),
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                            ),
+                            child: Text(_submitting && _submittingStatus == 'draft' ? 'Saving…' : 'Save as draft'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: canSubmit ? () => _submit('sent', schools, catalog) : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryPurple,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                            ),
+                            child: Text(_submitting && _submittingStatus == 'sent' ? 'Sending…' : 'Save & send'),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -744,6 +931,33 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
         const SizedBox(width: 8),
         Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 14)),
       ],
+    );
+  }
+
+  /// Matches web's paid/amber lock notices (`NewInvoiceDrawer.tsx:533-564`).
+  Widget _banner({required Color color, required String title, required String body}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, size: 15, color: color),
+              const SizedBox(width: 6),
+              Expanded(child: Text(title, style: AppTextStyles.boardLabel.copyWith(fontSize: 12, fontWeight: FontWeight.w700, color: color))),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(body, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11, height: 1.4)),
+        ],
+      ),
     );
   }
 
@@ -859,7 +1073,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
     );
   }
 
-  Widget _buildDateField(String label, DateTime value, VoidCallback onTap) {
+  Widget _buildDateField(String label, DateTime value, VoidCallback? onTap) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -870,7 +1084,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.bgSecondary,
+              color: onTap == null ? AppColors.bgTertiary : AppColors.bgSecondary,
               border: Border.all(color: AppColors.borderPrimary),
               borderRadius: BorderRadius.circular(8),
             ),
@@ -881,7 +1095,40 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
     );
   }
 
-  Widget _buildLineEditor(int index, _LineDraft line) {
+  /// Column headings for the line-item cards below — matches web's real
+  /// `<thead>` labels exactly (`NewInvoiceDrawer.tsx`: Description / SAC /
+  /// Qty / Rate (₹) / Amount (₹)), laid out with the same flex ratios as
+  /// `_buildLineEditor`'s SAC/Qty/Rate row so the columns line up.
+  Widget _lineItemsHeader() {
+    final style = AppTextStyles.sectionSubtitle.copyWith(
+      fontSize: 10,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.4,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, left: 12, right: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('DESCRIPTION', style: style),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(flex: 3, child: Text('SAC', style: style)),
+              const SizedBox(width: 8),
+              Expanded(flex: 2, child: Text('QTY', style: style)),
+              const SizedBox(width: 8),
+              Expanded(flex: 3, child: Text('RATE (₹)', style: style)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Align(alignment: Alignment.centerRight, child: Text('AMOUNT (₹)', style: style)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLineEditor(int index, _LineDraft line, {bool readOnly = false}) {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(12),
@@ -899,6 +1146,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 child: TextFormField(
                   key: ValueKey('desc_$index'),
                   initialValue: line.description,
+                  enabled: !readOnly,
                   decoration: _fieldDecoration().copyWith(hintText: 'e.g. Eskoolia ERP — Premium plan'),
                   onChanged: (v) => setState(() {
                     line.description = v;
@@ -906,7 +1154,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                   }),
                 ),
               ),
-              if (_lines.length > 1)
+              if (!readOnly && _lines.length > 1)
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 18),
                   onPressed: () => setState(() => _lines.removeAt(index)),
@@ -921,6 +1169,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 child: TextFormField(
                   key: ValueKey('sac_$index'),
                   initialValue: line.sacCode,
+                  enabled: !readOnly,
                   decoration: _fieldDecoration().copyWith(hintText: 'SAC'),
                   style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5),
                   onChanged: (v) => setState(() => line.sacCode = v),
@@ -932,6 +1181,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 child: TextFormField(
                   key: ValueKey('qty_$index'),
                   initialValue: line.quantity.toString(),
+                  enabled: !readOnly,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: _fieldDecoration().copyWith(hintText: 'Qty'),
@@ -944,6 +1194,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 child: TextFormField(
                   key: ValueKey('price_$index'),
                   initialValue: line.unitPrice.toString(),
+                  enabled: !readOnly,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: _fieldDecoration().copyWith(hintText: 'Rate (₹)'),
                   onChanged: (v) => setState(() => line.unitPrice = double.tryParse(v) ?? 0),

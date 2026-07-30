@@ -20,6 +20,8 @@ import '../../features/student/presentation/pages/student_subject_assignment_pag
 import '../../features/student/presentation/pages/student_unassigned_page.dart';
 import '../../features/school_tenancy/presentation/pages/dashboard_tab.dart';
 import '../../features/school_tenancy/presentation/pages/schools_tab.dart';
+import '../../features/school_tenancy/presentation/pages/school_detail_page.dart';
+import '../../features/school_tenancy/presentation/pages/edit_school_page.dart';
 import '../../features/school_tenancy/presentation/pages/billing_tab.dart';
 import '../../features/school_tenancy/presentation/pages/audit_tab.dart';
 import '../../features/school_tenancy/presentation/pages/policies_tab.dart';
@@ -139,6 +141,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/super-admin/schools',
         name: 'super-admin-schools',
         builder: (context, state) => const SuperAdminSchoolsPage(),
+      ),
+      GoRoute(
+        path: '/super-admin/schools/:tenantId',
+        name: 'super-admin-school-detail',
+        builder: (context, state) => SchoolDetailPage(tenantId: state.pathParameters['tenantId']!),
+      ),
+      GoRoute(
+        path: '/super-admin/schools/:tenantId/edit',
+        name: 'super-admin-school-edit',
+        builder: (context, state) => EditSchoolPage(tenantId: state.pathParameters['tenantId']!),
       ),
       GoRoute(
         path: '/super-admin/billing',
