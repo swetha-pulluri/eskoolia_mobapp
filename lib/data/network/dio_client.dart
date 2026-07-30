@@ -11,6 +11,13 @@ class DioClient {
   final SecureStorageService _secureStorage;
 
   DioClient(this._secureStorage) {
+    // Prints in both debug and release builds (print() is never stripped by
+    // Flutter's release compiler) — view via `adb logcat` for a release APK.
+    // Added after a release-only bug where this resolved to the same LAN IP
+    // as debug but cleartext HTTP to it was blocked in release (see
+    // android/app/src/main/res/xml/network_security_config.xml), which a
+    // "No Internet Connection" toast alone gave no way to diagnose.
+    print('[DioClient] Resolved base URL: ${ApiConstants.baseUrl}');
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
@@ -87,6 +94,19 @@ class DioClient {
   InterceptorsWrapper _errorInterceptor() {
     return InterceptorsWrapper(
       onError: (error, handler) {
+        // The DioException reconstructed below deliberately drops the
+        // original `error.error` (the real underlying exception object —
+        // e.g. a SocketException/HandshakeException with the actual OS-level
+        // message) and `error.message`, replacing both with a generic
+        // friendly string for display. That's by design for the UI, but it
+        // means every caller downstream — including diagnostic prints in
+        // auth_remote_datasource.dart — only ever sees "Message: null" and
+        // the friendly text, never the real cause. Log the original here,
+        // before it's discarded, so a release-only failure (which can't be
+        // attached to a debugger) is still diagnosable via `adb logcat`.
+        print('[DioClient] Raw error type: ${error.type}');
+        print('[DioClient] Raw error.message: ${error.message}');
+        print('[DioClient] Raw error.error: ${error.error} (${error.error?.runtimeType})');
         // Format error response
         String errorMessage = 'An unexpected error occurred';
 

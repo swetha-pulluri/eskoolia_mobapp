@@ -32,12 +32,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<LoginResponseModel> login(LoginRequestModel request) async {
+    // Diagnostic logging for connectivity issues (e.g. a stale LAN IP in
+    // EnvConfig, or the dev backend not bound to 0.0.0.0) — a connection
+    // timeout gives no other clue as to which URL was actually attempted.
+    final fullUrl = '${_dio.options.baseUrl}${ApiConstants.login}';
+    print('[Login] Base URL: ${_dio.options.baseUrl}');
+    print('[Login] Full login URL: $fullUrl');
+    print('[Login] Request body: ${request.toJson()}');
     try {
       final response = await _dio.post(
         ApiConstants.login,
         data: request.toJson(),
       );
 
+      print('[Login] Response status: ${response.statusCode}');
       // Debug: Print response data to diagnose parsing issues
       print('Login Response Data: ${response.data}');
       print('Response Data Type: ${response.data.runtimeType}');
@@ -47,6 +55,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       return loginResponse;
     } on DioException catch (e) {
+      print('[Login] Response status: ${e.response?.statusCode ?? "(no response)"}');
       print('DioException during login: ${e.type}, Message: ${e.message}');
       print('DioException Error: ${e.error}');
       throw Exception(e.error ?? 'Login failed');

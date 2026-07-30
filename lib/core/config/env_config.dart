@@ -15,9 +15,18 @@ class EnvConfig {
   EnvConfig._();
 
   /// YOUR DEVELOPMENT MACHINE'S LAN IP ADDRESS
-  /// Update this when testing on physical Android devices
-  /// Example: '192.168.1.100' or '192.168.0.105'
-  static const String _developmentLanIp = '192.168.0.105'; // ← CHANGE THIS TO YOUR LAN IP
+  /// Update this when testing on physical Android devices, and whenever this
+  /// machine's IP changes (e.g. reconnecting to a different Wi-Fi network) —
+  /// a stale value here is a silent `DioException: Connection timeout` with
+  /// no other symptom, since the app never learns the address is wrong, it
+  /// just never gets a response. Run `ipconfig` (Windows) / `ifconfig`
+  /// (macOS/Linux) to find the current one. Also update the matching
+  /// `<domain>` entry in
+  /// android/app/src/debug/res/xml/network_security_config.xml, which
+  /// permits cleartext (http://) traffic only for this IP + 10.0.2.2 —
+  /// without it, API 28+ blocks cleartext traffic by default and every
+  /// request fails immediately regardless of whether the IP is correct.
+  static const String _developmentLanIp = '192.168.170.202'; // ← CHANGE THIS TO YOUR LAN IP
 
   /// Backend port (default Django port)
   static const String _backendPort = '8000';
