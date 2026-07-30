@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 
 /// Environment Configuration for API Base URL
 /// 
@@ -31,8 +31,21 @@ class EnvConfig {
   /// Backend port (default Django port)
   static const String _backendPort = '8000';
 
+  /// Shared hosted backend — root host only, no `/api/v1` suffix.
+  /// ApiConstants.apiBasePath ('/api/v1') is already appended to every
+  /// endpoint constant in api_constants.dart, so if this included `/api/v1`
+  /// too, every request would resolve to `.../api/v1/api/v1/...`.
+  static const String _productionApiUrl = 'https://app.eskoolia.com';
+
   /// Get the appropriate API base URL based on platform and environment
   static String get apiBaseUrl {
+    // Release builds always use the shared hosted backend, regardless of
+    // platform — never a developer's LAN IP, which only exists on whichever
+    // laptop happens to be running `manage.py runserver` at the time.
+    if (kReleaseMode) {
+      return _productionApiUrl;
+    }
+
     if (kIsWeb) {
       // Web: Use localhost
       return 'http://localhost:$_backendPort';
@@ -64,7 +77,4 @@ class EnvConfig {
 
   /// Alternative: Get LAN IP URL for physical devices
   static String get physicalDeviceUrl => 'http://$_developmentLanIp:$_backendPort';
-
-  /// Production API URL (update when deploying to production)
-  static const String productionApiUrl = 'https://api.eskoolia.com'; // Update with real production URL
 }
