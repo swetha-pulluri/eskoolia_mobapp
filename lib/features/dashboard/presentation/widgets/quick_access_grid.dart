@@ -53,36 +53,19 @@ class QuickAccessGrid extends ConsumerWidget {
                 ),
               )
             else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  // Calculate available width after accounting for horizontal padding
-                  const horizontalPadding = 24.0;
-                  const crossAxisSpacing = 10.0;
-                  const crossAxisCount = 2;
-                  // Aspect ratio 3.1 provides proper height for icon + title + subtitle + padding
-                  // Calculation: Card needs ~52px height (8px padding top + 36px content + 8px padding bottom)
-                  // With card width ~165px: 165/3.1 = 53.2px height (safe margin)
-                  const aspectRatio = 3.1;
-                  
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: crossAxisSpacing,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: aspectRatio,
-                      ),
-                      itemCount: pins.length,
-                      itemBuilder: (context, index) {
-                        final pin = pins[index];
-                        // Match module by ID, not path (pins use sub-module paths)
+              // One card per row (full width) — each `ModuleCard` sizes to
+              // its own content height (icon + label, ~52px) rather than a
+              // `GridView`'s fixed `childAspectRatio`, so there's no aspect
+              // ratio to recompute now that the card is full-width instead
+              // of half-width.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    for (final pin in pins) ...[
+                      Builder(builder: (context) {
                         final module = Modules.findById(pin.moduleId);
-                        
                         if (module == null) return const SizedBox.shrink();
-                        
                         return ModuleCard(
                           module: module,
                           label: pin.label,
@@ -101,10 +84,11 @@ class QuickAccessGrid extends ConsumerWidget {
                             }
                           },
                         );
-                      },
-                    ),
-                  );
-                },
+                      }),
+                      if (pin != pins.last) const SizedBox(height: 10),
+                    ],
+                  ],
+                ),
               ),
           ],
         );

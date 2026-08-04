@@ -129,7 +129,13 @@ class _StepContactState extends ConsumerState<StepContact> {
                 if (v == true) _syncPermanentFromCurrent();
               },
             ),
-            const Text('Same as current address', style: TextStyle(fontSize: 12)),
+            // `Flexible` — this label plus the checkbox is wide enough to
+            // overflow the Row on a 320-360dp phone even with the section
+            // label `Expanded` (the label can shrink to 0 and it still
+            // wouldn't be enough).
+            const Flexible(
+              child: Text('Same as current address', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12)),
+            ),
           ]),
           onboardFieldGrid([
             onboardText(label: 'Address Line 1', value: sameAddress ? (form['current_address'] as String? ?? '') : (form['permanent_address'] as String? ?? ''), onChanged: sameAddress ? (_) {} : (v) => widget.onChange('permanent_address', v)),

@@ -1,8 +1,8 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import '../../../fees/presentation/utils/pdf_unicode_theme.dart';
 import '../../../../core/utils/inr_formatter.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/invoice_entity.dart';
 
 const _kStateCodes = {
@@ -39,15 +39,19 @@ pw.Widget _kv(String label, String value, {bool bold = false, double fontSize = 
   );
 }
 
-/// Builds and hands the real Tax Invoice to the native print/share sheet —
-/// mirrors web's `handleDownloadPdf()` (`billing/page.tsx`), which itself is
-/// just `window.print()` on the same on-screen invoice; there's no backend
-/// PDF file to fetch. Same field set as the Flutter Tax Invoice card
-/// (`billing_tab.dart`'s `_buildTaxInvoiceCard`) — seller/buyer, line
-/// items, GST breakdown, amount in words, payment terms.
-Future<void> shareInvoicePdf(InvoiceEntity invoice, {required String sellerGstin, required String sellerState}) async {
+/// Builds the real Tax Invoice PDF and saves it directly to a user-findable
+/// location (see `saveBytesForDownload`), returning the saved path so the
+/// caller can confirm it to the user — web's `handleDownloadPdf()`
+/// (`billing/page.tsx`) is just `window.print()` on the same on-screen
+/// invoice (no backend PDF file to fetch); on mobile a direct save is the
+/// closer match to "download" than opening a print/share dialog. Same field
+/// set as the Flutter Tax Invoice card (`billing_tab.dart`'s
+/// `_buildTaxInvoiceCard`) — seller/buyer, line items, GST breakdown,
+/// amount in words, payment terms.
+Future<String> downloadInvoicePdf(InvoiceEntity invoice, {required String sellerGstin, required String sellerState}) async {
   final doc = await buildInvoicePdfDocument(invoice, sellerGstin: sellerGstin, sellerState: sellerState);
-  await Printing.layoutPdf(onLayout: (_) async => doc.save(), name: '${invoice.invoiceNumber}.pdf');
+  final bytes = await doc.save();
+  return saveBytesForDownload(bytes: bytes, filename: '${invoice.invoiceNumber}.pdf');
 }
 
 /// Builds the invoice PDF document — split out from [shareInvoicePdf] so the

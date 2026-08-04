@@ -394,6 +394,8 @@ class _AdminSetupScreenState extends ConsumerState<AdminSetupScreen> {
               children: [
                 Text(
                   e.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -404,6 +406,8 @@ class _AdminSetupScreenState extends ConsumerState<AdminSetupScreen> {
                   e.description?.isNotEmpty == true
                       ? e.description!
                       : 'No description',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: AppColors.textTertiary,

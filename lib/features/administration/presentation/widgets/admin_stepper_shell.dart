@@ -44,9 +44,12 @@ class AdminStepperNav extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
                 decoration: BoxDecoration(
-                  color: active ? Colors.white : Colors.transparent,
+                  // Matches web's `.navTabActive` exactly
+                  // (`VisitorBookPanel.module.css`): `background: var(--ink)
+                  // !important` where `--ink: #19162c` + white text — not a
+                  // white raised pill with purple text.
+                  color: active ? const Color(0xFF19162C) : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
-                  boxShadow: active ? const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))] : null,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -58,9 +61,9 @@ class AdminStepperNav extends StatelessWidget {
                             style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
-                                color: active ? AppColors.primaryPurple : AppColors.textTertiary)),
+                                color: active ? Colors.white : AppColors.textTertiary)),
                         const SizedBox(width: 4),
-                        Icon(step.icon, size: 13, color: active ? AppColors.primaryPurple : AppColors.textTertiary),
+                        Icon(step.icon, size: 13, color: active ? Colors.white : AppColors.textTertiary),
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -71,7 +74,7 @@ class AdminStepperNav extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
-                        color: active ? AppColors.primaryPurple : AppColors.textSecondary,
+                        color: active ? Colors.white : AppColors.textSecondary,
                       ),
                     ),
                   ],

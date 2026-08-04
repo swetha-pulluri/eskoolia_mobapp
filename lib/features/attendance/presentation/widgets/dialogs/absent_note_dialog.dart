@@ -125,9 +125,15 @@ class _AbsentNoteDialogState extends State<AbsentNoteDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 color: const Color(0xFFFAFAFD),
-                child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                // `Wrap` (not a bare `Row`) — "Mark Absent with Reason" plus
+                // "Skip" can exceed the 420px-capped dialog's width on a
+                // 320-360dp phone; `mainAxisAlignment: end` alone doesn't
+                // stop the Row from overflowing, it just doesn't help avoid
+                // it either. `WrapAlignment.end` gives the same visual
+                // right-alignment but lets the buttons drop to a second
+                // line instead.
+                child: Wrap(alignment: WrapAlignment.end, spacing: 8, runSpacing: 8, children: [
                   OutlinedButton(onPressed: widget.onSkip, style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF3A3A4A), side: const BorderSide(color: Color(0xFFE6E6EC))), child: const Text('Skip')),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () => widget.onConfirm(reason),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC2264E), foregroundColor: Colors.white),

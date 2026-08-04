@@ -108,17 +108,33 @@ class _HrDesignationDeptCardState extends State<HrDesignationDeptCard> {
                             child: Row(
                               children: [
                                 Expanded(child: Text(widget.deptDesigs[idx].name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: HrColors.ink))),
-                                HrBadge(variant: widget.deptDesigs[idx].isActive ? HrBadgeVariant.green : HrBadgeVariant.grey, label: widget.deptDesigs[idx].isActive ? 'Active' : 'Inactive'),
                                 const SizedBox(width: 8),
-                                TextButton(
-                                  onPressed: () => widget.onEdit(widget.deptDesigs[idx]),
-                                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                  child: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                                ),
-                                TextButton(
-                                  onPressed: () => widget.onDelete(widget.deptDesigs[idx].id),
-                                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                  child: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: HrColors.red)),
+                                // `Flexible` — the badge + Edit + Delete
+                                // cluster's combined natural width can still
+                                // slightly exceed what's left after a long
+                                // designation name at 320dp even with the
+                                // name `Expanded`; this lets the cluster
+                                // itself shrink/wrap rather than overflow.
+                                Flexible(
+                                  child: Wrap(
+                                    alignment: WrapAlignment.end,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 4,
+                                    runSpacing: 2,
+                                    children: [
+                                      HrBadge(variant: widget.deptDesigs[idx].isActive ? HrBadgeVariant.green : HrBadgeVariant.grey, label: widget.deptDesigs[idx].isActive ? 'Active' : 'Inactive'),
+                                      TextButton(
+                                        onPressed: () => widget.onEdit(widget.deptDesigs[idx]),
+                                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                        child: const Text('Edit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => widget.onDelete(widget.deptDesigs[idx].id),
+                                        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                        child: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: HrColors.red)),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

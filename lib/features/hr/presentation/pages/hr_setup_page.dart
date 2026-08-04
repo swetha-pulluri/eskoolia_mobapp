@@ -115,25 +115,35 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Was a Row(Expanded(title), Wrap(buttons)) — a Row gives its
+    // non-flexible children (the button Wrap) an UNBOUNDED main-axis
+    // constraint, so that inner Wrap never actually wraps; once "Import" +
+    // "Add Department" together are wider than the row (320-412dp, once
+    // page padding is subtracted), it hard-overflows regardless of the
+    // Expanded title shrinking to 0. Making the whole header itself a
+    // top-level Wrap (bounded by the page's Column, same as the pager/
+    // step-wizard fixes elsewhere in this file) lets the button group drop
+    // to its own line instead of overflowing.
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.start,
+      spacing: 16,
+      runSpacing: 12,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('HR CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
-              const SizedBox(height: 2),
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: HrColors.ink),
-                  children: [TextSpan(text: 'Staff '), TextSpan(text: 'setup', style: TextStyle(color: HrColors.brand, fontWeight: FontWeight.w400))],
-                ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('HR CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
+            const SizedBox(height: 2),
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: HrColors.ink),
+                children: [TextSpan(text: 'Staff '), TextSpan(text: 'setup', style: TextStyle(color: HrColors.brand, fontWeight: FontWeight.w400))],
               ),
-              const SizedBox(height: 4),
-              const Text('Define your organisation structure — departments and designations.', style: TextStyle(fontSize: 13, color: HrColors.muted)),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            const Text('Define your organisation structure — departments and designations.', style: TextStyle(fontSize: 13, color: HrColors.muted)),
+          ],
         ),
         Wrap(spacing: 8, runSpacing: 8, children: [
           OutlinedButton.icon(
@@ -363,8 +373,15 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
           ],
         ],
         const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // `Wrap` (not a bare `Row(spaceBetween)`) — "← Departments" and
+        // "Finish Setup →" together can exceed a 320-360dp screen with no
+        // Expanded/Flexible sibling to absorb it; letting them drop to a
+        // second line avoids the overflow instead of just relying on
+        // spaceBetween, which doesn't stop a Row from overflowing.
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 8,
           children: [
             TextButton(onPressed: () => setState(() => _step = 1), child: const Text('← Departments', style: TextStyle(color: Color(0xFF475569)))),
             FilledButton(

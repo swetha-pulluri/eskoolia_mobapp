@@ -537,7 +537,9 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       },
                     ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         WebButton(
                           label: isSaving
@@ -545,14 +547,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                               : (_editingId == null ? 'Save' : 'Update'),
                           onPressed: isSaving ? null : _submit,
                         ),
-                        if (_editingId != null) ...[
-                          const SizedBox(width: 8),
+                        if (_editingId != null)
                           WebButton(
                             label: 'Cancel',
                             color: const Color(0xFF6B7280),
                             onPressed: _resetForm,
                           ),
-                        ],
                       ],
                     ),
                   ],

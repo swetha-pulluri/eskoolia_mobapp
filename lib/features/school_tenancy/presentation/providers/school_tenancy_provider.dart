@@ -193,6 +193,15 @@ final auditEventsProvider = FutureProvider<PaginatedAuditEventsEntity>((ref) {
     page: filters.page,
     pageSize: kAuditPageSize,
     search: filters.search,
+    // The real backend view (`AuditListView.get()`) never reads a `search`
+    // query param at all — only `actor` (an `icontains` filter), a
+    // pre-existing gap in the web reference itself (its search box sends
+    // `search=` too, which the backend silently ignores). Also sending the
+    // same value as `actor` makes the search box genuinely filter results
+    // server-side (across all pages, not just the current one) without any
+    // backend change — `search` is left in place too, in case the backend
+    // ever starts honoring it.
+    actor: filters.search,
     action: filters.action,
     severity: filters.severity,
     dateFrom: filters.dateFrom,

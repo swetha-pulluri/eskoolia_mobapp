@@ -331,16 +331,31 @@ class _ClassCardState extends State<_ClassCard> {
                       child: const Icon(Icons.chevron_right, size: 16, color: Color(0xFF9CA0AE)),
                     ),
                     const SizedBox(width: 6),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(cls.displayLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
-                        if (cls.subLabel.isNotEmpty) Text(cls.subLabel, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
-                      ],
+                    // `Flexible` (not a bare `Column`) so a long, realistic
+                    // class name (e.g. "International Baccalaureate — Grade
+                    // 10 Section B") is capped to its share of the header
+                    // `Row`'s width instead of demanding its full intrinsic
+                    // width — which, once every other fixed-width sibling
+                    // (ring, percent column, optional "Mark All Present"
+                    // button) claims its space on a narrow phone, is what
+                    // previously starved the name down to a near-zero-width
+                    // line box and forced Flutter to wrap after every single
+                    // character. `maxLines: 1` + ellipsis is the fallback
+                    // for names that still don't fit.
+                    Flexible(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(cls.displayLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0B0B14))),
+                          if (cls.subLabel.isNotEmpty) Text(cls.subLabel, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
+                      flex: 3,
                       child: Wrap(spacing: 6, runSpacing: 4, children: [
                         _pill('${cls.totalStudents} ${cls.totalStudents == 1 ? "student" : "students"}', const Color(0xFFFAFAFD), const Color(0xFF3A3A4A), border: const Color(0xFFE6E6EC)),
                         _pill('$totalPresent present', const Color(0xFFE4F6ED), const Color(0xFF0A8C5A)),
@@ -353,30 +368,67 @@ class _ClassCardState extends State<_ClassCard> {
                       ]),
                     ),
                     if (!widget.isOpen && widget.dateMode == 'today' && !widget.readOnly && widget.onMarkAllPresentForClass != null && attendanceStatus != 'complete')
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: OutlinedButton(
-                          onPressed: _markAllCooldown
-                              ? null
-                              : () {
-                                  widget.onMarkAllPresentForClass!(cls.id);
-                                  setState(() => _markAllCooldown = true);
-                                  Future.delayed(const Duration(milliseconds: 1500), () {
-                                    if (mounted) setState(() => _markAllCooldown = false);
-                                  });
-                                },
-                          style: OutlinedButton.styleFrom(backgroundColor: const Color(0xFFE4F6ED), foregroundColor: const Color(0xFF0A8C5A), side: const BorderSide(color: Color(0x330A8C5A)), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                          child: const Text('✓ Mark All Present'),
+                      // `Flexible` — this button's natural width is a
+                      // non-flexible sibling in this Row; on a narrow phone
+                      // it (plus the ring/percent/chevron) can exceed what's
+                      // left after the name/pill flex children, overflowing
+                      // the Row regardless of their `Flexible`/`Expanded`
+                      // flex (a Row's non-flex children get unbounded width
+                      // during layout no matter what else is flexible).
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: OutlinedButton(
+                            onPressed: _markAllCooldown
+                                ? null
+                                : () {
+                                    widget.onMarkAllPresentForClass!(cls.id);
+                                    setState(() => _markAllCooldown = true);
+                                    Future.delayed(const Duration(milliseconds: 1500), () {
+                                      if (mounted) setState(() => _markAllCooldown = false);
+                                    });
+                                  },
+                            style: OutlinedButton.styleFrom(backgroundColor: const Color(0xFFE4F6ED), foregroundColor: const Color(0xFF0A8C5A), side: const BorderSide(color: Color(0x330A8C5A)), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap, textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                            child: const Text('✓ Mark All Present', maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
                         ),
                       ),
-                    AttendanceRing(pct: attendancePct, size: 32, strokeWidth: 3),
-                    const SizedBox(width: 5),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('$attendancePct%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: attendancePct == 0 ? const Color(0xFFEF4444) : const Color(0xFF4729F4))),
-                        const Text('today', style: TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
-                      ],
+                    // `Flexible` — the last remaining non-flex sibling in
+                    // this Row (name/pills/Mark-All-Present are already
+                    // Flexible/Expanded); harmless at today's default text
+                    // scale, but with no shrink/ellipsis fallback of its own
+                    // this ring+percent block would be the next thing to
+                    // overflow under a larger accessibility text-scale
+                    // setting.
+                    //
+                    // `FittedBox` inside the `Flexible` — the ring (a fixed
+                    // 32px `CustomPaint`) and the percent text have no
+                    // shrink mechanism of their own, so on a genuinely tight
+                    // header (long class name + 3 sections + subLabel all
+                    // competing for space) `Flexible` alone just moved the
+                    // overflow from the outer Row to inside this one,
+                    // confirmed via widget test (a real 34px overflow at
+                    // 360-390dp). `FittedBox(scaleDown)` makes it visually
+                    // shrink instead of erroring.
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AttendanceRing(pct: attendancePct, size: 32, strokeWidth: 3),
+                            const SizedBox(width: 5),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('$attendancePct%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: attendancePct == 0 ? const Color(0xFFEF4444) : const Color(0xFF4729F4))),
+                                const Text('today', style: TextStyle(fontSize: 9, color: Color(0xFF9CA0AE))),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -554,15 +606,25 @@ class _SectionBody extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: const BoxDecoration(color: Color(0xFFFAFAFD), border: Border(top: BorderSide(color: Color(0xFFF1F1F5)))),
-            child: Row(children: [
-              _dot(present, 'present', const Color(0xFF0A8C5A)),
-              const SizedBox(width: 10),
-              _dot(absent, 'absent', const Color(0xFFC2264E)),
-              const SizedBox(width: 10),
-              _dot(late, 'late', const Color(0xFFB4721B)),
-              const Spacer(),
-              const Text('Read-only', style: TextStyle(fontSize: 10, color: Color(0xFF9CA0AE), fontStyle: FontStyle.italic)),
-            ]),
+            // `Wrap` (not `Row` + `Spacer`) — matching `_SectionInnerBar`/
+            // `_SectionFooter`'s identical fix elsewhere in this file: a
+            // `Spacer` only claims left-over space, so 3 count dots (whose
+            // text grows with real attendance numbers, e.g. "40 present")
+            // plus "Read-only" can still overflow regardless of it.
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 6,
+              children: [
+                Wrap(spacing: 10, runSpacing: 4, children: [
+                  _dot(present, 'present', const Color(0xFF0A8C5A)),
+                  _dot(absent, 'absent', const Color(0xFFC2264E)),
+                  _dot(late, 'late', const Color(0xFFB4721B)),
+                ]),
+                const Text('Read-only', style: TextStyle(fontSize: 10, color: Color(0xFF9CA0AE), fontStyle: FontStyle.italic)),
+              ],
+            ),
           )
         else
           _SectionFooter(

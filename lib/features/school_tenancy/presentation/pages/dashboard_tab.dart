@@ -240,7 +240,13 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
+                    // `Wrap` (not a bare `Row`) — a plain Row of 3 buttons
+                    // has no way to give way on a narrow screen, so
+                    // "Add school" (the 3rd/rightmost button) could be
+                    // pushed off-screen/clipped entirely on smaller phones.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
                           onPressed: dashboardAsync.isLoading
@@ -262,7 +268,6 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                             textStyle: AppTextStyles.buttonSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         OutlinedButton.icon(
                           onPressed: () => _exportDashboardCsv(context, dashboard),
                           icon: const Icon(Icons.download, size: 14),
@@ -275,7 +280,6 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                             textStyle: AppTextStyles.buttonSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           onPressed: () => context.go('/super-admin/schools'),
                           icon: const Icon(Icons.add, size: 14),

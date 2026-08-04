@@ -359,14 +359,15 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                 ),
 
                 // KPI CARDS
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                // `KpiCardGrid` (width-constrained, height-intrinsic tiles)
+                // instead of a fixed-`childAspectRatio` `GridView` — a forced
+                // ratio gives every card the same height regardless of its
+                // actual label/value/footnote content, overflowing on narrow
+                // phones (confirmed: 78.9px cells vs. content needing more).
+                KpiCardGrid(
+                  spacing: 14,
                   crossAxisCount: 2,
-                  mainAxisSpacing: 14,
-                  crossAxisSpacing: 14,
-                  childAspectRatio: 1.1,
-                  children: [
+                  cards: [
                     KpiCard(
                       label: 'MRR',
                       value: mrr == null ? '—' : _formatINR(mrr.currentMrr),
@@ -527,14 +528,21 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                           ),
                         )
                       else
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
+                        // `KpiCardGrid` (width-constrained, height-intrinsic
+                        // tiles) instead of a fixed-`childAspectRatio`
+                        // `GridView` — a forced ratio gives every card the
+                        // same height regardless of its actual content
+                        // (name/price/description/buttons), which is what
+                        // made the 18px card padding read as "excessive":
+                        // the content area was being squeezed shorter than
+                        // it needed while the padding stayed fixed. Reusing
+                        // the same widget already used for KPI rows (Schools/
+                        // Dashboard/Audit Log tabs) keeps card sizing
+                        // consistent across the module too.
+                        KpiCardGrid(
+                          spacing: 14,
                           crossAxisCount: 2,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.9,
-                          children: plans.plans
+                          cards: plans.plans
                               .map((p) => _buildPlanCard(p))
                               .toList(),
                         ),
@@ -773,6 +781,19 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
     }
   }
 
+  Future<void> _downloadInvoicePdf(InvoiceEntity invoice, {required String sellerGstin, required String sellerState}) async {
+    try {
+      final path = await downloadInvoicePdf(invoice, sellerGstin: sellerGstin, sellerState: sellerState);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to $path')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      }
+    }
+  }
+
   /// Real call to `GET /billing/export/gstr1/` — mirrors web's
   /// `exportGstr1()`/`downloadFile()`. Uses the app-wide `saveBytesForDownload`
   /// helper (the established convention for every other export in this app)
@@ -1006,7 +1027,44 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               const SizedBox(height: 8),
               // Matches web's 5-column table (Description/SAC/Qty/Rate/
               // Amount, `billing/page.tsx:398-419`) restructured as a
-              // 2-line block per item for mobile width.
+              // 2-line block per item for mobile width. This header mirrors
+              // each row's own Expanded+left / fixed+right alignment exactly
+              // (row 1: description ↔ SAC, row 2: qty×rate ↔ amount) so the
+              // headings actually line up with the values underneath them.
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'DESCRIPTION',
+                      style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'SAC',
+                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'QTY × RATE',
+                      style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AMOUNT',
+                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
               ...invoice.lineItems.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -1296,17 +1354,13 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               const SizedBox(height: 10),
               // Web itself uses the browser's native window.print() for this
               // (`handleDownloadPdf`) on the same on-screen invoice — this
-              // builds an equivalent real PDF from the same data and hands
-              // it to the native print/share sheet.
+              // builds an equivalent real PDF from the same data and saves
+              // it directly (no print/share dialog), matching "download".
               _actionRow(
                 context,
                 Icons.download_outlined,
                 'Download PDF',
-                () => shareInvoicePdf(
-                  invoice,
-                  sellerGstin: sellerGstin,
-                  sellerState: sellerState,
-                ),
+                () => _downloadInvoicePdf(invoice, sellerGstin: sellerGstin, sellerState: sellerState),
               ),
               // Real call to POST /billing/invoices/{id}/reminder/.
               _actionRow(
@@ -1626,17 +1680,13 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                           _rowActionIcon(
                             icon: Icons.download_outlined,
                             tooltip: 'Download PDF',
-                            // shareInvoicePdf already falls back to the
+                            // `downloadInvoicePdf` already falls back to the
                             // invoice's own seller fields when these are
                             // empty (`invoice_pdf.dart`), so this is
                             // equivalent to the main Invoice Actions panel's
                             // call once `sellerGstin`/`sellerState` (sourced
                             // from `mrr`) are unset for this invoice.
-                            onTap: () => shareInvoicePdf(
-                              invoice,
-                              sellerGstin: '',
-                              sellerState: '',
-                            ),
+                            onTap: () => _downloadInvoicePdf(invoice, sellerGstin: '', sellerState: ''),
                           ),
                           const SizedBox(width: 6),
                           _rowActionIcon(
@@ -1886,7 +1936,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
         ),
         borderRadius: BorderRadius.circular(14),
       ),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1907,23 +1957,31 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                 ),
               ),
               if (popular)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryPurple,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    'POPULAR',
-                    style: AppTextStyles.chipLabel(color: Colors.white)
-                        .copyWith(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
+                // `Flexible` — on very narrow cards the badge's own natural
+                // width (padding + "POPULAR" glyphs) can slightly exceed
+                // whatever the Row has left after the flexible name Text,
+                // overflowing the Row even though a sibling is `Expanded`.
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryPurple,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'POPULAR',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.chipLabel(color: Colors.white)
+                          .copyWith(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                    ),
                   ),
                 ),
             ],
@@ -1961,7 +2019,11 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               height: 1.3,
             ),
           ),
-          const Spacer(),
+          // `Spacer` requires a bounded-height ancestor — fine under the old
+          // fixed-aspect-ratio grid cell, but these cards now size to their
+          // own content inside `KpiCardGrid`'s `Wrap` (intrinsic height,
+          // unbounded), so a fixed gap replaces it.
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -1979,16 +2041,25 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    // Compact, explicit padding (was vertical-only, leaving
+                    // the button wider than it needed to be next to the
+                    // now-also-compact Delete icon).
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
                   child: const Text('Edit'),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
+              // Compact icon button — a bare `IconButton` defaults to a
+              // large ~48dp tap target/padding, which looked oversized next
+              // to the now-tighter Edit button and card padding.
               IconButton(
                 onPressed: () => _confirmDeletePlan(plan),
                 icon: const Icon(Icons.delete_outline, size: 18),
                 color: AppColors.dangerRed,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                visualDensity: VisualDensity.compact,
               ),
             ],
           ),

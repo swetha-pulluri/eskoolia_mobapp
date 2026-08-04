@@ -15,6 +15,12 @@ class GreetingSection extends ConsumerWidget {
           authenticated: (user) => user,
         );
     final attentionCount = ref.watch(attentionCountProvider);
+    // Matches web's `Greeting.tsx` name derivation exactly: fall back to
+    // the username when first/last name are both blank, and only render
+    // the ", <name>" suffix at all when there's a non-empty name to show.
+    final displayName = currentUser == null
+        ? ''
+        : (currentUser.fullName.isNotEmpty ? currentUser.fullName : currentUser.username);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -37,10 +43,10 @@ class GreetingSection extends ConsumerWidget {
                       TextSpan(
                         text: 'Good ${app_date_utils.DateUtils.getTimeWord()}',
                       ),
-                      if (currentUser != null) ...[
+                      if (displayName.isNotEmpty) ...[
                         const TextSpan(text: ', '),
                         TextSpan(
-                          text: currentUser.fullName,
+                          text: displayName,
                           style: const TextStyle(
                             color: AppColors.brandPurple,
                           ),

@@ -53,6 +53,14 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Exposes the app's Documents directory in the iOS Files app, so
+	     exported invoices/reports saved there (see file_download_io.dart)
+	     are actually visible/findable, matching "direct download" instead
+	     of vanishing into an inaccessible sandbox path. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/kpi_card.dart';
 
 /// Morning Brief — section "01" of the Command Center. Converted from web
 /// `command-center/MorningBrief.tsx`. A collapsible KPI strip: 2x2 grid of
@@ -98,14 +99,16 @@ class _MorningBriefState extends State<MorningBrief> {
                       ),
                     ),
                   )
-                : GridView.count(
+                : KpiCardGrid(
+                    // Width-constrained, height-intrinsic (not a fixed
+                    // `childAspectRatio`) — the forced ratio gave every
+                    // card the same height regardless of its actual
+                    // content (emoji + value + label, which can wrap to 2
+                    // lines for "Follow-up Overdue" on narrow phones),
+                    // overflowing by ~8px on the bottom at 320-390dp.
+                    spacing: 8,
                     crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.5,
-                    children: _cards.map((c) => _buildCard(c)).toList(),
+                    cards: _cards.map((c) => _buildCard(c)).toList(),
                   ),
             if (!widget.isLoading && widget.priorityText != null) ...[
               const SizedBox(height: 10),

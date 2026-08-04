@@ -85,9 +85,25 @@ class StepPayroll extends StatelessWidget {
   Widget _previewRow(String label, double value, {bool bold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
+      // `Expanded`+`Flexible` (not two bare fixed `Text`s) — `spaceBetween`
+      // only controls alignment when both children already fit; it doesn't
+      // stop the Row from overflowing once a label like "PF (12% of basic)"
+      // plus a large salary-derived rupee value exceeds the card's width on
+      // a 320-360dp phone.
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.w800 : FontWeight.w500, color: bold ? HrColors.ink : HrColors.muted)),
-        Text('₹${value.toStringAsFixed(0)}', style: TextStyle(fontSize: bold ? 18 : 13, fontWeight: bold ? FontWeight.w900 : FontWeight.w700, color: bold ? HrColors.brand : HrColors.ink)),
+        Expanded(
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.w800 : FontWeight.w500, color: bold ? HrColors.ink : HrColors.muted)),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            '₹${value.toStringAsFixed(0)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: TextStyle(fontSize: bold ? 18 : 13, fontWeight: bold ? FontWeight.w900 : FontWeight.w700, color: bold ? HrColors.brand : HrColors.ink),
+          ),
+        ),
       ]),
     );
   }
@@ -96,7 +112,13 @@ class StepPayroll extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Expanded(child: onboardSectionLabel(title)),
-        TextButton.icon(onPressed: () => _setList(key, [...rows, <String, dynamic>{}]), icon: const Icon(Icons.add, size: 16), label: const Text('Add row')),
+        Flexible(
+          child: TextButton.icon(
+            onPressed: () => _setList(key, [...rows, <String, dynamic>{}]),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Add row', maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+        ),
       ]),
       for (var i = 0; i < rows.length; i++)
         Padding(

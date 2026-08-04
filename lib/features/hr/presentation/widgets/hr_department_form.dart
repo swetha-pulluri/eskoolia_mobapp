@@ -459,9 +459,15 @@ class _HrDepartmentFormState extends ConsumerState<HrDepartmentForm> {
                 )
               else
                 const SizedBox.shrink(),
-              Row(mainAxisSize: MainAxisSize.min, children: [
+              // `Wrap` (not a `Row(mainAxisSize: min)`) — this group is a
+              // child of the outer spaceBetween `Wrap`, which hands it up
+              // to the FULL content width (not the leftover after the
+              // "Save & add another" sibling); "Cancel" + "Save Department"
+              // together genuinely exceed that on a 320-360dp form, so they
+              // need to be able to drop to a second line instead of
+              // overflowing.
+              Wrap(spacing: 8, runSpacing: 8, children: [
                 TextButton(onPressed: widget.onCancel, child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B)))),
-                const SizedBox(width: 8),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
                   onPressed: _saving ? null : () => _save(),

@@ -230,10 +230,11 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     WebButton(label: 'Search', onPressed: () => _search(roles)),
-                    const SizedBox(width: 8),
                     WebButton(
                       label: _printing ? 'Generating...' : 'Print Selected',
                       color: const Color(0xFF0F766E),
@@ -284,11 +285,13 @@ class _GenerateIdCardScreenState extends ConsumerState<GenerateIdCardScreen> {
                             _selectedIds.remove(r.id);
                           }
                         }),
-                        title: Text(r.label, style: const TextStyle(fontSize: 13)),
+                        title: Text(r.label, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: isStudent
                             ? Text(
                                 'Admission: ${r.admissionNo ?? '-'} · ${r.className ?? '-'} (${r.sectionName ?? '-'}) · ${r.gender ?? '-'} · DOB ${r.dateOfBirth ?? '-'}',
                                 style: const TextStyle(fontSize: 11.5),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               )
                             : null,
                       );

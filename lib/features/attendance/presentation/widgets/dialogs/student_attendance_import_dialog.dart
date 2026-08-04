@@ -251,7 +251,7 @@ class _StudentAttendanceImportDialogState extends ConsumerState<StudentAttendanc
             isExpanded: true,
             hint: Text(hint, style: const TextStyle(fontSize: 13, color: Color(0xFF9CA0AE))),
             style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A2E)),
-            items: items.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+            items: items.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: onChanged,
           ),
         ),
@@ -293,6 +293,11 @@ class _StudentAttendanceImportDialogState extends ConsumerState<StudentAttendanc
         child: Container(
           color: const Color(0x80000000),
           alignment: Alignment.center,
+          // 16dp breathing room on narrow phones — every other modal in this
+          // module pads its scrim the same way; this one didn't, so on a
+          // 320dp-wide screen it rendered truly edge-to-edge (rounded
+          // corners clipped flush against the screen edges).
+          padding: const EdgeInsets.all(16),
           child: GestureDetector(
             onTap: () {},
             child: Container(

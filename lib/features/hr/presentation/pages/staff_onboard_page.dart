@@ -633,9 +633,13 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
             OutlinedButton(onPressed: () => _stub('QR scan to fill — coming soon'), child: const Text('Scan & fill')),
             OutlinedButton(onPressed: _openVerificationPreview, child: const Text('Print / PDF')),
           ]),
-          Row(mainAxisSize: MainAxisSize.min, children: [
+          // `Wrap` (not a `Row(mainAxisSize: min)`) — this group is a child
+          // of the outer spaceBetween `Wrap`, so it's handed the FULL
+          // footer width, not the leftover after the action-buttons Wrap;
+          // "Back" + a long final-step label ("Update & Onboard") can
+          // exceed that on a narrow phone.
+          Wrap(spacing: 6, runSpacing: 6, children: [
             if (step > 1) TextButton(onPressed: _goBack, child: const Text('Back')),
-            const SizedBox(width: 6),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
               onPressed: _submitting ? null : _goNext,

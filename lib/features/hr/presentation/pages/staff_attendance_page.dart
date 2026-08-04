@@ -449,50 +449,226 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
     });
   }
 
+  /// Real month <select> options for the whole calendar year containing
+  /// [selectedDate] — matches web's `monthOptions()` (`HrGlobalControls.tsx`).
+  List<MapEntry<String, String>> _monthOptions(DateTime selectedDate) {
+    const monthsAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final year = selectedDate.year;
+    return List.generate(12, (m) {
+      final value = '$year-${(m + 1).toString().padLeft(2, '0')}';
+      return MapEntry(value, '${monthsAbbr[m]} $year');
+    });
+  }
+
+  DateTime _mondayOf(DateTime d) => d.subtract(Duration(days: d.weekday - 1));
+
+  String _iso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Real week <select> options within one calendar month — matches web's
+  /// `weekOptionsForMonth()` (`HrGlobalControls.tsx`).
+  List<MapEntry<String, String>> _weekOptionsForMonth(String monthValue) {
+    final parts = monthValue.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+    final out = <MapEntry<String, String>>[];
+    var cursor = _mondayOf(firstDay);
+    var idx = 1;
+    while ((cursor.isBefore(lastDay) || _iso(cursor) == _iso(lastDay)) && idx <= 7) {
+      final weekStart = cursor;
+      final weekEnd = cursor.add(const Duration(days: 6));
+      final inMonthStart = weekStart.month == month ? weekStart : firstDay;
+      final inMonthEnd = weekEnd.month == month ? weekEnd : lastDay;
+      out.add(MapEntry(_iso(weekStart), 'Week $idx (${inMonthStart.day}-${inMonthEnd.day})'));
+      cursor = cursor.add(const Duration(days: 7));
+      idx++;
+    }
+    return out;
+  }
+
+  Widget _weekNavButton(String label, VoidCallback onTap) {
+    return SizedBox(
+      height: 30,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xFF3A3A4A),
+          side: const BorderSide(color: _line),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          minimumSize: Size.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+
+  Widget _smallDropdown({required String value, required List<MapEntry<String, String>> items, required ValueChanged<String?> onChanged}) {
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(border: Border.all(color: _line), borderRadius: BorderRadius.circular(8), color: Colors.white),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: items.any((e) => e.key == value) ? value : null,
+          isDense: true,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF1A1A2E)),
+          items: items.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  /// Row 1 of `HrGlobalControls.tsx`: "Week of … :" label, month/week
+  /// pickers, prev/next, Today, the 7 day chips, and the Auto-saving
+  /// indicator — all on one horizontally-scrolling bar, matching web
+  /// exactly (previously this only had the day chips + prev/next/Today,
+  /// missing the label/month/week pickers and the Auto-saving indicator
+  /// entirely).
   Widget _buildDateStrip(String date) {
     final selected = DateTime.parse(date);
-    final weekday = selected.weekday; // 1=Mon..7=Sun
-    final monday = selected.subtract(Duration(days: weekday - 1));
+    final monday = _mondayOf(selected);
     final days = List.generate(7, (i) => monday.add(Duration(days: i)));
     final todayStr = _todayIso();
 
-    String iso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const monthsAbbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final first = days.first;
+    final last = days.last;
+    final stripLabel = 'Week of ${first.day} ${monthsAbbr[first.month - 1]} – ${last.day} ${monthsAbbr[last.month - 1]}';
+
+    final selectedMonth = '${selected.year}-${selected.month.toString().padLeft(2, '0')}';
+    final months = _monthOptions(selected);
+    final weeks = _weekOptionsForMonth(selectedMonth);
+    final selectedWeekStart = _iso(monday);
+    final weekValue = weeks.any((w) => w.key == selectedWeekStart) ? selectedWeekStart : (weeks.isNotEmpty ? weeks.first.key : date);
+
+    void goToDate(String iso) => ref.read(attendanceDateProvider.notifier).state = iso;
 
     return Container(
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _line), borderRadius: BorderRadius.circular(14)),
-      child: Row(children: [
-        IconButton(icon: const Icon(Icons.chevron_left, size: 20), onPressed: () => ref.read(attendanceDateProvider.notifier).state = iso(monday.subtract(const Duration(days: 7)))),
-        Expanded(
-          child: Row(
-            children: [
-              for (var i = 0; i < 7; i++)
-                Expanded(
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text('${stripLabel.toUpperCase()}:', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF9CA0AE), letterSpacing: 0.5)),
+            const SizedBox(width: 6),
+            _smallDropdown(
+              value: selectedMonth,
+              items: months,
+              onChanged: (v) {
+                if (v == null) return;
+                final parts = v.split('-');
+                goToDate(_iso(DateTime(int.parse(parts[0]), int.parse(parts[1]), 1)));
+              },
+            ),
+            const SizedBox(width: 4),
+            _weekNavButton('←', () => goToDate(_iso(monday.subtract(const Duration(days: 7))))),
+            const SizedBox(width: 4),
+            _smallDropdown(
+              value: weekValue,
+              items: weeks,
+              onChanged: (v) {
+                if (v != null) goToDate(v);
+              },
+            ),
+            const SizedBox(width: 4),
+            _weekNavButton('→', () => goToDate(_iso(monday.add(const Duration(days: 7))))),
+            const SizedBox(width: 8),
+            SizedBox(
+              height: 30,
+              child: TextButton(
+                onPressed: date == todayStr ? null : () => goToDate(todayStr),
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFE4F6ED),
+                  foregroundColor: const Color(0xFF0A8C5A),
+                  disabledBackgroundColor: const Color(0xFFE4F6ED),
+                  disabledForegroundColor: const Color(0xFF0A8C5A),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Color(0xFFBDE9D0))),
+                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                ),
+                child: const Text('Today'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            for (var i = 0; i < 7; i++)
+              Builder(builder: (context) {
+                // Matches web's `chipState`/`chipClass`
+                // (`HrGlobalControls.tsx`) exactly — 3 date states
+                // (today / already-passed "done" / future) crossed
+                // with selected/not, 5 distinct looks total. Previously
+                // only distinguished selected vs. today, so every past
+                // date looked identical to a future one.
+                final dISO = _iso(days[i]);
+                final isSelected = dISO == date;
+                final isToday = dISO == todayStr;
+                final isDone = !isToday && dISO.compareTo(todayStr) < 0;
+
+                Color bg;
+                Color textColor;
+                Border? border;
+                if (isSelected && isToday) {
+                  bg = _brand;
+                  textColor = Colors.white;
+                } else if (isSelected) {
+                  bg = const Color(0xFFFFF4D6);
+                  textColor = const Color(0xFF9A5C00);
+                } else if (isToday) {
+                  bg = Colors.white;
+                  textColor = _brand;
+                  border = Border.all(color: _brand, width: 2);
+                } else if (isDone) {
+                  bg = const Color(0xFFF6F4FF);
+                  textColor = _brand;
+                  border = Border.all(color: _brand.withValues(alpha: 0.2));
+                } else {
+                  bg = Colors.white;
+                  textColor = _muted;
+                  border = Border.all(color: const Color(0xFFE6E6EC));
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 4),
                   child: GestureDetector(
-                    onTap: () => ref.read(attendanceDateProvider.notifier).state = iso(days[i]),
+                    onTap: () => goToDate(dISO),
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: iso(days[i]) == date ? _brand : (iso(days[i]) == todayStr ? const Color(0xFFF6F4FF) : Colors.white),
-                        border: iso(days[i]) == todayStr && iso(days[i]) != date ? Border.all(color: _brand) : null,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(children: [
-                        Text(dayNames[i], style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: iso(days[i]) == date ? Colors.white : _muted)),
+                      constraints: const BoxConstraints(minWidth: 46, minHeight: 38),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: bg, border: border, borderRadius: BorderRadius.circular(10)),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Text(dayNames[i], style: TextStyle(fontSize: 9, fontWeight: isToday ? FontWeight.w600 : FontWeight.normal, color: textColor)),
                         const SizedBox(height: 2),
-                        Text('${days[i].day}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: iso(days[i]) == date ? Colors.white : _ink)),
+                        Text('${days[i].day}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor)),
+                        if (isToday)
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(color: isSelected ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFDDF5EA), borderRadius: BorderRadius.circular(3)),
+                            child: Text('TODAY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : const Color(0xFF0A8C5A))),
+                          ),
                       ]),
                     ),
                   ),
-                ),
-            ],
-          ),
+                );
+              }),
+            const SizedBox(width: 12),
+            const Row(mainAxisSize: MainAxisSize.min, children: [
+              SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: Color(0xFF0A8C5A), shape: BoxShape.circle))),
+              SizedBox(width: 6),
+              Text('Auto-saving', style: TextStyle(fontSize: 11, color: Color(0xFF8B8B9E))),
+            ]),
+          ],
         ),
-        IconButton(icon: const Icon(Icons.chevron_right, size: 20), onPressed: () => ref.read(attendanceDateProvider.notifier).state = iso(monday.add(const Duration(days: 7)))),
-        TextButton(onPressed: date == todayStr ? null : () => ref.read(attendanceDateProvider.notifier).state = todayStr, child: const Text('Today')),
-      ]),
+      ),
     );
   }
 
@@ -797,9 +973,12 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
     final notes = (mark?.note.isEmpty ?? true) ? const <String>[] : mark!.note.split('|||');
 
     return Container(
-      color: isSelected ? const Color(0xFFF4F2FF) : null,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF4F4F8)))),
+      // `color` and `decoration` can't both be set on a `Container` (a real,
+      // always-on crash the moment a row's checkbox is selected — Flutter
+      // throws "Cannot provide both a color and a decoration" outright).
+      // Fold the selection tint into the same `BoxDecoration` as the border.
+      decoration: BoxDecoration(color: isSelected ? const Color(0xFFF4F2FF) : null, border: const Border(top: BorderSide(color: Color(0xFFF4F4F8)))),
       child: Row(children: [
         SizedBox(
           width: 28,
@@ -917,6 +1096,13 @@ class _AddNoteDialogState extends State<_AddNoteDialog> {
   Widget build(BuildContext context) {
     final isEditing = widget.initialNote.isNotEmpty;
     return AlertDialog(
+      // `scrollable: true` — only the dialog's *width* was capped for
+      // narrow phones before; on a short viewport (soft keyboard open,
+      // small-height landscape) title + staff name + the 4-line growing
+      // TextField + actions could still exceed the available height with
+      // nothing to absorb the overflow. This turns that into a scrollbar
+      // instead of a hard `RenderFlex` overflow.
+      scrollable: true,
       title: Text(isEditing ? 'Edit Note' : 'Add Note'),
       content: ConstrainedBox(
         // A hardcoded desktop width overflows a 320-360dp phone screen once
@@ -970,6 +1156,10 @@ class _ViewNotesDialogState extends State<_ViewNotesDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // See `_AddNoteDialog`'s identical fix — the header + notes list +
+      // an in-place edit `TextField` combination has no scroll fallback of
+      // its own on a short viewport otherwise.
+      scrollable: true,
       title: const Text('Notes'),
       content: ConstrainedBox(
         // A hardcoded desktop width overflows a 320-360dp phone screen once

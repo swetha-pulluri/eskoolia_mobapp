@@ -464,7 +464,16 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary)),
-          Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.right,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -583,8 +592,8 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 260,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 260),
                   child: TextField(
                     controller: _searchCtrl,
                     decoration: const InputDecoration(hintText: 'Search categories or codes...', isDense: true, prefixIcon: Icon(Icons.search, size: 18)),

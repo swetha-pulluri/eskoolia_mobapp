@@ -364,27 +364,29 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
     );
   }
 
+  // Was a Row(Expanded(title column) + Wrap(action buttons)) — a Row's
+  // non-flex children (the button Wrap) are laid out with an unbounded
+  // main-axis constraint, so they never actually wrap/shrink to make room;
+  // confirmed via widget test to hard-overflow the RenderFlex at every
+  // tested width from 320dp up to 412dp. Stacking the actions below the
+  // title (both still full-width Column children) lets the Wrap receive a
+  // real bounded width from its Column ancestor, so it can wrap the two
+  // buttons onto their own line(s) and never overflow.
   Widget _buildHero(bool loading, List<StaffEntity> staffList) {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('STAFF RECORDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _muted)),
-              const SizedBox(height: 4),
-              RichText(
-                text: const TextSpan(
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _ink),
-                  children: [TextSpan(text: 'Staff '), TextSpan(text: 'list & Onboarding', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text('Department parent accordions with staff child rows, fast filters, and profile details in a side panel.', style: TextStyle(fontSize: 13, color: _muted)),
-            ],
+        const Text('STAFF RECORDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _muted)),
+        const SizedBox(height: 4),
+        RichText(
+          text: const TextSpan(
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _ink),
+            children: [TextSpan(text: 'Staff '), TextSpan(text: 'list & Onboarding', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
           ),
         ),
+        const SizedBox(height: 4),
+        const Text('Department parent accordions with staff child rows, fast filters, and profile details in a side panel.', style: TextStyle(fontSize: 13, color: _muted)),
+        const SizedBox(height: 12),
         Wrap(spacing: 8, runSpacing: 8, children: [
           OutlinedButton(onPressed: staffList.isEmpty ? null : () => _exportCsv(staffList), child: const Text('Export CSV')),
           FilledButton(
@@ -571,17 +573,26 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(children: [
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Was a Row(Expanded(title) + 2 OutlinedButtons) — same
+            // unbounded-non-flex-child issue as the hero row above: the two
+            // buttons alone are wider than a 320-412dp row, confirmed via
+            // widget test to overflow at every tested width. Stack the
+            // title above a Wrap of the two buttons so they can wrap to
+            // their own line and never overflow.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('All Staff', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _ink)),
                   Text('View opens a side hover panel. The table remains full width for large schools.', style: TextStyle(fontSize: 12, color: _muted)),
                 ]),
-              ),
-              OutlinedButton(onPressed: _collapseAll, child: const Text('Collapse all')),
-              const SizedBox(width: 8),
-              OutlinedButton(onPressed: _expandAllTap, child: const Text('Expand all')),
-            ]),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  OutlinedButton(onPressed: _collapseAll, child: const Text('Collapse all')),
+                  OutlinedButton(onPressed: _expandAllTap, child: const Text('Expand all')),
+                ]),
+              ],
+            ),
           ),
           Container(
             width: double.infinity,
@@ -642,7 +653,17 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
                   ]),
                 ),
                 if (g.key != -1) ...[
+                  // Compact padding/tap-target — the default OutlinedButton
+                  // padding pushed this row's non-flex total (icon + button
+                  // + ring) past a 320dp row's available width, confirmed
+                  // via widget test (18px hard overflow with a real long
+                  // department name). Same label/icon/color, just tighter.
                   OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     onPressed: () => context.push('/hr/onboard?department=${g.key}'),
                     icon: const Icon(Icons.add, size: 13),
                     label: const Text('Add staff', style: TextStyle(fontSize: 12)),

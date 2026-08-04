@@ -385,38 +385,50 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
           if (data.byGrade.isEmpty)
             const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Center(child: Text('No grade data yet.', style: TextStyle(fontSize: 12.5, color: Color(0xFF9CA3AF)))))
           else
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.8,
-              children: List.generate(data.byGrade.length, (i) {
-                final g = data.byGrade[i];
-                final color = gradeColors[i % gradeColors.length];
-                final pctVal = maxGrade > 0 ? (g.count / maxGrade * 100).round() : 0;
-                final isHighDemand = pctVal >= 90;
-                return Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
-                        child: Text(g.gradeName ?? '?', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white), overflow: TextOverflow.ellipsis),
+            // Width-constrained, height-intrinsic 3-column layout (not
+            // `GridView.count(childAspectRatio: ...)`) — a fixed aspect
+            // ratio gives every cell the same forced height regardless of
+            // its actual content (badge + count + gauge + label), which
+            // overflowed on 320-360dp phones once the cell narrowed enough
+            // to also shrink that forced height below what the content
+            // needs. `SemiGauge` (fixed 80×48) is also wrapped in
+            // `FittedBox` so it scales down to fit a narrow cell instead of
+            // demanding its full fixed size.
+            LayoutBuilder(builder: (context, constraints) {
+              const spacing = 8.0;
+              final cellWidth = (constraints.maxWidth - spacing * 2) / 3;
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: List.generate(data.byGrade.length, (i) {
+                  final g = data.byGrade[i];
+                  final color = gradeColors[i % gradeColors.length];
+                  final pctVal = maxGrade > 0 ? (g.count / maxGrade * 100).round() : 0;
+                  final isHighDemand = pctVal >= 90;
+                  return SizedBox(
+                    width: cellWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(12)),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+                            child: Text(g.gradeName ?? '?', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white), overflow: TextOverflow.ellipsis),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('${g.count}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+                          FittedBox(fit: BoxFit.scaleDown, child: SemiGauge(pct: pctVal, color: color)),
+                          Text(isHighDemand ? 'HIGH DEMAND' : '$pctVal% of top', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: isHighDemand ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF))),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text('${g.count}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
-                      SemiGauge(pct: pctVal, color: color),
-                      Text(isHighDemand ? 'HIGH DEMAND' : '$pctVal% of top', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: isHighDemand ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF))),
-                    ],
-                  ),
-                );
-              }),
-            ),
+                    ),
+                  );
+                }),
+              );
+            }),
         ],
       ),
     );

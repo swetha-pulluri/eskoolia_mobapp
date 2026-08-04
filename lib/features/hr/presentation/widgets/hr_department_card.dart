@@ -55,10 +55,21 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
+                    // Was: Column(header-info) sitting inside this Expanded,
+                    // with "N staff" + Edit + Delete as separate FIXED-width
+                    // siblings of this Expanded directly in the outer Row.
+                    // Those fixed siblings' combined intrinsic width (badge +
+                    // staff text + 2 buttons) alone exceeds the Row's
+                    // available width at 320-412dp regardless of what the
+                    // Expanded gets, causing a hard `RenderFlex overflowed`
+                    // (confirmed via widget test with a long department
+                    // name). Folding "N staff"/Edit/Delete into this Wrap —
+                    // which is already bounded by the Expanded — lets them
+                    // wrap onto their own line instead of overflowing.
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, children: [
+                        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
                           Text(dept.name, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: HrColors.ink)),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -70,6 +81,18 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                               dept.isActive ? 'Active' : 'Inactive',
                               style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: dept.isActive ? const Color(0xFF15803D) : const Color(0xFF64748B)),
                             ),
+                          ),
+                          if (widget.staffCount > 0)
+                            Text('${widget.staffCount} staff', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
+                          TextButton(
+                            onPressed: widget.onEdit,
+                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            child: const Text('Edit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                          ),
+                          TextButton(
+                            onPressed: widget.onDelete,
+                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            child: const Text('Delete', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: HrColors.red)),
                           ),
                         ]),
                         const SizedBox(height: 4),
@@ -85,22 +108,6 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                         ]),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (widget.staffCount > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Text('${widget.staffCount} staff', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
-                    ),
-                  TextButton(
-                    onPressed: widget.onEdit,
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                    child: const Text('Edit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                  ),
-                  TextButton(
-                    onPressed: widget.onDelete,
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                    child: const Text('Delete', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: HrColors.red)),
                   ),
                 ],
               ),

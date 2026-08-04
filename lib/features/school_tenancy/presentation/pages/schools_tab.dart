@@ -100,6 +100,24 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
   bool _addSchoolOpen = false;
   final GlobalKey _addSchoolKey = GlobalKey();
 
+  /// "Smart filters" accordion (02) — matches web's `accFiltersOpen`, which
+  /// also defaults to closed (`schools/page.tsx`).
+  bool _smartFiltersOpen = false;
+
+  /// Matches web's own `activeFilterCount` formula exactly
+  /// (`schools/page.tsx`): search/plan/board/state count, plus status only
+  /// when it's neither the default `'all'` nor `'active'` — region and
+  /// health-flag aren't counted on web either.
+  int _activeFilterCount(SchoolFilters filters) {
+    return [
+      filters.search,
+      filters.plan,
+      filters.board,
+      filters.state,
+      (filters.status != null && filters.status != 'all' && filters.status != 'active') ? filters.status : null,
+    ].where((v) => v != null && v.isNotEmpty).length;
+  }
+
   void _openAddSchool() {
     setState(() => _addSchoolOpen = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -420,7 +438,18 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                     const SizedBox(height: 16),
 
                     // Action buttons
-                    Row(
+                    // `Wrap` (not a bare `Row`) — on a narrow real device
+                    // (small phone width and/or a larger system font-scale
+                    // setting), a `Row` with neither button flexing has
+                    // nowhere to give: the "Add school" label can end up
+                    // squeezed into an effectively zero-width box, which
+                    // forces Flutter's text layout to wrap after every
+                    // single letter instead of overflowing normally. `Wrap`
+                    // gives each button its own natural width and moves the
+                    // overflow button to a new line instead.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
                           onPressed: _exportBusy ? null : () => _handleExportSchools(filters),
@@ -436,7 +465,6 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                             textStyle: AppTextStyles.buttonSecondary,
                           ),
                         ),
-                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           onPressed: () => _openAddSchool(),
                           icon: const Icon(Icons.add, size: 14),
@@ -557,12 +585,21 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(999)),
-                              child: Text(
-                                'Auto-generates tenant ID',
-                                style: AppTextStyles.chipLabel(color: AppColors.purpleDeep),
+                            // `Flexible`+ellipsis — this chip's fixed-size
+                            // `Text` combined with the icon badge and
+                            // chevron genuinely overflowed this Row by
+                            // 144px on a 320dp screen (confirmed via a
+                            // widget test); it now shrinks instead.
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(999)),
+                                child: Text(
+                                  'Auto-generates tenant ID',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.chipLabel(color: AppColors.purpleDeep),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -598,22 +635,70 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
               // deliberately deviating from strict web parity since the
               // underlying filter genuinely works.
               Container(
-                padding: const EdgeInsets.all(14),
+                margin: const EdgeInsets.only(bottom: 0),
                 decoration: BoxDecoration(
                   color: AppColors.bgPrimary,
-                  border: Border.all(color: AppColors.borderPrimary),
+                  border: Border.all(color: _smartFiltersOpen ? AppColors.primaryPurple : AppColors.borderPrimary),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
+                  children: [
+                    InkWell(
+                      onTap: () => setState(() => _smartFiltersOpen = !_smartFiltersOpen),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(9)),
+                              child: const Icon(Icons.filter_alt_outlined, color: AppColors.primaryPurple, size: 16),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Smart filters', style: AppTextStyles.sectionTitle.copyWith(fontSize: 13)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Find schools by status, plan, board, region & billing health',
+                                    style: AppTextStyles.sectionSubtitle,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_activeFilterCount(filters) > 0)
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(999)),
+                                  child: Text(
+                                    '${_activeFilterCount(filters)} active',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.chipLabel(color: AppColors.purpleDeep),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            Icon(_smartFiltersOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: AppColors.textTertiary),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (_smartFiltersOpen)
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.borderPrimary))),
+                        child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Smart filters', style: AppTextStyles.sectionTitle.copyWith(fontSize: 13)),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Find schools by status, plan, board, region & billing health',
-                      style: AppTextStyles.sectionSubtitle,
-                    ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     TextField(
                       controller: _searchController,
                       onChanged: (value) => _applyFilters(filters, search: value.trim().isEmpty ? null : value.trim()),
@@ -765,6 +850,9 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                   ],
                 ),
               ),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 20),
 
@@ -887,49 +975,76 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                             ),
                             const SizedBox(height: 14),
                             // ACTIVE FILTER + EXPORT/REFRESH — matches web's
-                            // `schools/page.tsx` row directly above the table.
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text.rich(
+                            // `schools/page.tsx` row directly above the
+                            // table. `LayoutBuilder`-based split (not a
+                            // plain `Row`/`Wrap`) — a `Row`'s non-flexible
+                            // children (including a `Wrap` that isn't itself
+                            // given a bounded width) are laid out at their
+                            // full natural size regardless of an `Expanded`
+                            // sibling, which genuinely overflowed by 10px at
+                            // 320dp (confirmed via widget test) once both
+                            // buttons' natural width plus the label's
+                            // couldn't fit one line. Below the threshold,
+                            // the label moves above the button pair instead.
+                            LayoutBuilder(builder: (context, constraints) {
+                              final label = Text.rich(
+                                TextSpan(
+                                  style: AppTextStyles.sectionSubtitle,
+                                  children: [
+                                    const TextSpan(text: 'Active filter: '),
                                     TextSpan(
-                                      style: AppTextStyles.sectionSubtitle,
-                                      children: [
-                                        const TextSpan(text: 'Active filter: '),
-                                        TextSpan(
-                                          text: filters.status == null
-                                              ? 'All · Active'
-                                              : filters.status![0].toUpperCase() + filters.status!.substring(1),
-                                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.purpleDeep),
-                                        ),
-                                      ],
+                                      text: filters.status == null
+                                          ? 'All · Active'
+                                          : filters.status![0].toUpperCase() + filters.status!.substring(1),
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.purpleDeep),
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                              final buttons = Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: [
+                                  OutlinedButton.icon(
+                                    onPressed: _exportBusy ? null : () => _handleExportSchools(filters),
+                                    icon: _exportBusy
+                                        ? const SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2))
+                                        : const Icon(Icons.download, size: 13),
+                                    label: Text(_exportBusy ? 'Exporting…' : 'Export'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      textStyle: const TextStyle(fontSize: 12),
                                     ),
                                   ),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: _exportBusy ? null : () => _handleExportSchools(filters),
-                                  icon: _exportBusy
-                                      ? const SizedBox(width: 13, height: 13, child: CircularProgressIndicator(strokeWidth: 2))
-                                      : const Icon(Icons.download, size: 13),
-                                  label: Text(_exportBusy ? 'Exporting…' : 'Export'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    textStyle: const TextStyle(fontSize: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () => ref.invalidate(schoolsProvider),
+                                    icon: const Icon(Icons.refresh, size: 13),
+                                    label: const Text('Refresh'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      textStyle: const TextStyle(fontSize: 12),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                OutlinedButton.icon(
-                                  onPressed: () => ref.invalidate(schoolsProvider),
-                                  icon: const Icon(Icons.refresh, size: 13),
-                                  label: const Text('Refresh'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    textStyle: const TextStyle(fontSize: 12),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              );
+                              // Below this width, the label's minimum
+                              // (ellipsized) width plus both buttons'
+                              // natural width can't share one line — stack
+                              // the label above the buttons instead of
+                              // ever letting the Row overflow.
+                              if (constraints.maxWidth < 300) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [label, const SizedBox(height: 8), buttons],
+                                );
+                              }
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [Expanded(child: label), const SizedBox(width: 8), buttons],
+                              );
+                            }),
                             const SizedBox(height: 14),
 
                             if (schools.results.isEmpty)

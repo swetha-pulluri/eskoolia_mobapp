@@ -663,6 +663,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'School type',
+              required: true,
               child: _decorativeDropdown('school_type', const [
                 'K-12 · Day school',
                 'K-12 · Residential',
@@ -716,7 +717,6 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'Affiliation number',
-              required: true,
               child: _decorativeText(
                 'affiliation_no',
                 hint: 'CBSE/AFF/930451',
@@ -725,7 +725,6 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'UDISE+ code',
-              required: true,
               hint: '11 digits',
               child: _textCtl(
                 _udiseController,
@@ -813,7 +812,6 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
           _section('05', 'Campus address & geography', [
             _field(
               'Street address',
-              required: true,
               child: _decorativeText(
                 'street',
                 hint: 'Plot 22, Road No. 12, Banjara Hills',
@@ -822,12 +820,10 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'City',
-              required: true,
               child: _decorativeText('city', hint: 'Hyderabad'),
             ),
             _field(
               'State',
-              required: true,
               child: _decorativeDropdown(
                 'campus_state',
                 _kStateOptions.map((o) => '${o[1]} (${o[0]})').toList(),
@@ -835,7 +831,6 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'PIN code',
-              required: true,
               child: _decorativeText(
                 'pin',
                 hint: '500034',
@@ -1151,8 +1146,15 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _submitting ? null : widget.onCancel,
+                  // Explicit shape/color — the app theme has no
+                  // `outlinedButtonTheme`, so this would otherwise fall back
+                  // to Material 3's default `StadiumBorder` (pill) shape and
+                  // purple text, unlike web's flat, black-text ghost button.
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
+                    foregroundColor: AppColors.textPrimary,
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                   ),
                   child: const Text('Cancel'),
                 ),
@@ -1164,6 +1166,9 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                     onPressed: _submitting ? null : _saveDraft,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.borderPrimary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                     ),
                     child: const Text('Save as draft'),
                   ),
@@ -1228,9 +1233,18 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+              // `Expanded`+ellipsis — this bare `Text` had no shrink
+              // fallback, and several section titles ("Admin login
+              // credentials", "Principal & primary contact", "Campus
+              // address & geography") are long enough to overflow this
+              // Row's available width (~284px) on a 320dp phone by itself.
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+                ),
               ),
             ],
           ),
@@ -1267,10 +1281,24 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                   style: TextStyle(color: AppColors.dangerRed, fontSize: 11.5),
                 ),
               if (hint != null) ...[
-                const Spacer(),
-                Text(
-                  hint,
-                  style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5),
+                const SizedBox(width: 8),
+                // `Expanded`+right-align (not a bare `Spacer` + `Text`) —
+                // a `Spacer` only claims whatever space happens to be left
+                // over, which doesn't stop the trailing hint `Text` from
+                // overflowing the Row on the right when it's long (e.g.
+                // "Min 10 chars · mix of letters, numbers, symbols" for
+                // Admin password). `Expanded` claims all remaining width
+                // and right-aligns the hint within it — visually identical
+                // to "pushed flush right" — while letting it ellipsize
+                // instead of overflowing if it still doesn't fit.
+                Expanded(
+                  child: Text(
+                    hint,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5),
+                  ),
                 ),
               ],
             ],
@@ -1691,7 +1719,12 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     return Container(
       height: 38,
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 11),
+      // Reduced from 11 — "https://" + ".eskoolia.com" as two fixed,
+      // non-flexible siblings of the Expanded subdomain field genuinely
+      // overflowed the Subdomain URL Row by 11px at 320dp (the Expanded
+      // field can shrink to 0, but that alone can't absorb these fixed
+      // chips exceeding the Row's own width).
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
         border: Border.all(color: AppColors.borderPrimary),

@@ -223,6 +223,13 @@ class ApiConstants {
   static const String feesYearEndGroupAmounts = '$feesYearEndBasePath/group-amounts/';
   static const String feesYearEndReport = '$feesYearEndBasePath/report/';
 
+  // Notifications — Reference: backend/apps/utilities/communication (NotificationViewSet),
+  // matches frontend/components/nav/NotificationBell.tsx's endpoints exactly.
+  static const String notificationsBasePath = '$apiBasePath/utilities/communication/notifications';
+  static const String notifications = '$notificationsBasePath/';
+  static const String notificationsMarkAllRead = '$notificationsBasePath/mark-all-read/';
+  static String notificationMarkRead(int id) => '$notificationsBasePath/$id/mark-read/';
+
   // Dashboard Endpoints
   static const String attentionCountEndpoint =
       '/api/dashboard/attention-count/';

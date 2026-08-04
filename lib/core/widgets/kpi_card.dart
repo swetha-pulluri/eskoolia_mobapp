@@ -20,6 +20,11 @@ class KpiCard extends StatelessWidget {
   final List<double>? sparklineData;
   final Color? sparklineColor;
   final VoidCallback? onTap;
+  /// Optional icon shown next to the label — matches web KPI cards that
+  /// pair a small lucide icon with the label (e.g. Audit Log's Activity/
+  /// XCircle/Users/Clock). Omitted entirely (as before) when null, so
+  /// existing callers that don't pass one keep their current look.
+  final IconData? icon;
 
   const KpiCard({
     super.key,
@@ -31,6 +36,7 @@ class KpiCard extends StatelessWidget {
     this.sparklineData,
     this.sparklineColor,
     this.onTap,
+    this.icon,
   });
 
   @override
@@ -66,10 +72,23 @@ class KpiCard extends StatelessWidget {
                   const SizedBox(height: 16),
                 ],
 
-                // Label
-                Text(
-                  label.toUpperCase(),
-                  style: AppTextStyles.kpiLabel,
+                // Label (+ optional icon)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, size: 13, color: sparklineColor ?? AppColors.textTertiary),
+                      const SizedBox(width: 5),
+                    ],
+                    Flexible(
+                      child: Text(
+                        label.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.kpiLabel,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
 

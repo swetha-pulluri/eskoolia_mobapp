@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.0+8
 
 environment:
   sdk: ^3.12.1
@@ -59,6 +59,12 @@ dependencies:
   # so a normal phone-camera photo (often 3-8MB) still fits the backend's
   # upload size limit instead of being rejected outright.
   image: ^4.3.0
+
+  # Resolves the OS's real Downloads directory (Android) / a visible
+  # Documents directory (iOS), so School Tenancy's export/download buttons
+  # land somewhere the user can actually find the file, instead of the
+  # invisible OS temp directory.
+  path_provider: ^2.1.6
 
   # PDF generation + native print/share dialog (Documents Studio: Generate &
   # Print — the mobile equivalent of web's `window.open()` + `popup.print()`)

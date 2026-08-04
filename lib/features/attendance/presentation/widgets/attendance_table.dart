@@ -12,7 +12,12 @@ class AttendanceTableColumns {
   static const pickup = 100.0;
   static const lunch = 70.0;
   static const notes = 60.0;
-  static const actions = 110.0;
+  // Wide enough for the worst case in `_actionsCell()` — an absent/late,
+  // non-read-only student with an existing note shows 4 icon buttons at
+  // once (edit-status, view-notes, add-note, delete-note), each 24px +
+  // 4px right padding = 28px, needing 112px alone before the cell's own
+  // 12px×2 horizontal padding; 110 overflowed that Row by ~26px.
+  static const actions = 140.0;
 
   static double get total => checkbox + pupil + rollNo + absent + arrival + signIn + signOut + pickup + lunch + notes + actions;
 }
@@ -69,9 +74,14 @@ class AttendanceTable extends StatelessWidget {
     final signInMins = students.where((s) => s.status != 'absent').map((s) => _timeToMins(s.signInTime)).whereType<int>().toList();
     final earliestSignIn = signInMins.isEmpty ? null : signInMins.reduce((a, b) => a < b ? a : b);
 
-    return SizedBox(
-      height: 380,
-      child: SingleChildScrollView(
+    // No fixed-height `SizedBox`/`Expanded` here — this table already sits
+    // inside the page's own vertical scroll view (via each class card's
+    // expanded section body), so it should size to its actual content
+    // (header + however many rows there are) instead of a hardcoded 380px
+    // viewport that left a large empty gap below short sections and
+    // (for a genuinely long roster) would itself need scrolling that
+    // conflicts with the outer page scroll.
+    return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
           width: AttendanceTableColumns.total,
@@ -79,12 +89,13 @@ class AttendanceTable extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _header(allSelected),
-              Expanded(
-                child: loading
+              loading
                     ? const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 32), child: Text('Loading students…', style: TextStyle(fontSize: 12, color: Color(0xFF9CA0AE)))))
                     : students.isEmpty
                         ? const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 32), child: Text('No students found', style: TextStyle(fontSize: 12, color: Color(0xFF9CA0AE)))))
                         : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
                             itemCount: students.length,
                             itemBuilder: (context, i) {
                               final s = students[i];
@@ -116,12 +127,10 @@ class AttendanceTable extends StatelessWidget {
                               );
                             },
                           ),
-              ),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _header(bool allSelected) {

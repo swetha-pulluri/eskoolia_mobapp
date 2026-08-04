@@ -222,10 +222,11 @@ class _GenerateCertificateScreenState extends ConsumerState<GenerateCertificateS
                   helper: 'Spacing between certificates (0-100)',
                 ),
                 const SizedBox(height: 6),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     WebButton(label: 'Search', onPressed: _search),
-                    const SizedBox(width: 8),
                     WebButton(
                       label: _printing ? 'Generating...' : 'Print Selected',
                       color: const Color(0xFF5AB88D),
@@ -276,8 +277,13 @@ class _GenerateCertificateScreenState extends ConsumerState<GenerateCertificateS
                             _selectedIds.remove(r.id);
                           }
                         }),
-                        title: Text(r.label, style: const TextStyle(fontSize: 13)),
-                        subtitle: Text('Admission: ${r.admissionNo ?? '-'} · ${r.className ?? '-'} (${r.sectionName ?? '-'})', style: const TextStyle(fontSize: 11.5)),
+                        title: Text(r.label, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(
+                          'Admission: ${r.admissionNo ?? '-'} · ${r.className ?? '-'} (${r.sectionName ?? '-'})',
+                          style: const TextStyle(fontSize: 11.5),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
                   ),

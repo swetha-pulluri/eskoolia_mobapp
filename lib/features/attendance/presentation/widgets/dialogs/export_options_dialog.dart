@@ -199,8 +199,8 @@ class _ExportOptionsDialogViewState extends State<_ExportOptionsDialogView> {
           isExpanded: true,
           style: const TextStyle(fontSize: 13, color: Color(0xFF0B0B14)),
           items: [
-            const DropdownMenuItem(value: 'all', child: Text('All Classes')),
-            ...widget.classes.map((c) => DropdownMenuItem(value: '${c.id}', child: Text(c.displayLabel))),
+            const DropdownMenuItem(value: 'all', child: Text('All Classes', overflow: TextOverflow.ellipsis)),
+            ...widget.classes.map((c) => DropdownMenuItem(value: '${c.id}', child: Text(c.displayLabel, overflow: TextOverflow.ellipsis))),
           ],
           onChanged: (v) => setState(() {
             _classId = v ?? 'all';
@@ -224,8 +224,8 @@ class _ExportOptionsDialogViewState extends State<_ExportOptionsDialogView> {
           isExpanded: true,
           style: TextStyle(fontSize: 13, color: disabled ? const Color(0xFF9CA0AE) : const Color(0xFF0B0B14)),
           items: [
-            const DropdownMenuItem(value: 'all', child: Text('All Sections')),
-            ..._sections.map((s) => DropdownMenuItem(value: '${s.id}', child: Text('Section ${s.name}'))),
+            const DropdownMenuItem(value: 'all', child: Text('All Sections', overflow: TextOverflow.ellipsis)),
+            ..._sections.map((s) => DropdownMenuItem(value: '${s.id}', child: Text('Section ${s.name}', overflow: TextOverflow.ellipsis))),
           ],
           onChanged: disabled ? null : (v) => setState(() => _sectionId = v ?? 'all'),
         ),

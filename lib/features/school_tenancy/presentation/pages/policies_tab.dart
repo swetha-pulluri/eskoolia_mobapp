@@ -68,6 +68,16 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    // Drives which category's content renders below the tab strip now that
+    // the page is one continuous scroll region instead of a `TabBarView`
+    // (see build() for why) — `TabBar` itself only needs a `TabController`
+    // to render/animate its own indicator; it doesn't require a
+    // `TabBarView` to function.
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging || _tabController.index != _tabController.previousIndex) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -254,11 +264,36 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
 
     final policiesState = policiesAsync.value!;
 
+    // Matches web's own behavior (one continuous page scroll) — previously
+    // the header/tab strip/save bar were fixed in an outer `Column` around
+    // an `Expanded(child: TabBarView(...))`, and each tab's own content had
+    // its OWN separate `SingleChildScrollView` inside that bounded middle
+    // region. That's real nested scrolling: the heading never moved, and
+    // only the area below it scrolled. Restructured into a single
+    // `SingleChildScrollView` wrapping everything (header, tabs, the active
+    // category's content, and the save bar), with the active tab's content
+    // rendered directly (no `TabBarView`, which needs a bounded height and
+    // can't sit inside an unbounded scroll parent) — `TabBar` only needs its
+    // `TabController` to render/animate the indicator, not a `TabBarView`.
+    final activeCategoryPolicies = switch (_tabController.index) {
+      0 => policiesState.security,
+      1 => policiesState.dataIsolation,
+      2 => policiesState.billing,
+      _ => policiesState.system,
+    };
+    final activeCategoryMeta = switch (_tabController.index) {
+      0 => _kCategoryMeta['security']!,
+      1 => _kCategoryMeta['data_isolation']!,
+      2 => _kCategoryMeta['billing']!,
+      _ => _kCategoryMeta['system']!,
+    };
+
     return SchoolTenancyLayout(
       currentPath: '/super-admin/policies',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(
+          child: SingleChildScrollView(
           child: Column(
           children: [
             // PAGE HEADER
@@ -392,18 +427,9 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
               ),
             ),
 
-            // TAB CONTENT
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildCategoryContent(policiesState.security, _kCategoryMeta['security']!),
-                  _buildCategoryContent(policiesState.dataIsolation, _kCategoryMeta['data_isolation']!),
-                  _buildCategoryContent(policiesState.billing, _kCategoryMeta['billing']!),
-                  _buildCategoryContent(policiesState.system, _kCategoryMeta['system']!),
-                ],
-              ),
-            ),
+            // TAB CONTENT — just the active category, scrolling as part of
+            // the page instead of a separately-scrollable `TabBarView` page.
+            _buildCategoryContent(activeCategoryPolicies, activeCategoryMeta),
 
             // SAVE BAR — matches web exactly (`policies/page.tsx:376-387`):
             // a pending-change count plus a single Save button. Web has no
@@ -456,8 +482,11 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
               );
             }),
           ],
+          ),
         ),
-      ),      ),    );
+      ),
+      ),
+    );
   }
 
   bool _isDirty(PolicyEntity policy) {
@@ -687,8 +716,11 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     );
   }
 
+  // No longer wraps itself in a `SingleChildScrollView` — the page above
+  // is now the single scroll region; nesting a second vertical scroll view
+  // with unbounded height inside it would throw a layout assertion.
   Widget _buildCategoryContent(List<PolicyEntity> policies, _CategoryMeta meta) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

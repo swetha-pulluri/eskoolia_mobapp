@@ -2,31 +2,22 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 
 /// Environment Configuration for API Base URL
-/// 
-/// IMPORTANT: For Android physical device testing, update [_developmentLanIp]
-/// with your development machine's LAN IP address.
-/// 
-/// To find your LAN IP:
-/// - Windows: Run `ipconfig` and look for IPv4 Address (e.g., 192.168.1.100)
-/// - macOS/Linux: Run `ifconfig` or `ip addr` and look for inet address
-/// 
-/// Example: static const String _developmentLanIp = '192.168.1.100';
+///
+/// Android and iOS (including debug builds) use the shared hosted backend
+/// by default — see [apiBaseUrl]. [_developmentLanIp] is only needed if you
+/// switch [apiBaseUrl] back to [physicalDeviceUrl] to point at a local
+/// Django instance on your LAN.
 class EnvConfig {
   EnvConfig._();
 
-  /// YOUR DEVELOPMENT MACHINE'S LAN IP ADDRESS
-  /// Update this when testing on physical Android devices, and whenever this
-  /// machine's IP changes (e.g. reconnecting to a different Wi-Fi network) —
-  /// a stale value here is a silent `DioException: Connection timeout` with
-  /// no other symptom, since the app never learns the address is wrong, it
-  /// just never gets a response. Run `ipconfig` (Windows) / `ifconfig`
-  /// (macOS/Linux) to find the current one. Also update the matching
-  /// `<domain>` entry in
+  /// Development machine's LAN IP, used only by [physicalDeviceUrl].
+  /// If you point [apiBaseUrl] at this instead of the hosted backend, also
+  /// update the matching `<domain>` entry in
   /// android/app/src/debug/res/xml/network_security_config.xml, which
   /// permits cleartext (http://) traffic only for this IP + 10.0.2.2 —
   /// without it, API 28+ blocks cleartext traffic by default and every
   /// request fails immediately regardless of whether the IP is correct.
-  static const String _developmentLanIp = '192.168.170.202'; // ← CHANGE THIS TO YOUR LAN IP
+  static const String _developmentLanIp = '192.168.170.202';
 
   /// Backend port (default Django port)
   static const String _backendPort = '8000';
@@ -51,21 +42,12 @@ class EnvConfig {
       return 'http://localhost:$_backendPort';
     }
 
-    if (Platform.isAndroid) {
-      // Android Emulator: Use 10.0.2.2 (special alias for host machine)
-      // Android Physical Device: Use LAN IP of development machine
-      // 
-      // To detect if running on emulator vs physical device is complex,
-      // so we use the configured LAN IP which works for both if set correctly.
-      // If you're using an emulator, you can change this to '10.0.2.2'
-      return 'http://$_developmentLanIp:$_backendPort';
-    }
-
-    if (Platform.isIOS) {
-      // iOS Simulator: Use localhost
-      // iOS Physical Device: Use LAN IP of development machine
-      // For simulator, localhost works; for device, use LAN IP
-      return 'http://$_developmentLanIp:$_backendPort';
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Mobile (debug): use the shared hosted backend/database, same as
+      // release mode, instead of the dev machine's local LAN backend — the
+      // local backend requires the dev machine's Django server + DB to be
+      // running and reachable, which physical devices frequently can't do.
+      return _productionApiUrl;
     }
 
     // Default fallback (Desktop platforms)

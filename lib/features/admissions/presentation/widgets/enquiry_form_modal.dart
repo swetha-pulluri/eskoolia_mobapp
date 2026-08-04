@@ -377,7 +377,13 @@ class _EnquiryFormModalState extends ConsumerState<EnquiryFormModal> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       color: const Color(0xFFF8FAFC),
-      child: Row(
+      // `SingleChildScrollView` — this Row's intrinsic width (3 step
+      // circles + connectors + labels, none of it `Expanded`/`Flexible`)
+      // exceeds a 320-360dp modal width and overflowed; letting it scroll
+      // horizontally avoids that without shrinking the step design itself.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(3, (i) {
           final active = i <= _section;
@@ -396,6 +402,7 @@ class _EnquiryFormModalState extends ConsumerState<EnquiryFormModal> {
             if (i < 2) Container(width: 40, height: 2, margin: const EdgeInsets.only(left: 8, right: 8, bottom: 18), color: i < _section ? kAdmIndigo : const Color(0xFFD1D5DB)),
           ]);
         }),
+        ),
       ),
     );
   }

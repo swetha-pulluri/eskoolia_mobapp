@@ -237,7 +237,19 @@ class _KpiCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(child: Text(value, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1))),
-              if (trend != null) Text(trend!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: trendColor)),
+              // `Flexible` — trend strings like "Same as yesterday" or
+              // "↓ 8 vs yesterday" are long enough to overflow this Row on
+              // a narrow 2-column card even with the value Text `Expanded`.
+              if (trend != null)
+                Flexible(
+                  child: Text(
+                    trend!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: trendColor),
+                  ),
+                ),
             ],
           ),
           if (sub != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(sub!, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)))),

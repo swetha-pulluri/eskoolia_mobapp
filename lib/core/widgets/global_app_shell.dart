@@ -6,13 +6,14 @@ import '../../features/auth/domain/entities/user_entity.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/dashboard/domain/entities/module_entity.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
+import '../../features/notifications/presentation/providers/notification_provider.dart';
+import '../../features/notifications/presentation/widgets/notification_panel.dart';
 
 const _navBg = Color(0xFFFFFFFF);
 const _navBorder = Color(0xFFECECF2);
 const _navInk1 = Color(0xFF0F1222);
 const _navInk2 = Color(0xFF5A607A);
 const _navInk3 = Color(0xFF9197AE);
-const _navSearchBg = Color(0xFFF4F4F8);
 const _navPurple = Color(0xFF6D4AFF);
 
 /// Global application shell — Flutter port of frontend's
@@ -150,9 +151,7 @@ class _GlobalTopBar extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                _iconButton(icon: Icons.search, onTap: () => _openSearch(ref)),
-                const SizedBox(width: 2),
-                _iconButton(icon: Icons.notifications_outlined, onTap: () {}),
+                const _NotificationBellButton(),
                 const SizedBox(width: 6),
                 const _AvatarMenu(),
               ],
@@ -172,29 +171,54 @@ class _GlobalTopBar extends ConsumerWidget {
     return false;
   }
 
-  Widget _iconButton({required IconData icon, required VoidCallback onTap}) {
+}
+
+/// Notification bell — opens [showNotificationPanel] and shows an unread
+/// badge, matching `NotificationBell.tsx`'s always-visible bell + polled
+/// unread count. Needs its own context (routed through go_router's root
+/// `navigatorKey`, same reasoning as `_AvatarMenu._openMenu` — see
+/// `GlobalAppShell`'s class doc) since `_GlobalTopBar` itself sits outside
+/// any real `Navigator`/`Overlay`.
+class _NotificationBellButton extends ConsumerWidget {
+  const _NotificationBellButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
+
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+        if (navContext == null) return;
+        showNotificationPanel(navContext, ref);
+      },
       borderRadius: BorderRadius.circular(8),
-      child: Container(
+      child: SizedBox(
         width: 34,
         height: 34,
-        alignment: Alignment.center,
-        child: Icon(icon, size: 18, color: _navInk2),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.notifications_outlined, size: 18, color: _navInk2),
+            if (unreadCount > 0)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 14),
+                  decoration: BoxDecoration(color: const Color(0xFFE11D48), borderRadius: BorderRadius.circular(999)),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-    );
-  }
-
-  void _openSearch(WidgetRef ref) {
-    // `showDialog` needs a BuildContext with a real `Navigator`/`Overlay`
-    // ancestor — this widget's own context doesn't have one (see class doc
-    // on `GlobalAppShell`), so route through go_router's own root
-    // `navigatorKey` instead, which *is* inside that Navigator's subtree.
-    final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
-    if (navContext == null) return;
-    showDialog<void>(
-      context: navContext,
-      builder: (context) => const _SearchDialog(),
     );
   }
 }
@@ -348,104 +372,3 @@ class _AvatarMenu extends ConsumerWidget {
   }
 }
 
-/// Minimal local search over the module strip — Flutter counterpart of
-/// web's `CommandPalette.tsx`, which itself only filters the same static
-/// module/sub-route index (no live API), so a lightweight local-filter
-/// dialog is faithful to what the frontend actually does today.
-///
-/// Shown via `showDialog(context: <go_router's root navigatorKey context>)`
-/// (see `_GlobalTopBar._openSearch`), so — unlike `_GlobalTopBar` itself —
-/// this dialog's own `context` below *is* a proper descendant of the real
-/// `Navigator`/`InheritedGoRouter`, and `context.go()`/`Navigator.of(context)`
-/// work normally from here without any special handling.
-class _SearchDialog extends ConsumerStatefulWidget {
-  const _SearchDialog();
-
-  @override
-  ConsumerState<_SearchDialog> createState() => _SearchDialogState();
-}
-
-class _SearchDialogState extends ConsumerState<_SearchDialog> {
-  final TextEditingController _controller = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final modules = ref.watch(visibleModulesProvider);
-    final q = _query.trim().toLowerCase();
-    final results = q.isEmpty ? modules : modules.where((m) => m.name.toLowerCase().contains(q)).toList();
-
-    return Dialog(
-      backgroundColor: _navBg,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                onChanged: (v) => setState(() => _query = v),
-                decoration: InputDecoration(
-                  hintText: 'Search modules…',
-                  filled: true,
-                  fillColor: _navSearchBg,
-                  prefixIcon: const Icon(Icons.search, size: 18, color: _navInk3),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                  isDense: true,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: results.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: Text('No results', style: TextStyle(color: _navInk3, fontSize: 12.5))),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: results.length,
-                        itemBuilder: (context, i) {
-                          final m = results[i];
-                          return ListTile(
-                            dense: true,
-                            leading: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(color: m.bgColor, borderRadius: BorderRadius.circular(8)),
-                              alignment: Alignment.center,
-                              child: Icon(m.icon, size: 14, color: m.iconColor),
-                            ),
-                            title: Text(m.name, style: const TextStyle(fontSize: 13, color: _navInk1)),
-                            subtitle: Text(m.path, style: const TextStyle(fontSize: 11, color: _navInk3)),
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              if (m.comingSoon) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('${m.name} — Coming Soon')),
-                                );
-                                return;
-                              }
-                              ref.read(appRouterProvider).go(m.path);
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

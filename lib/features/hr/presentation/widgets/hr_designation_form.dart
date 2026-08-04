@@ -6,12 +6,13 @@ import '../../domain/repositories/hr_repository.dart';
 import '../providers/hr_provider.dart';
 import 'hr_theme.dart';
 
-/// Add/Edit Designation form — Department, Name, Active only, matching the
-/// ACTUAL currently-running backend's `DesignationSerializer` exactly
-/// (verified read-only: `fields = ["id","school","department","name",
-/// "is_active","created_at","updated_at"]`). No Short Code/Role
-/// Template/Employment Type/Reports To/Grade Level/Sort Order/reorder —
-/// none of those exist on this backend.
+/// Add/Edit Designation form — Department, Name, Short Code, Active,
+/// matching the backend's `DesignationSerializer` fields
+/// (`apps/hr/models.py`/`serializers.py`) and the web reference's actual
+/// routed form (`InlineDesigForm`, `app/(dashboard)/hr/setup/page.tsx`).
+/// Role Template/Employment Type/Reports To/Grade Level/Sort Order also
+/// exist on the backend but aren't collected here, matching that same web
+/// form (which doesn't collect them either).
 class HrDesignationForm extends ConsumerStatefulWidget {
   final DesignationEntity? initial;
   final int? defaultDeptId;
@@ -36,6 +37,7 @@ class HrDesignationForm extends ConsumerStatefulWidget {
 
 class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
   late final _nameCtrl = TextEditingController(text: widget.initial?.name ?? '');
+  late final _shortCodeCtrl = TextEditingController(text: widget.initial?.shortCode ?? '');
   int? _departmentId;
   late bool _isActive = widget.initial?.isActive ?? true;
   bool _saving = false;
@@ -51,6 +53,7 @@ class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _shortCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -91,6 +94,7 @@ class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
       id: base?.id ?? 0,
       departmentId: _departmentId!,
       name: _nameCtrl.text.trim(),
+      shortCode: _shortCodeCtrl.text.trim().toUpperCase(),
       isActive: _isActive,
     );
     try {
@@ -106,6 +110,7 @@ class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
       if (addAnother) {
         setState(() {
           _nameCtrl.clear();
+          _shortCodeCtrl.clear();
           _isActive = true;
         });
       }
@@ -167,9 +172,34 @@ class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
             ),
           ]),
           const SizedBox(height: 12),
-          Row(children: [
-            Checkbox(value: _isActive, onChanged: (v) => setState(() => _isActive = v ?? true)),
-            const Text('Active'),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: HrField(
+                label: 'Short Code',
+                child: TextField(
+                  controller: _shortCodeCtrl,
+                  maxLength: 10,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'e.g. SNR-TCH', counterText: ''),
+                  onChanged: (v) {
+                    final upper = v.toUpperCase();
+                    if (upper != v) {
+                      _shortCodeCtrl.value = _shortCodeCtrl.value.copyWith(text: upper, selection: TextSelection.collapsed(offset: upper.length));
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20),
+                child: Row(children: [
+                  Checkbox(value: _isActive, onChanged: (v) => setState(() => _isActive = v ?? true)),
+                  const Text('Active'),
+                ]),
+              ),
+            ),
           ]),
           const SizedBox(height: 12),
           const Divider(color: Color(0xFFF1F5F9)),
@@ -184,11 +214,13 @@ class _HrDesignationFormState extends ConsumerState<HrDesignationForm> {
                 onPressed: _saving ? null : () => _save(addAnother: true),
                 child: const Text('Save & add another', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: HrColors.brand)),
               ),
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                if (widget.onCancel != null) ...[
-                  OutlinedButton(onPressed: widget.onCancel, child: const Text('Cancel')),
-                  const SizedBox(width: 8),
-                ],
+              // `Wrap` (not a `Row(mainAxisSize: min)`) — same bug class as
+              // `hr_department_form.dart`'s save/cancel row: a child of the
+              // outer spaceBetween `Wrap` gets the FULL content width, not
+              // the leftover after "Save & add another", so these buttons
+              // need to be able to drop to a second line on narrow phones.
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                if (widget.onCancel != null) OutlinedButton(onPressed: widget.onCancel, child: const Text('Cancel')),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
                   onPressed: _saving ? null : () => _save(),

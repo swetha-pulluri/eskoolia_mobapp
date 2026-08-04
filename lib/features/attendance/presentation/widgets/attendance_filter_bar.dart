@@ -28,25 +28,27 @@ class AttendanceFilterBar extends StatelessWidget {
         spacing: 12,
         runSpacing: 8,
         children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Academic Year', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF6B6B80))),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE6E6EC)), borderRadius: BorderRadius.circular(8), color: Colors.white),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: academicYear,
-                  isDense: true,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
-                  items: kAcademicYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-                  onChanged: (v) {
-                    if (v != null) onYearChange(v);
-                  },
-                ),
+          // Flattened directly into the outer `Wrap` (not grouped into a
+          // `mainAxisSize.min` Row) so the label and the dropdown can each
+          // land on their own line on a narrow phone — the combined Row's
+          // intrinsic width (label + `DropdownButton`'s own generous item
+          // padding) genuinely exceeded 320-360dp screens.
+          const Text('Academic Year', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF6B6B80))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(border: Border.all(color: const Color(0xFFE6E6EC)), borderRadius: BorderRadius.circular(8), color: Colors.white),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: academicYear,
+                isDense: true,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
+                items: kAcademicYears.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
+                onChanged: (v) {
+                  if (v != null) onYearChange(v);
+                },
               ),
             ),
-          ]),
+          ),
           Wrap(
             spacing: 6,
             children: kLevels.map((l) {

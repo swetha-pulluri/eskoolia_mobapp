@@ -273,6 +273,7 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                   KpiCard(
                     label: 'Total Events',
                     value: '${page.count}',
+                    icon: Icons.show_chart,
                     sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
                     sparklineColor: const Color(0xFF5836E0),
                     trend: 'in loaded window',
@@ -282,6 +283,7 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                   KpiCard(
                     label: 'Critical / Error',
                     value: '$criticalCount',
+                    icon: Icons.cancel_outlined,
                     sparklineData: const [14, 11, 13, 9, 12, 8, 10, 7, 9, 6, 8, 5, 7, 4],
                     sparklineColor: const Color(0xFFE0463A),
                     trend: 'failed actions',
@@ -291,6 +293,7 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                   KpiCard(
                     label: 'Unique Actors',
                     value: '$uniqueActors',
+                    icon: Icons.group_outlined,
                     sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
                     sparklineColor: const Color(0xFF0369A1),
                     trend: 'distinct users',
@@ -300,6 +303,7 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                   KpiCard(
                     label: 'Last 24 Hours',
                     value: '$last24h',
+                    icon: Icons.access_time,
                     sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
                     sparklineColor: const Color(0xFF0E9F6E),
                     trend: 'recent activity',

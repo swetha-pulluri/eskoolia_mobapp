@@ -96,57 +96,79 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
                   color: Color(0xFF4F46E5),
                 ),
                 const SizedBox(width: 6),
-                const Text(
-                  'Class Portfolio',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                // `Flexible`+ellipsis — this title, the subtitle, the
+                // "N hidden" chip, the Manage button and the chevron are
+                // ALL non-flex siblings besides the subtitle's `Expanded`;
+                // their combined natural width alone (regardless of the
+                // subtitle shrinking to 0) overflowed this Row by ~95px at
+                // 320-390dp.
+                Flexible(
+                  child: Text(
+                    'Class Portfolio',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
                 ),
                 const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    "Select a class to view its pipeline",
-                    style: TextStyle(fontSize: 11.5, color: Color(0xFF9CA3AF)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (_hiddenClassIds.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${_hiddenClassIds.length} hidden',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFB45309),
+                // The trailing "N hidden"/"Manage"/chevron cluster is
+                // wrapped so it can drop to its own line instead of
+                // forcing the Row past its available width — a `Wrap` as
+                // a bare Row child would still get unbounded width, hence
+                // the enclosing `Flexible`.
+                Flexible(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
+                        "Select a class to view its pipeline",
+                        style: TextStyle(fontSize: 11.5, color: Color(0xFF9CA3AF)),
                       ),
-                    ),
-                  ),
-                TextButton(
-                  onPressed: () => setState(() => _manageMode = !_manageMode),
-                  style: TextButton.styleFrom(
-                    backgroundColor: _manageMode
-                        ? const Color(0xFF4F46E5)
-                        : Colors.transparent,
-                    foregroundColor: _manageMode
-                        ? Colors.white
-                        : const Color(0xFF6B7280),
-                    minimumSize: const Size(0, 28),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  child: Text(
-                    _manageMode ? 'Done' : 'Manage',
-                    style: const TextStyle(fontSize: 11),
+                      if (_hiddenClassIds.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${_hiddenClassIds.length} hidden',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                        ),
+                      TextButton(
+                        onPressed: () => setState(() => _manageMode = !_manageMode),
+                        style: TextButton.styleFrom(
+                          backgroundColor: _manageMode
+                              ? const Color(0xFF4F46E5)
+                              : Colors.transparent,
+                          foregroundColor: _manageMode
+                              ? Colors.white
+                              : const Color(0xFF6B7280),
+                          minimumSize: const Size(0, 28),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        child: Text(
+                          _manageMode ? 'Done' : 'Manage',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(width: 4),
                 Icon(
                   _collapsed
                       ? Icons.keyboard_arrow_down
@@ -412,18 +434,24 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                InkWell(
-                  onTap: () => _showCardMenu(cls),
-                  borderRadius: BorderRadius.circular(999),
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(
-                      Icons.more_vert,
-                      size: 16,
-                      color: Color(0xFF9CA3AF),
+                // Web only reveals this on `:hover` (`opacity-0
+                // group-hover:opacity-100`), which has no touch equivalent —
+                // gating it on "this card is the selected one" (i.e. tapped
+                // once already) is the closest touch analog, matching "only
+                // visible after tapping the respective class card".
+                if (selected)
+                  InkWell(
+                    onTap: () => _showCardMenu(cls),
+                    borderRadius: BorderRadius.circular(999),
+                    child: const Padding(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 16,
+                        color: Color(0xFF9CA3AF),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             const Spacer(),

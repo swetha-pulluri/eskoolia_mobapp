@@ -49,10 +49,20 @@ class FilterPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                label,
-                style: AppTextStyles.buttonSmall.copyWith(
-                  color: isSelected ? Colors.white : AppColors.textPrimary,
+              // `Flexible`+ellipsis — `mainAxisSize: min` only affects how
+              // this Row reports its own size upward; it does NOT let the
+              // Row exceed a tight max-width handed down by an ancestor
+              // (e.g. a fixed-width grid cell). Confirmed reproducible via
+              // a widget test (a real ~4px overflow at 320dp), so long
+              // labels now truncate instead of overflowing.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.buttonSmall.copyWith(
+                    color: isSelected ? Colors.white : AppColors.textPrimary,
+                  ),
                 ),
               ),
               if (count != null) ...[

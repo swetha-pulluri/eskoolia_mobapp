@@ -30,7 +30,17 @@ class StepQualifications extends StatelessWidget {
           onboardStepHeader('Qualifications', 'Education and experience'),
           Row(children: [
             Expanded(child: onboardSectionLabel('Education')),
-            TextButton.icon(onPressed: () => _setList('qualifications', [...qualifications, <String, dynamic>{}]), icon: const Icon(Icons.add, size: 16), label: const Text('Add qualification')),
+            // `Flexible` — "Add qualification" (icon + label + default
+            // TextButton padding) is just wide enough to overflow this Row
+            // by a few px on a 320dp phone even with the section label
+            // `Expanded`.
+            Flexible(
+              child: TextButton.icon(
+                onPressed: () => _setList('qualifications', [...qualifications, <String, dynamic>{}]),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add qualification', maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
           ]),
           for (var i = 0; i < qualifications.length; i++) _qualificationRow(i, qualifications),
           const SizedBox(height: 16),
@@ -42,7 +52,13 @@ class StepQualifications extends StatelessWidget {
           const SizedBox(height: 20),
           Row(children: [
             Expanded(child: onboardSectionLabel('Previous employment')),
-            TextButton.icon(onPressed: () => _setList('previous_employment', [...previousEmployment, <String, dynamic>{}]), icon: const Icon(Icons.add, size: 16), label: const Text('Add employer')),
+            Flexible(
+              child: TextButton.icon(
+                onPressed: () => _setList('previous_employment', [...previousEmployment, <String, dynamic>{}]),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add employer', maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
           ]),
           if (previousEmployment.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text('No previous employment added.', style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
           for (var i = 0; i < previousEmployment.length; i++) _employmentRow(context, i, previousEmployment),
