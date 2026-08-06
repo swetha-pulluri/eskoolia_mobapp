@@ -20,19 +20,26 @@ import '../providers/school_tenancy_provider.dart';
 ///
 /// Web renders 9 numbered sections (Modules, numbered 08 in the source, is
 /// `className="hidden"` and never actually shown — skipped here too).
-/// Several fields visible on web are genuinely decorative there: they render
-/// as plain uncontrolled `<input>`/`<select>` elements with no `value`/
-/// `onChange` at all, and `handleProvisionSubmit` only reads a specific
-/// subset of fields when building the request. This widget mirrors that
-/// distinction exactly — every field from web is present and interactive,
-/// but only the fields web itself actually submits are wired into the
-/// create/update payload. (Confirmed against
-/// `ProvisionSchoolRequestSerializer`/`SchoolTenantUpdateSerializer` in
-/// `backend/apps/super_admin/serializers.py`: on create, the backend even
-/// ignores web's own `short_code`/`gstin`/`pan`/`udise_code`/`seats` inputs —
-/// `short_code` is derived server-side from the name and the rest are never
-/// persisted at creation time — so this isn't a Flutter-side gap, it's
-/// matching web's actual, slightly incomplete, real behavior.)
+///
+/// Backend contract (re-verified against the live `ProvisionSchoolSerializer`
+/// / `SchoolProvisionView.post()` in `apps/tenancy/super_admin/`, which
+/// replaced an earlier `apps/super_admin/` implementation this file's
+/// comments used to describe): on create, the backend now genuinely
+/// persists `name`, `subdomain_url`, `state`, `board`, `plan`,
+/// `shard_region`, `storage_region`, `backup_retention`, `sso_method`,
+/// `short_code`, `gstin`, `pan`, `udise_code`, `seats`, `brand_color`,
+/// `logo_url` — all wired into `_submitCreate`'s payload below. It also
+/// declares (but this form doesn't yet collect matching, correctly-typed
+/// values for) `student_seat_limit`/`staff_seat_limit`/`storage_cap_gb`/
+/// `trial_days`/`go_live_date`/`billing_cycle` — the "Plan & capacity
+/// limits" section's Trial period/Go-live date/Staff seat limit/Storage cap/
+/// Billing cycle fields remain the same kind of decorative, uncontrolled
+/// inputs web itself has partial support for (web's own `editFields.*`
+/// state, not yet mirrored here) — a disclosed gap, not a silent omission.
+/// `admin_username`/`admin_password` are collected and sent (matching web's
+/// `provisionForm.admin_username`/`admin_password`) but neither this
+/// backend view nor `provision_tenant()` currently reads or acts on them —
+/// no admin user account is actually created from them yet, on web or here.
 class AddSchoolForm extends ConsumerStatefulWidget {
   final SchoolEntity? editSchool;
   final VoidCallback onCancel;
@@ -427,10 +434,12 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         if (_seatsController.text.trim().isNotEmpty)
           'seats': int.tryParse(_seatsController.text.trim()),
         'api_access': _apiAccess == 'enabled',
+        'brand_color': _brandColor,
         'logo_url': ?logoUrl,
       });
       ref.invalidate(schoolsProvider);
       ref.invalidate(schoolsGlobalStatsProvider);
+      ref.invalidate(schoolTenancyDashboardProvider);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -471,6 +480,20 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         'storage_region': _shardRegion,
         'backup_retention': _backupRetention,
         'sso_method': _ssoMethod,
+        // Now real, persisted `ProvisionSchoolSerializer` fields (see this
+        // class's doc comment) — previously omitted here on the mistaken
+        // belief the backend ignored them on create.
+        if (_shortCodeController.text.trim().isNotEmpty)
+          'short_code': _shortCodeController.text.trim(),
+        if (_gstinController.text.trim().isNotEmpty)
+          'gstin': _gstinController.text.trim(),
+        if (_panController.text.trim().isNotEmpty)
+          'pan': _panController.text.trim(),
+        if (_udiseController.text.trim().isNotEmpty)
+          'udise_code': _udiseController.text.trim(),
+        if (_seatsController.text.trim().isNotEmpty)
+          'seats': int.tryParse(_seatsController.text.trim()),
+        'brand_color': _brandColor,
         if (_adminUsernameController.text.trim().isNotEmpty)
           'admin_username': _adminUsernameController.text.trim(),
         if (_adminPasswordController.text.trim().isNotEmpty)
@@ -497,15 +520,26 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
         }
       }
 
+      // Refresh every screen that shows tenant data — the Schools list, its
+      // global stats strip, and the Super Admin Dashboard (a newly
+      // provisioned school changes school/plan counts there too).
       ref.invalidate(schoolsProvider);
       ref.invalidate(schoolsGlobalStatsProvider);
+      ref.invalidate(schoolTenancyDashboardProvider);
       await _clearDraft();
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$name provisioned — admin credentials ready below.')),
+        );
         await _showCredentialsDialog(result);
         if (mounted) widget.onSaved();
       }
     } catch (e) {
-      setState(() => _error = 'Provisioning failed: $e');
+      // `e` (a `SchoolTenancyApiException`) already carries the backend's
+      // own descriptive message (which itself may already read like
+      // "Provisioning failed: …") — adding another "Provisioning failed: "
+      // prefix here produced a visibly doubled message.
+      setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
