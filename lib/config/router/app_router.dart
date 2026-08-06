@@ -46,6 +46,7 @@ import '../../features/hr/presentation/pages/staff_attendance_page.dart';
 import '../../features/hr/presentation/pages/staff_directory_page.dart';
 import '../../features/hr/presentation/pages/staff_form_page.dart';
 import '../../features/hr/presentation/pages/staff_onboard_page.dart';
+import '../../features/settings/presentation/pages/school_info_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -377,6 +378,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // RolesPermissionsPage (see _MainTab), matching the frontend's shared
       // layout/breadcrumb across its Roles/Assign Permissions/Login
       // Permission destinations.
+
+      // Settings Routes
+      GoRoute(
+        path: '/settings/school-info',
+        name: 'settings-school-info',
+        builder: (context, state) => const SchoolInfoPage(),
+      ),
     ],
     errorBuilder: (context, state) => Scaffold(
       appBar: AppBar(title: const Text('Error')),

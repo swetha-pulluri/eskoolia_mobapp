@@ -78,4 +78,9 @@ class AppColors {
   
   static const Color utilitiesBg = Color(0xFFF3F4F6);
   static const Color utilitiesIc = Color(0xFF6B7280);
+
+  // Matches web's commented-out Settings module entry in routes.ts
+  // (bg: '#F1F5F9', ic: '#475569').
+  static const Color settingsBg = Color(0xFFF1F5F9);
+  static const Color settingsIc = Color(0xFF475569);
 }

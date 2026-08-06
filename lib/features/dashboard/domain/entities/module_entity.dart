@@ -146,6 +146,19 @@ class Modules {
       iconColor: AppColors.hrIc,
       comingSoon: false,
     ),
+    ModuleEntity(
+      id: 'settings',
+      name: 'Settings',
+      // Only the School Info section is built so far — web's own Settings
+      // Section has no dedicated School Info page either (see
+      // school_info_entity.dart doc comment), so there's no wider surface
+      // to match yet.
+      path: '/settings/school-info',
+      icon: Icons.settings_outlined,
+      bgColor: AppColors.settingsBg,
+      iconColor: AppColors.settingsIc,
+      comingSoon: false,
+    ),
     // Finance, Library, Transport, Inventory, Utilities are commented out in web - REMOVED to match web's 12 modules
   ];
 
