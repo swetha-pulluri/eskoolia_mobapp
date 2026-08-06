@@ -9,7 +9,6 @@ import '../widgets/fee_groups_tab.dart';
 import '../widgets/fee_schedules_tab.dart';
 import '../widgets/fee_types_tab.dart';
 import '../widgets/fees_layout.dart';
-import '../widgets/fees_module_sub_nav.dart';
 import '../widgets/late_fee_rules_tab.dart';
 
 enum _Tab { feeGroups, feeTypes, feeSchedules, concessionRules, lateFeeRules }
@@ -87,7 +86,6 @@ class _FeeConfigurationPageState extends ConsumerState<FeeConfigurationPage> {
   @override
   Widget build(BuildContext context) {
     return FeesLayout(
-      activeTab: FeesModuleTab.configuration,
       child: SafeArea(
         top: false,
         child: Stack(

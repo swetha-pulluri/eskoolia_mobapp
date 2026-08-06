@@ -92,7 +92,6 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
     final activeStaff = staffAsync.valueOrNull?.results ?? const <StaffLiteEntity>[];
 
     return HrLayout(
-      currentPath: '/hr/setup',
       child: SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),

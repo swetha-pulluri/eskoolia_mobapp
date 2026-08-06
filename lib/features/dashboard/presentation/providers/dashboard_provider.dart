@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/shared_prefs.dart';
+import '../../../academics/presentation/providers/academics_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../student/domain/models/academic_year.dart';
 import '../../data/datasources/dashboard_remote_datasource.dart';
 import '../../data/datasources/dashboard_local_datasource.dart';
 import '../../data/repositories/dashboard_repository_impl.dart';
@@ -36,6 +38,16 @@ final attentionCountProvider = FutureProvider<int>((ref) async {
   final result = await repository.getAttentionCount();
   debugPrint('[DashboardProvider] attentionCountProvider: result=$result');
   return result;
+});
+
+/// The school's current academic year, for the Home screen's "ACADEMIC
+/// YEAR" chip — same source of truth as Academics → Foundation (the
+/// `AcademicYear` row with `isCurrent == true`, enforced unique per school
+/// server-side), matching web's `Greeting.tsx`. Reuses the existing
+/// [academicsRepositoryProvider] rather than duplicating the HTTP call.
+final currentAcademicYearProvider = FutureProvider<AcademicYear?>((ref) async {
+  final years = await ref.watch(academicsRepositoryProvider).fetchAcademicYears();
+  return years.where((y) => y.isCurrent).firstOrNull;
 });
 
 // Recent Modules Provider

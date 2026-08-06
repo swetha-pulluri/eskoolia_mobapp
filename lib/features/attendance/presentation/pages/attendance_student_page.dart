@@ -101,7 +101,6 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     final kpis = kpisAsync.maybeWhen(data: (v) => v, orElse: () => null);
 
     return AttendanceLayout(
-      currentPath: '/attendance/student',
       child: Container(
         color: const Color(0xFFF0EFFE),
         child: SafeArea(

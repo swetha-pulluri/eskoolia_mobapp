@@ -500,7 +500,6 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
     final stepInfo = onboardStepByNum(step);
 
     return HrLayout(
-      currentPath: '/hr/onboard',
       child: _loadingInitial
           ? const Center(child: CircularProgressIndicator())
           : Column(

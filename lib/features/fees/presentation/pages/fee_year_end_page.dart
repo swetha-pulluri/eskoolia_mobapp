@@ -12,7 +12,6 @@ import '../../../../core/utils/file_download_helper.dart';
 import '../utils/fee_assignment_format.dart' show groupIndian;
 import '../utils/fy_report_pdf.dart';
 import '../widgets/fees_layout.dart';
-import '../widgets/fees_module_sub_nav.dart';
 import '../widgets/fees_year_end_styles.dart';
 import '../widgets/fy_edit_amounts_dialog.dart';
 
@@ -238,7 +237,6 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
   @override
   Widget build(BuildContext context) {
     return FeesLayout(
-      activeTab: FeesModuleTab.yearEnd,
       child: SafeArea(
         top: false,
         child: Stack(

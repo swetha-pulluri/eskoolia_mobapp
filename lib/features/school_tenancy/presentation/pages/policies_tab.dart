@@ -241,14 +241,12 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
 
     if (policiesAsync.isLoading && !policiesAsync.hasValue) {
       return const SchoolTenancyLayout(
-        currentPath: '/super-admin/policies',
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (policiesAsync.hasError && !policiesAsync.hasValue) {
       return SchoolTenancyLayout(
-        currentPath: '/super-admin/policies',
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -289,7 +287,6 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     };
 
     return SchoolTenancyLayout(
-      currentPath: '/super-admin/policies',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(

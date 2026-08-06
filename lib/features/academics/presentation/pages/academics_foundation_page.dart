@@ -10,7 +10,6 @@ import '../../domain/entities/holiday_entity.dart';
 import '../../domain/entities/room_entity.dart';
 import '../../domain/entities/subject_entry.dart';
 import '../providers/academics_providers.dart';
-import '../widgets/academics_module_sub_nav.dart';
 import '../widgets/foundation_widgets.dart';
 import 'foundation_steps/academic_year_step.dart';
 import 'foundation_steps/classes_step.dart';
@@ -160,7 +159,6 @@ class _AcademicsFoundationPageState extends ConsumerState<AcademicsFoundationPag
           SafeArea(
             child: Column(
               children: [
-                const AcademicsModuleSubNav(active: AcademicsModuleTab.foundation),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _loadAll,

@@ -10,7 +10,6 @@ import '../../domain/models/promotion.dart';
 import '../providers/student_providers.dart';
 import '../widgets/promotion_widgets.dart';
 import '../widgets/student_group_widgets.dart' show GroupPill;
-import '../widgets/student_module_sub_nav.dart';
 
 /// Student Promote — full port of frontend
 /// app/(dashboard)/students/promote/{page.tsx,PromotePageContainer.tsx} +
@@ -442,7 +441,6 @@ class _StudentPromotionPageState extends ConsumerState<StudentPromotionPage> {
           SafeArea(
             child: Column(
               children: [
-                const StudentModuleSubNav(active: StudentModuleTab.studentPromote),
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),

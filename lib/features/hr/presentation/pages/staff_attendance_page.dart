@@ -302,7 +302,6 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
     final filteredDepartments = _deptFilter == 'all' ? departments : departments.where((d) => d.name == _deptFilter).toList();
 
     return HrLayout(
-      currentPath: '/hr/attendance',
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/role_data.dart';
 import '../providers/roles_providers.dart';
@@ -129,10 +128,6 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
     });
   }
 
-  void _onGoToAssignPermissionsTab() {
-    setState(() => _mainTab = _MainTab.assignPermissions);
-  }
-
   void _onGoToRolesTab() {
     setState(() => _mainTab = _MainTab.roles);
   }
@@ -155,7 +150,6 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               _buildHeader(),
-              _buildTabs(context),
               if (onRolesTab) ...[
                 _buildControls(state),
                 _buildRolesSection(state),
@@ -236,82 +230,12 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // TABS (Roles | Assign Permissions | Login Permission)
-  // ══════════════════════════════════════════════════════════════════════════
-
-  Widget _buildTabs(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Container(
-        color: AppColors.cardBackground,
-        child: Column(
-          children: [
-            // Tab buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                children: [
-                  _buildTabButton(
-                    label: 'Roles',
-                    isActive: _mainTab == _MainTab.roles,
-                    onTap: _onGoToRolesTab,
-                  ),
-                  const SizedBox(width: 24),
-                  _buildTabButton(
-                    label: 'Assign Permissions',
-                    isActive: _mainTab == _MainTab.assignPermissions,
-                    onTap: _onGoToAssignPermissionsTab,
-                  ),
-                  const SizedBox(width: 24),
-                  _buildTabButton(
-                    label: 'Login Permission',
-                    isActive: false,
-                    onTap: () {
-                      // Navigate to login permission page
-                      context.go('/login-permission');
-                    },
-                  ),
-                ],
-              ),
-            ),
-            // Bottom border
-            Container(height: 1, color: AppColors.cardBorder),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton({
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? AppColors.dashboardPurple : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-            color: isActive
-                ? AppColors.dashboardPurple
-                : const Color(0xFF9197AE),
-          ),
-        ),
-      ),
-    );
-  }
+  // Module-level nav ("Roles" / "Login Permission") is now shown once,
+  // globally, by `GlobalAppShell`'s shared `ModuleSubNav`. "Assign
+  // Permissions" remains an in-page workflow state (see [_onAssignPermissions],
+  // [_onGoToRolesTab]) reached from a role card's action, not from a tab —
+  // matching web's own equivalent flow (`router.push('/roles/assign-
+  // permission?roleId=...')`).
 
   // ══════════════════════════════════════════════════════════════════════════
   // CONTROLS (Search, Filter, Add Button)

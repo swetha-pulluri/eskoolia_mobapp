@@ -226,7 +226,6 @@ class _AdmissionsCommandCenterPageState extends ConsumerState<AdmissionsCommandC
     final selectedClassConfig = selectedClassId != null ? classConfigs.where((c) => c.id == selectedClassId).firstOrNull : null;
 
     return AdmissionsLayout(
-      currentPath: '/admissions/command-center',
       child: Stack(
         children: [
           Container(

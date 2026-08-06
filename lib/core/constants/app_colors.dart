@@ -52,23 +52,23 @@ class AppColors {
   static const Color academicsBg = Color(0xFFF0FDF4);
   static const Color academicsIc = Color(0xFF15803D);
   
-  static const Color examBg = Color(0xFFFEF3F2);
-  static const Color examIc = Color(0xFFDC2626);
-  
-  static const Color feesBg = Color(0xFFFFFAEB);
-  static const Color feesIc = Color(0xFFD97706);
-  
+  static const Color examBg = Color(0xFFFDF4FF);
+  static const Color examIc = Color(0xFFA21CAF);
+
+  static const Color feesBg = Color(0xFFECFEFF);
+  static const Color feesIc = Color(0xFF0E7490);
+
   static const Color financeBg = Color(0xFFEFF6FF);
   static const Color financeIc = Color(0xFF1D4ED8);
-  
-  static const Color hrBg = Color(0xFFF5F3FF);
-  static const Color hrIc = Color(0xFF7C3AED);
-  
+
+  static const Color hrBg = Color(0xFFFEF2F2);
+  static const Color hrIc = Color(0xFFDC2626);
+
   static const Color libraryBg = Color(0xFFECFDF5);
   static const Color libraryIc = Color(0xFF059669);
-  
-  static const Color reportsBg = Color(0xFFFEF2F2);
-  static const Color reportsIc = Color(0xFFDC2626);
+
+  static const Color reportsBg = Color(0xFFFFF1F2);
+  static const Color reportsIc = Color(0xFFBE123C);
   
   static const Color transportBg = Color(0xFFDEEDFF);
   static const Color transportIc = Color(0xFF1E40AF);

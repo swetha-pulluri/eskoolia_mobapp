@@ -13,7 +13,6 @@ import '../widgets/fd_follow_up_panel.dart';
 import '../widgets/fd_resolve_dialog.dart';
 import '../widgets/fees_dues_styles.dart';
 import '../widgets/fees_layout.dart';
-import '../widgets/fees_module_sub_nav.dart';
 
 const _tiers = [(1, 'Tier 1: 1-15 days overdue'), (2, 'Tier 2: 16-30 days overdue'), (3, 'Tier 3: 31+ days overdue')];
 const _statBorders = [Color(0xFFF97316), Color(0xFFF59E0B), Color(0xFF6D4AFF), Color(0xFF16A34A)];
@@ -192,7 +191,6 @@ class _FeesDuesRemindersPageState extends ConsumerState<FeesDuesRemindersPage> {
   @override
   Widget build(BuildContext context) {
     return FeesLayout(
-      activeTab: FeesModuleTab.duesReminders,
       child: SafeArea(
         top: false,
         child: Stack(

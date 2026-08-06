@@ -87,7 +87,6 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
     final maxGrade = data.byGrade.isEmpty ? 1 : data.byGrade.fold<int>(1, (m, g) => g.count > m ? g.count : m);
 
     return AdmissionsLayout(
-      currentPath: '/admissions/analytics',
       child: Container(
         color: const Color(0xFFF9FAFB),
         child: SafeArea(

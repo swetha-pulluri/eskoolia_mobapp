@@ -370,13 +370,12 @@ class _StaffFormPageState extends ConsumerState<StaffFormPage> with SingleTicker
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const HrLayout(currentPath: '/hr/directory', child: Center(child: CircularProgressIndicator()));
+      return const HrLayout(child: Center(child: CircularProgressIndicator()));
     }
     final formOptionsAsync = ref.watch(staffFormOptionsProvider);
     final formOptions = formOptionsAsync.valueOrNull;
 
     return HrLayout(
-      currentPath: '/hr/directory',
       child: Column(
         children: [
           Padding(

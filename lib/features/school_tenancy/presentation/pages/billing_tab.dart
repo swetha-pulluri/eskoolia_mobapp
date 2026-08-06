@@ -189,14 +189,12 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
 
     if (invoicesAsync.isLoading && !invoicesAsync.hasValue) {
       return const SchoolTenancyLayout(
-        currentPath: '/super-admin/billing',
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (invoicesAsync.hasError && !invoicesAsync.hasValue) {
       return SchoolTenancyLayout(
-        currentPath: '/super-admin/billing',
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -242,7 +240,6 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
     final fyLabel = 'FY ${now.year}-${(now.year + 1).toString().substring(2)}';
 
     return SchoolTenancyLayout(
-      currentPath: '/super-admin/billing',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(

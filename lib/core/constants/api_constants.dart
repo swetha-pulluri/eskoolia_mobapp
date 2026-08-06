@@ -239,4 +239,11 @@ class ApiConstants {
   // open_admissions, total_staff, library_books, pending_homework, exams_this_week).
   static const String dashboardKpis = '$apiBasePath/dashboard/kpis/';
   // NOTE: Backend has NO /api/user/recents/ endpoint - use localStorage only
+
+  // Sticky Notes Endpoints (backend/apps/notes/, mounted at the app root —
+  // NOT under $apiBasePath, matching attentionCountEndpoint's precedent for
+  // a non-versioned path).
+  static const String notesBasePath = '/api/notes';
+  static const String notes = '$notesBasePath/';
+  static String noteDetail(int id) => '$notesBasePath/$id/';
 }

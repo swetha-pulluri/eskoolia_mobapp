@@ -6,7 +6,6 @@ import '../widgets/fees_audit_trail_card.dart';
 import '../widgets/fees_kpi_cards.dart';
 import '../widgets/fees_layout.dart';
 import '../widgets/fees_live_payment_feed_card.dart';
-import '../widgets/fees_module_sub_nav.dart';
 import '../widgets/fees_task_queue_card.dart';
 
 /// Fees Home — converted from `frontend/components/fees/FeesPaymentsPanel.tsx`
@@ -41,7 +40,6 @@ class FeesHomePage extends ConsumerWidget {
     });
 
     return FeesLayout(
-      activeTab: FeesModuleTab.home,
       child: SafeArea(
         top: false,
         child: state.loading

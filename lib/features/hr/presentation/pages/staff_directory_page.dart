@@ -338,7 +338,6 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
     final selectedStaff = staffList.where((s) => _selected.contains(s.id)).toList();
 
     return HrLayout(
-      currentPath: '/hr/directory',
       child: Stack(
         children: [
           SingleChildScrollView(

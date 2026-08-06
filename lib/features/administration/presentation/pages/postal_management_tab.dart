@@ -24,7 +24,6 @@ class _PostalManagementPageState extends State<PostalManagementPage> {
   @override
   Widget build(BuildContext context) {
     return AdministrationLayout(
-      currentPath: '/administration/postal',
       child: Column(
         children: [
           AdministrationSubTabBar(tabs: _tabs, activeIndex: _activeTab, onTap: (i) => setState(() => _activeTab = i)),

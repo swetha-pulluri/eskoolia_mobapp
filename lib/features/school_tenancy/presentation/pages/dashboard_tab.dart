@@ -164,14 +164,12 @@ class SuperAdminDashboardPage extends ConsumerWidget {
 
     if (dashboardAsync.isLoading && !dashboardAsync.hasValue) {
       return const SchoolTenancyLayout(
-        currentPath: '/super-admin/dashboard',
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (dashboardAsync.hasError && !dashboardAsync.hasValue) {
       return SchoolTenancyLayout(
-        currentPath: '/super-admin/dashboard',
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -198,7 +196,6 @@ class SuperAdminDashboardPage extends ConsumerWidget {
         : '—';
 
     return SchoolTenancyLayout(
-      currentPath: '/super-admin/dashboard',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(

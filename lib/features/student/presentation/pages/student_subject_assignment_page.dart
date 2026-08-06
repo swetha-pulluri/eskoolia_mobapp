@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../data/local/shared_prefs.dart';
 import '../../domain/models/subject_assignment.dart';
 import '../providers/student_providers.dart';
-import '../widgets/student_module_sub_nav.dart';
 import '../widgets/subject_assignment_widgets.dart';
 
 /// Multi Subject Assignment — full pixel-for-pixel port of frontend
@@ -325,7 +324,6 @@ class _StudentSubjectAssignmentPageState extends ConsumerState<StudentSubjectAss
       body: SafeArea(
         child: Column(
           children: [
-            const StudentModuleSubNav(active: StudentModuleTab.multiSubjectAssignment),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _load,

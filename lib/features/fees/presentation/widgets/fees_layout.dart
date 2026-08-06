@@ -1,28 +1,20 @@
 import 'package:flutter/material.dart';
-import 'fees_module_sub_nav.dart';
 
-/// Fees Layout Wrapper — top chrome for the Fees module: just
-/// [FeesModuleSubNav] (matching web's `ModuleSubNav.tsx` for the "fees"
-/// module). The global app-wide header (logo, module strip, search,
-/// notifications, avatar — web's `TopBarNew`) is mounted once above every
-/// route by `GlobalAppShell` (see `main.dart`), so this wrapper no longer
-/// duplicates a second back-arrow/title row of its own.
+/// Fees Layout Wrapper — thin Scaffold wrapper for the Fees module. The
+/// sub-nav tab strip (web's `ModuleSubNav.tsx` for the "fees" module) is now
+/// rendered once, globally, by `GlobalAppShell`'s shared `ModuleSubNav`
+/// widget (data-driven off `ModuleEntity.subModules`), so this wrapper no
+/// longer renders its own per-module copy.
 class FeesLayout extends StatelessWidget {
   final Widget child;
-  final FeesModuleTab activeTab;
 
-  const FeesLayout({super.key, required this.child, required this.activeTab});
+  const FeesLayout({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFC),
-      body: Column(
-        children: [
-          FeesModuleSubNav(active: activeTab),
-          Expanded(child: child),
-        ],
-      ),
+      body: child,
     );
   }
 }

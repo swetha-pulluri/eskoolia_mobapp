@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../domain/models/student_group.dart';
 import '../providers/student_providers.dart';
-import '../widgets/student_module_sub_nav.dart';
 import '../widgets/student_group_widgets.dart';
 import '../widgets/subject_assignment_widgets.dart' show ResponsiveGrid;
 
@@ -533,7 +532,6 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
           SafeArea(
             child: Column(
               children: [
-                const StudentModuleSubNav(active: StudentModuleTab.studentGroup),
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _loadAll,

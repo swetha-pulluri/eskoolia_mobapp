@@ -8,7 +8,6 @@ import '../providers/student_list_state.dart';
 import '../providers/student_providers.dart';
 import '../widgets/student_class_accordion.dart';
 import '../widgets/student_filters_panel.dart';
-import '../widgets/student_module_sub_nav.dart';
 import '../widgets/student_stats_grid.dart';
 
 /// Student List Page — mirrors frontend
@@ -40,11 +39,6 @@ class StudentListPage extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Mirrors `<ModuleSubNav />`, rendered above the page content
-              // by the frontend's dashboard shell for whichever module is
-              // active — full-bleed, sitting above the "Student List" card
-              // rather than inside its padding.
-              const StudentModuleSubNav(active: StudentModuleTab.enrollList),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: () async => notifier.refresh(),

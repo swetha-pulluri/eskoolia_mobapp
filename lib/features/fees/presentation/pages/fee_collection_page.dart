@@ -21,7 +21,6 @@ import '../widgets/fc_student_ledger_dialog.dart';
 import '../widgets/fees_collection_models.dart';
 import '../widgets/fees_collection_styles.dart';
 import '../widgets/fees_layout.dart';
-import '../widgets/fees_module_sub_nav.dart';
 
 /// Collection — converted from
 /// `frontend/components/fees/FeesCollectionPanel.tsx` (the "Collection" tab
@@ -423,7 +422,6 @@ class _FeesCollectionPageState extends ConsumerState<FeesCollectionPage> with Wi
   @override
   Widget build(BuildContext context) {
     return FeesLayout(
-      activeTab: FeesModuleTab.collection,
       child: SafeArea(
         top: false,
         child: Stack(

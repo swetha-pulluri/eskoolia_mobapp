@@ -146,14 +146,12 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
 
     if (auditAsync.isLoading && !auditAsync.hasValue) {
       return const SchoolTenancyLayout(
-        currentPath: '/super-admin/audit',
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (auditAsync.hasError && !auditAsync.hasValue) {
       return SchoolTenancyLayout(
-        currentPath: '/super-admin/audit',
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -187,7 +185,6 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
         .length;
 
     return SchoolTenancyLayout(
-      currentPath: '/super-admin/audit',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(

@@ -349,14 +349,12 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
 
     if (schoolsAsync.isLoading && !schoolsAsync.hasValue) {
       return const SchoolTenancyLayout(
-        currentPath: '/super-admin/schools',
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (schoolsAsync.hasError && !schoolsAsync.hasValue) {
       return SchoolTenancyLayout(
-        currentPath: '/super-admin/schools',
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -396,7 +394,6 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     final archivedCount = (globalStats != null && globalStats.archived > 0) ? globalStats.archived : archivedCountFallback;
 
     return SchoolTenancyLayout(
-      currentPath: '/super-admin/schools',
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(

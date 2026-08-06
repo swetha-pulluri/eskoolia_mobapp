@@ -24,7 +24,6 @@ class _SystemConfigPageState extends State<SystemConfigPage> {
   @override
   Widget build(BuildContext context) {
     return AdministrationLayout(
-      currentPath: '/administration/system-config',
       child: Column(
         children: [
           AdministrationSubTabBar(tabs: _tabs, activeIndex: _activeTab, onTap: (i) => setState(() => _activeTab = i)),

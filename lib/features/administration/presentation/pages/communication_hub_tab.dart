@@ -27,7 +27,6 @@ class _CommunicationHubPageState extends State<CommunicationHubPage> {
   @override
   Widget build(BuildContext context) {
     return AdministrationLayout(
-      currentPath: '/administration/communication-hub',
       child: Column(
         children: [
           AdministrationSubTabBar(tabs: _tabs, activeIndex: _activeTab, onTap: (i) => setState(() => _activeTab = i)),

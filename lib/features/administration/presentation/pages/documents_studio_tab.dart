@@ -35,7 +35,6 @@ class _DocumentsStudioPageState extends State<DocumentsStudioPage> {
   @override
   Widget build(BuildContext context) {
     return AdministrationLayout(
-      currentPath: '/administration/documents',
       child: Column(
         children: [
           AdministrationSubTabBar(

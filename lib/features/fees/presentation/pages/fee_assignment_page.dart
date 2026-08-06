@@ -17,7 +17,6 @@ import '../widgets/fa_info_dialog.dart';
 import '../widgets/fee_assignment_styles.dart';
 import '../widgets/fee_schedule_table.dart' show FeeRow;
 import '../widgets/fees_layout.dart';
-import '../widgets/fees_module_sub_nav.dart';
 
 class _Override {
   final String group;
@@ -379,7 +378,6 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
     final filtered = _filteredClasses;
 
     return FeesLayout(
-      activeTab: FeesModuleTab.assignment,
       child: SafeArea(
         top: false,
         child: Stack(

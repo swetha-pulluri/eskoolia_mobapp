@@ -145,7 +145,6 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
   Widget build(BuildContext context) {
     final campaigns = AdmissionsLocalData.campaigns;
     return AdmissionsLayout(
-      currentPath: '/admissions/marketing',
       child: Container(
         color: const Color(0xFFF9FAFB),
         child: SafeArea(

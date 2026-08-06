@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_assets.dart';
 import '../../config/router/app_router.dart';
+import '../../features/ai_assistant/presentation/widgets/search_command_palette.dart';
 import '../../features/auth/domain/entities/user_entity.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/dashboard/domain/entities/module_entity.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
+import '../../features/notes/presentation/widgets/note_trigger_button.dart';
 import '../../features/notifications/presentation/providers/notification_provider.dart';
 import '../../features/notifications/presentation/widgets/notification_panel.dart';
+import '../../features/widgets_panel/presentation/widgets/widget_manager_button.dart';
+import '../providers/module_flyout_provider.dart';
+import '../utils/module_nav_utils.dart';
+import 'module_pill_with_flyout.dart';
+import 'module_sub_nav.dart';
 
 const _navBg = Color(0xFFFFFFFF);
 const _navBorder = Color(0xFFECECF2);
@@ -51,10 +58,33 @@ class GlobalAppShell extends ConsumerWidget {
     // authenticated route group.
     if (!isAuthenticated) return child;
 
-    return Column(
+    final flyoutTarget = ref.watch(moduleFlyoutProvider);
+
+    return Stack(
       children: [
-        const _GlobalTopBar(),
-        Expanded(child: child),
+        Column(
+          children: [
+            const _GlobalTopBar(),
+            const ModuleSubNav(),
+            Expanded(child: child),
+          ],
+        ),
+        if (flyoutTarget != null) ...[
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => ref.read(moduleFlyoutProvider.notifier).closeNow(),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          Builder(
+            builder: (context) {
+              final module = Modules.findById(flyoutTarget.moduleId);
+              if (module == null) return const SizedBox.shrink();
+              return ModuleFlyoutPanel(module: module, top: flyoutTarget.top, left: flyoutTarget.left);
+            },
+          ),
+        ],
       ],
     );
   }
@@ -70,6 +100,20 @@ class _GlobalTopBar extends ConsumerWidget {
     final currentSegment = segments.isNotEmpty ? segments.first : '';
     final isHome = currentSegment.isEmpty || currentSegment == 'home' || currentSegment == 'dashboard';
     final visibleModules = ref.watch(visibleModulesProvider);
+    // Below this width the fixed-size header chrome (logo+wordmark, search,
+    // notes, widgets, notifications, avatar) no longer all fits alongside
+    // the module strip even with it collapsed to zero width — drop the
+    // purely-decorative "eskoolia" wordmark first (branding, not a control)
+    // rather than any actionable button, matching this header's existing
+    // collapse-the-least-useful-thing-first pattern (`_SearchTrigger`,
+    // `WidgetManagerButton`).
+    final showWordmark = MediaQuery.sizeOf(context).width >= 400;
+    // Extra headroom below the wordmark's own breakpoint: also tighten the
+    // outer padding and the trailing cluster's inter-item spacing so there
+    // is real margin left, not just an exact fit, on the narrowest real
+    // devices (~320px logical width).
+    final isNarrow = MediaQuery.sizeOf(context).width < 400;
+    final trailingGap = isNarrow ? 3.0 : 6.0;
 
     return Material(
       // `_GlobalTopBar` is mounted above every route's own `Scaffold` (via
@@ -87,7 +131,7 @@ class _GlobalTopBar extends ConsumerWidget {
           bottom: false,
           child: Container(
             height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: isNarrow ? 10 : 16),
             decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _navBorder))),
             child: Row(
               children: [
@@ -131,11 +175,13 @@ class _GlobalTopBar extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'eskoolia',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
-                      ),
+                      if (showWordmark) ...[
+                        const SizedBox(width: 8),
+                        const Text(
+                          'eskoolia',
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -145,14 +191,22 @@ class _GlobalTopBar extends ConsumerWidget {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        for (final m in visibleModules) _ModulePill(module: m, isActive: _isModuleActive(m, currentSegment)),
+                        for (final m in visibleModules) ModulePillWithFlyout(module: m, isActive: isModuleActive(m, currentPath)),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 4),
+                SizedBox(width: isNarrow ? 2 : 4),
+                const _SearchTrigger(),
+                SizedBox(width: trailingGap),
+                const NoteTriggerButton(),
+                if (isHome) ...[
+                  SizedBox(width: trailingGap),
+                  const WidgetManagerButton(),
+                ],
+                SizedBox(width: trailingGap),
                 const _NotificationBellButton(),
-                const SizedBox(width: 6),
+                SizedBox(width: trailingGap),
                 const _AvatarMenu(),
               ],
             ),
@@ -161,16 +215,60 @@ class _GlobalTopBar extends ConsumerWidget {
       ),
     );
   }
+}
 
-  bool _isModuleActive(ModuleEntity m, String currentSegment) {
-    if (currentSegment.isEmpty) return false;
-    final moduleSegments = m.path.split('/').where((s) => s.isNotEmpty).toList();
-    final moduleSegment = moduleSegments.isNotEmpty ? moduleSegments.first : '';
-    if (moduleSegment == currentSegment) return true;
-    if (m.id == 'dashboard' && currentSegment == 'home') return true;
-    return false;
+/// Header "Search" button — Flutter port of `TopBar.tsx`'s search
+/// pill/icon, opening [showSearchCommandPalette]. Collapses to icon-only
+/// below 900px so it never crowds out the module strip on phone widths.
+class _SearchTrigger extends ConsumerWidget {
+  const _SearchTrigger();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showLabel = MediaQuery.sizeOf(context).width >= 900;
+
+    void openPalette() {
+      final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+      if (navContext == null) return;
+      showSearchCommandPalette(navContext);
+    }
+
+    if (!showLabel) {
+      return InkWell(
+        onTap: openPalette,
+        borderRadius: BorderRadius.circular(8),
+        child: const SizedBox(
+          width: 34,
+          height: 34,
+          child: Icon(Icons.search, size: 15, color: _navInk2),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: openPalette,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 34,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(border: Border.all(color: _navBorder), borderRadius: BorderRadius.circular(8), color: const Color(0xFFF3F4FB)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search, size: 14, color: _navInk3),
+            const SizedBox(width: 6),
+            const Text('Search…', style: TextStyle(fontSize: 12, color: _navInk3)),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _navBorder), borderRadius: BorderRadius.circular(4)),
+              child: const Text('⌘K', style: TextStyle(fontSize: 10, color: _navInk3, fontFamily: 'monospace')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-
 }
 
 /// Notification bell — opens [showNotificationPanel] and shows an unread
@@ -215,58 +313,6 @@ class _NotificationBellButton extends ConsumerWidget {
                     style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ModulePill extends ConsumerWidget {
-  final ModuleEntity module;
-  final bool isActive;
-
-  const _ModulePill({required this.module, required this.isActive});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      onTap: () {
-        if (module.comingSoon) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${module.name} — Coming Soon'), duration: const Duration(seconds: 2)),
-          );
-          return;
-        }
-        ref.read(appRouterProvider).go(module.path);
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        margin: const EdgeInsets.symmetric(horizontal: 2),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(module.icon, size: 13, color: isActive ? _navInk1 : _navInk2),
-                const SizedBox(width: 6),
-                Text(
-                  module.name,
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: isActive ? _navInk1 : _navInk2),
-                ),
-              ],
-            ),
-            if (isActive)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: -9,
-                child: Container(height: 2, decoration: BoxDecoration(color: _navPurple, borderRadius: BorderRadius.circular(2))),
               ),
           ],
         ),

@@ -11,7 +11,6 @@ import '../widgets/login_permission_bulk_confirm_dialog.dart';
 import '../widgets/login_permission_credential_drawer.dart';
 import '../widgets/login_permission_filter_bar.dart';
 import '../widgets/login_permission_hero.dart';
-import '../widgets/login_permission_module_subnav.dart';
 import '../widgets/login_permission_stats.dart';
 import '../widgets/login_permission_tabs.dart';
 import '../widgets/login_permission_users_table.dart';
@@ -124,10 +123,6 @@ class LoginPermissionPage extends ConsumerWidget {
             color: AppColors.inkPrimary,
           ),
         ),
-        // Module breadcrumb/sub-nav — fixed below the app bar, mirrors the
-        // frontend's ModuleSubNav which lives outside the scrollable page
-        // content and never scrolls away.
-        bottom: const LoginPermissionModuleSubnav(),
       ),
       body: Stack(
         children: [

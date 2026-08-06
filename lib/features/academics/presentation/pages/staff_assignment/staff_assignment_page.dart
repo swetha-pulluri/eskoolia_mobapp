@@ -10,7 +10,6 @@ import '../../../domain/entities/class_entity.dart';
 import '../../../domain/entities/section_entity.dart';
 import '../../../domain/entities/staff_assignment_entities.dart';
 import '../../providers/academics_providers.dart';
-import '../../widgets/academics_module_sub_nav.dart';
 import '../../widgets/staff_assignment_dialogs.dart';
 import '../../widgets/staff_assignment_widgets.dart';
 import 'staff_audit_log_tab.dart';
@@ -245,7 +244,6 @@ class _StaffAssignmentPageState extends ConsumerState<StaffAssignmentPage> {
       body: Stack(children: [
         SafeArea(
           child: Column(children: [
-            const AcademicsModuleSubNav(active: AcademicsModuleTab.staffAssignment),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refreshAll,

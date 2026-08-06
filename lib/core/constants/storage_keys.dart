@@ -15,4 +15,7 @@ class StorageKeys {
   static const String userEmail = 'user_email';
   static const String userName = 'user_name';
   static const String isFirstLaunch = 'is_first_launch';
+  // Reuses web's own localStorage key string for traceability (separate
+  // storage systems/platforms, zero collision risk).
+  static const String widgetPrefs = 'eskoolia_widget_prefs_v2';
 }
