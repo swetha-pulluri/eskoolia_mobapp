@@ -30,6 +30,8 @@
 	<string>Eskoolia needs camera access so you can take a student's photo during enrollment.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Eskoolia needs photo library access so you can pick a student's photo during enrollment.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Eskoolia needs your location to set the campus location on the School Info map.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

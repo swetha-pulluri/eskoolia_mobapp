@@ -14,7 +14,10 @@ import '../../features/teacher/presentation/pages/teacher_profile_page.dart';
 import '../../features/teacher/presentation/pages/teacher_fees_home_page.dart';
 import 'portal_routes.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/dashboard/presentation/pages/modules_page.dart';
 import '../../features/dashboard/presentation/pages/school_overview_page.dart';
+import '../../features/widgets_panel/presentation/pages/widgets_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/roles/presentation/pages/roles_permissions_page.dart';
 import '../../features/login_permission/presentation/pages/login_permission_page.dart';
 import '../../features/student/domain/models/student_data.dart';
@@ -56,6 +59,13 @@ import '../../features/hr/presentation/pages/staff_directory_page.dart';
 import '../../features/hr/presentation/pages/staff_form_page.dart';
 import '../../features/hr/presentation/pages/staff_onboard_page.dart';
 import '../../features/settings/presentation/pages/school_info_page.dart';
+import '../../features/settings/presentation/pages/leave_policy_page.dart';
+import '../../features/settings/presentation/pages/holiday_calendar_page.dart';
+import '../../features/settings/presentation/pages/smtp_settings_page.dart';
+import '../../features/settings/presentation/pages/settings_audit_log_page.dart';
+import '../../features/settings/presentation/pages/attendance_rules_page.dart';
+import '../../features/settings/presentation/pages/documents_page.dart';
+import '../../features/settings/presentation/pages/document_branding_page.dart';
 
 /// App Router Configuration
 /// Manages navigation and route guards
@@ -241,6 +251,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/dashboard',
         name: 'dashboard',
         builder: (context, state) => const SchoolOverviewPage(),
+      ),
+
+      // Bottom-nav tabs (Home is registered above; Modules/Widgets/Profile
+      // are new standalone routes so each tab has its own address, matching
+      // how Home/Dashboard already work).
+      GoRoute(
+        path: '/modules',
+        name: 'modules',
+        builder: (context, state) => const ModulesPage(),
+      ),
+      GoRoute(
+        path: '/widgets',
+        name: 'widgets',
+        builder: (context, state) => const WidgetsPage(),
+      ),
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (context, state) => const ProfilePage(),
       ),
 
       // School Tenancy Routes (matching web frontend structure)
@@ -497,6 +526,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/settings/school-info',
         name: 'settings-school-info',
         builder: (context, state) => const SchoolInfoPage(),
+      ),
+      GoRoute(
+        path: '/settings/leave-policy',
+        name: 'settings-leave-policy',
+        builder: (context, state) => const LeavePolicyPage(),
+      ),
+      GoRoute(
+        path: '/settings/holidays',
+        name: 'settings-holidays',
+        builder: (context, state) => const HolidayCalendarPage(),
+      ),
+      GoRoute(
+        path: '/settings/smtp',
+        name: 'settings-smtp',
+        builder: (context, state) => const SmtpSettingsPage(),
+      ),
+      GoRoute(
+        path: '/settings/audit-log',
+        name: 'settings-audit-log',
+        builder: (context, state) => const SettingsAuditLogPage(),
+      ),
+      GoRoute(
+        path: '/settings/attendance-rules',
+        name: 'settings-attendance-rules',
+        builder: (context, state) => const AttendanceRulesPage(),
+      ),
+      GoRoute(
+        path: '/settings/documents',
+        name: 'settings-documents',
+        builder: (context, state) => const DocumentsPage(),
+      ),
+      GoRoute(
+        path: '/settings/document-branding',
+        name: 'settings-document-branding',
+        builder: (context, state) => const DocumentBrandingPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

@@ -33,11 +33,10 @@ class ModuleSubNav extends ConsumerWidget {
     final active = activeSubModule(owner, currentPath);
 
     // Mounted directly in `GlobalAppShell`'s `Column` as a sibling of
-    // `_GlobalTopBar` (not a descendant of it), so — like
-    // `ModuleFlyoutPanel` — it has no `Material` ancestor of its own to
-    // satisfy `_tab()`'s `InkWell`s. `type: transparency` paints nothing
-    // itself, so the `Container` below (white bg + bottom border) remains
-    // the only visual source.
+    // `_GlobalTopBar` (not a descendant of it), so it has no `Material`
+    // ancestor of its own to satisfy `_tab()`'s `InkWell`s. `type:
+    // transparency` paints nothing itself, so the `Container` below (white
+    // bg + bottom border) remains the only visual source.
     return Material(
       type: MaterialType.transparency,
       child: Container(
@@ -51,7 +50,14 @@ class ModuleSubNav extends ConsumerWidget {
               height: 20,
               decoration: BoxDecoration(color: owner.bgColor, borderRadius: BorderRadius.circular(5)),
               alignment: Alignment.center,
-              child: Icon(owner.icon, size: 11, color: owner.iconColor),
+              child: owner.iconAsset != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Image.asset(owner.iconAsset!, fit: BoxFit.contain),
+                    )
+                  : owner.emoji != null
+                      ? Center(child: Text(owner.emoji!, style: const TextStyle(fontSize: 11)))
+                      : Icon(owner.icon, size: 11, color: owner.iconColor),
             ),
             const SizedBox(width: 8),
             Text(owner.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _navInk2)),

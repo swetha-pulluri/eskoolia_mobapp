@@ -9,6 +9,7 @@ class AdminSectionCard extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final Widget child;
+
   /// Admin Setup's web panel overrides the shared `.white-box` style with
   /// its own `border-radius: 14px`, `padding: 24px` and a drop shadow
   /// (`0 1px 3px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06)`) — every
@@ -52,8 +53,15 @@ class AdminSectionCard extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             runSpacing: 8,
             children: [
-              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              if (trailing != null) trailing!,
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              ?trailing,
             ],
           ),
           const SizedBox(height: 12),
@@ -73,14 +81,23 @@ class AdminRowActions extends StatelessWidget {
   final VoidCallback onDelete;
   final bool isDeleting;
 
-  const AdminRowActions({super.key, required this.onEdit, required this.onDelete, this.isDeleting = false});
+  const AdminRowActions({
+    super.key,
+    required this.onEdit,
+    required this.onDelete,
+    this.isDeleting = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 6,
       children: [
-        WebButton(label: 'Edit', color: const Color(0xFF0EA5E9), onPressed: onEdit),
+        WebButton(
+          label: 'Edit',
+          color: const Color(0xFF0EA5E9),
+          onPressed: onEdit,
+        ),
         WebButton(
           label: isDeleting ? '...' : 'Delete',
           color: AppColors.dangerRed,
@@ -99,7 +116,12 @@ class AdminIconActionButtons extends StatelessWidget {
   final VoidCallback onDelete;
   final bool isDeleting;
 
-  const AdminIconActionButtons({super.key, required this.onEdit, required this.onDelete, this.isDeleting = false});
+  const AdminIconActionButtons({
+    super.key,
+    required this.onEdit,
+    required this.onDelete,
+    this.isDeleting = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +134,10 @@ class AdminIconActionButtons extends StatelessWidget {
           child: Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(color: const Color(0xFFE3F2FD), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE3F2FD),
+              borderRadius: BorderRadius.circular(6),
+            ),
             child: const Icon(Icons.edit, size: 15, color: Color(0xFF1565C0)),
           ),
         ),
@@ -123,9 +148,15 @@ class AdminIconActionButtons extends StatelessWidget {
           child: Container(
             width: 32,
             height: 32,
-            decoration: BoxDecoration(color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(6)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEBEE),
+              borderRadius: BorderRadius.circular(6),
+            ),
             child: isDeleting
-                ? const Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2))
+                ? const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.delete, size: 15, color: Color(0xFFC62828)),
           ),
         ),
@@ -152,12 +183,17 @@ class AdminMessageBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isError ? AppColors.redSoft : AppColors.greenSoft,
-        border: Border.all(color: isError ? AppColors.redBorder : AppColors.greenBorder),
+        border: Border.all(
+          color: isError ? AppColors.redBorder : AppColors.greenBorder,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 12.5, color: isError ? const Color(0xFFB91C1C) : AppColors.greenDark),
+        style: TextStyle(
+          fontSize: 12.5,
+          color: isError ? const Color(0xFFB91C1C) : AppColors.greenDark,
+        ),
       ),
     );
   }

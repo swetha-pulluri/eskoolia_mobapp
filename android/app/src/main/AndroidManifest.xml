@@ -13,6 +13,10 @@
     <!-- Student Enroll "Take photo" — image_picker's camera source -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Settings > School Info "Use My Current Location" (campus map pin) —
+         geolocator's getCurrentPosition(), mirrors web's navigator.geolocation -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="eskoolia_mobapp"
         android:name="${applicationName}"

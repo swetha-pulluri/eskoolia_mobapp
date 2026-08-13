@@ -8,5 +8,13 @@ class SchoolInfoRepositoryImpl implements SchoolInfoRepository {
   SchoolInfoRepositoryImpl(this._remoteDataSource);
 
   @override
-  Future<SchoolInfoEntity> getMySchoolInfo() => _remoteDataSource.getMySchoolInfo();
+  Future<SchoolInfoEntity> getSchoolInfo() => _remoteDataSource.getSchoolInfo();
+
+  @override
+  Future<SchoolInfoEntity> updateSchoolInfo(Map<String, dynamic> payload) =>
+      _remoteDataSource.updateSchoolInfo(payload);
+
+  @override
+  Future<SchoolInfoEntity> uploadLogo(List<int> bytes, String filename, String mimeType) =>
+      _remoteDataSource.uploadLogo(bytes, filename, mimeType);
 }

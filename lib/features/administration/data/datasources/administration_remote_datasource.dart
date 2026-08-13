@@ -376,7 +376,7 @@ class AdministrationRemoteDataSource {
   Future<bool> checkStudentCategoryNameExists(String name, {int? excludeId}) async {
     final response = await _dioClient.get(
       '/api/v1/students/categories/check-name/',
-      queryParameters: {'name': name, if (excludeId != null) 'exclude_id': excludeId},
+      queryParameters: {'name': name, 'exclude_id': ?excludeId},
     );
     return (response.data as Map<String, dynamic>)['exists'] as bool? ?? false;
   }
@@ -469,8 +469,8 @@ class AdministrationRemoteDataSource {
       queryParameters: {
         'role': role,
         'page_size': 100,
-        if (classId != null) 'class': classId,
-        if (sectionId != null) 'section': sectionId,
+        'class': ?classId,
+        'section': ?sectionId,
       },
     );
     return RecipientsResult.fromJson(response.data as Map<String, dynamic>);
@@ -517,8 +517,8 @@ class AdministrationRemoteDataSource {
       '/api/v1/admissions/certificate-templates/recipients/',
       queryParameters: {
         'role': role,
-        if (classId != null) 'class': classId,
-        if (sectionId != null) 'section': sectionId,
+        'class': ?classId,
+        'section': ?sectionId,
       },
     );
     return RecipientsResult.fromJson(response.data as Map<String, dynamic>);

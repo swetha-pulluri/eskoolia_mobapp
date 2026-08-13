@@ -1,4 +1,6 @@
 import '../../domain/repositories/dashboard_repository.dart';
+import '../../domain/entities/attendance_pulse_entity.dart';
+import '../../domain/entities/fees_today_entity.dart';
 import '../../domain/entities/pin_item_entity.dart';
 import '../../domain/entities/recent_item_entity.dart';
 import '../../domain/models/kpi_data.dart';
@@ -34,6 +36,28 @@ class DashboardRepositoryImpl implements DashboardRepository {
       // NOTE: Backend endpoint /api/dashboard/attention-count/ doesn't exist yet.
       // Return 0 to gracefully handle missing endpoint (like web frontend does).
       return 0;
+    }
+  }
+
+  @override
+  Future<AttendancePulseEntity> getAttendancePulse() async {
+    // Propagates errors (unlike getFeesToday below) — the real web card
+    // shows a "Failed to load attendance data" banner + Retry on failure
+    // (AttendanceSnapshot.tsx), so the UI layer needs the actual exception,
+    // not a silently-swallowed zero.
+    return await _remoteDataSource.getAttendancePulse();
+  }
+
+  @override
+  Future<FeesTodayEntity> getFeesToday() async {
+    try {
+      return await _remoteDataSource.getFeesToday();
+    } catch (e) {
+      // Matches the real web card's own behavior exactly (FeesToday.tsx):
+      // `fetch(...).catch(() => {})` — no error banner exists, a failed
+      // request just leaves the card showing zeros indefinitely.
+      AppLogger.error('Get today fees summary error', e);
+      return const FeesTodayEntity.empty();
     }
   }
 

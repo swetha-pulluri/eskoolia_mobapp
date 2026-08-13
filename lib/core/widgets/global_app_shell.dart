@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_assets.dart';
 import '../../config/router/app_router.dart';
 import '../../features/ai_assistant/presentation/widgets/search_command_palette.dart';
-import '../../features/auth/domain/entities/user_entity.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
-import '../../features/dashboard/domain/entities/module_entity.dart';
-import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import '../../features/notes/presentation/widgets/note_trigger_button.dart';
 import '../../features/notifications/presentation/providers/notification_provider.dart';
 import '../../features/notifications/presentation/widgets/notification_panel.dart';
+<<<<<<< Updated upstream
 import '../../features/teacher/domain/entities/teacher_module_entity.dart';
 import '../../features/teacher/presentation/widgets/teacher_top_bar.dart';
 import '../../features/widgets_panel/presentation/providers/widget_prefs_provider.dart';
@@ -17,6 +15,8 @@ import '../../features/widgets_panel/presentation/widgets/widget_manager_button.
 import '../providers/module_flyout_provider.dart';
 import '../utils/module_nav_utils.dart';
 import 'module_pill_with_flyout.dart';
+=======
+>>>>>>> Stashed changes
 import 'module_sub_nav.dart';
 
 const _navBg = Color(0xFFFFFFFF);
@@ -26,10 +26,17 @@ const _navInk2 = Color(0xFF5A607A);
 const _navInk3 = Color(0xFF9197AE);
 const _navPurple = Color(0xFF6D4AFF);
 
-/// Global application shell — Flutter port of frontend's
-/// `(dashboard)/layout.tsx` + `components/nav/TopBar.tsx`
-/// (`TopBarNew`): the persistent header (logo, module strip, search,
-/// notifications, avatar/logout) that wraps every authenticated route.
+/// Which top-level nav tab (if any) [path] belongs to — drives both the
+/// bottom nav's active highlight and the top bar's back-button visibility
+/// (main tabs are reached directly from the bottom nav, so they never need
+/// a "back" affordance).
+const _mainTabSegments = {'', 'home', 'modules', 'widgets', 'profile'};
+
+/// Global application shell — mobile-native redesign of frontend's
+/// `(dashboard)/layout.tsx` + `components/nav/TopBar.tsx`: a persistent top
+/// bar (logo/name, search, notifications, sticky notes) plus a persistent
+/// bottom tab bar (Home / Modules / Widgets / Profile) that together wrap
+/// every authenticated route.
 ///
 /// Mounted once via `MaterialApp.router`'s `builder:` in `main.dart`. This
 /// means every widget in this file is a *sibling* of the actual routed
@@ -61,6 +68,7 @@ class GlobalAppShell extends ConsumerWidget {
     // authenticated route group.
     if (!isAuthenticated) return child;
 
+<<<<<<< Updated upstream
     // Parent/Student still land on a disclosed "not implemented yet" page
     // (see portal_routes.dart) rather than the Admin Dashboard — they have
     // no access to the admin module nav, so it must not wrap them either
@@ -113,6 +121,14 @@ class GlobalAppShell extends ConsumerWidget {
             },
           ),
         ],
+=======
+    return Column(
+      children: [
+        const _GlobalTopBar(),
+        const ModuleSubNav(),
+        Expanded(child: child),
+        const _GlobalBottomNav(),
+>>>>>>> Stashed changes
       ],
     );
   }
@@ -126,6 +142,7 @@ class _GlobalTopBar extends ConsumerWidget {
     final currentPath = ref.watch(currentRoutePathProvider);
     final segments = currentPath.split('/').where((s) => s.isNotEmpty).toList();
     final currentSegment = segments.isNotEmpty ? segments.first : '';
+<<<<<<< Updated upstream
     final isHome = currentSegment.isEmpty || currentSegment == 'home' || currentSegment == 'dashboard';
     final visibleModules = ref.watch(visibleModulesProvider);
     // Below this width the fixed-size header chrome (logo+wordmark, search,
@@ -142,13 +159,23 @@ class _GlobalTopBar extends ConsumerWidget {
     // devices (~320px logical width).
     final isNarrow = MediaQuery.sizeOf(context).width < 400;
     final trailingGap = isNarrow ? 3.0 : 6.0;
+=======
+    // Bottom-nav tabs are reached directly from the bar below, so they
+    // never need a "back" affordance — only pushed/deep-linked screens do.
+    final isMainTab = _mainTabSegments.contains(currentSegment);
+    // Extra headroom on the narrowest real devices (~320px logical width):
+    // tighten the outer padding and the trailing cluster's inter-item
+    // spacing so there's real margin left, not just an exact fit.
+    final isNarrow = MediaQuery.sizeOf(context).width < 360;
+    final trailingGap = isNarrow ? 4.0 : 8.0;
+>>>>>>> Stashed changes
 
     return Material(
       // `_GlobalTopBar` is mounted above every route's own `Scaffold` (via
       // `MaterialApp.router`'s `builder:`), so it has no `Material` ancestor
       // of its own — without this, every `InkWell` below (back arrow, logo,
-      // module pills, search/notification icons, avatar menu) throws "No
-      // Material widget found" the moment this bar first builds.
+      // search/notification/notes icons) throws "No Material widget found"
+      // the moment this bar first builds.
       // `type: transparency` keeps the existing `Container` colors as the
       // actual paint, matching how `AiPanel` already solves the same
       // problem for its own out-of-Scaffold widget tree.
@@ -163,7 +190,7 @@ class _GlobalTopBar extends ConsumerWidget {
             decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _navBorder))),
             child: Row(
               children: [
-                if (!isHome) ...[
+                if (!isMainTab) ...[
                   InkWell(
                     onTap: () {
                       final router = ref.read(appRouterProvider);
@@ -203,16 +230,15 @@ class _GlobalTopBar extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      if (showWordmark) ...[
-                        const SizedBox(width: 8),
-                        const Text(
-                          'eskoolia',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
-                        ),
-                      ],
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Eskoolia',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
+                      ),
                     ],
                   ),
                 ),
+<<<<<<< Updated upstream
                 const SizedBox(width: 12),
                 Expanded(
                   child: SingleChildScrollView(
@@ -236,6 +262,14 @@ class _GlobalTopBar extends ConsumerWidget {
                 const NotificationBellButton(),
                 SizedBox(width: trailingGap),
                 const AvatarMenu(),
+=======
+                const Spacer(),
+                const _SearchTrigger(),
+                SizedBox(width: trailingGap),
+                const _NotificationBellButton(),
+                SizedBox(width: trailingGap),
+                const NoteTriggerButton(),
+>>>>>>> Stashed changes
               ],
             ),
           ),
@@ -247,9 +281,15 @@ class _GlobalTopBar extends ConsumerWidget {
 
 /// Header "Search" button — Flutter port of `TopBar.tsx`'s search
 /// pill/icon, opening [showSearchCommandPalette]. Collapses to icon-only
+<<<<<<< Updated upstream
 /// below 900px so it never crowds out the module strip on phone widths.
 class SearchTrigger extends ConsumerWidget {
   const SearchTrigger({super.key});
+=======
+/// below 900px (i.e. on every phone) to stay compact next to the logo.
+class _SearchTrigger extends ConsumerWidget {
+  const _SearchTrigger();
+>>>>>>> Stashed changes
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -302,11 +342,18 @@ class SearchTrigger extends ConsumerWidget {
 /// Notification bell — opens [showNotificationPanel] and shows an unread
 /// badge, matching `NotificationBell.tsx`'s always-visible bell + polled
 /// unread count. Needs its own context (routed through go_router's root
+<<<<<<< Updated upstream
 /// `navigatorKey`, same reasoning as `AvatarMenu._openMenu` — see
 /// `GlobalAppShell`'s class doc) since `_GlobalTopBar` itself sits outside
 /// any real `Navigator`/`Overlay`.
 class NotificationBellButton extends ConsumerWidget {
   const NotificationBellButton({super.key});
+=======
+/// `navigatorKey` — see `GlobalAppShell`'s class doc) since `_GlobalTopBar`
+/// itself sits outside any real `Navigator`/`Overlay`.
+class _NotificationBellButton extends ConsumerWidget {
+  const _NotificationBellButton();
+>>>>>>> Stashed changes
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -326,7 +373,7 @@ class NotificationBellButton extends ConsumerWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.notifications_outlined, size: 18, color: _navInk2),
+            const Icon(Icons.notifications_outlined, size: 18, color: _navPurple),
             if (unreadCount > 0)
               Positioned(
                 top: 4,
@@ -349,98 +396,95 @@ class NotificationBellButton extends ConsumerWidget {
   }
 }
 
+<<<<<<< Updated upstream
 class AvatarMenu extends ConsumerWidget {
   const AvatarMenu({super.key});
+=======
+class _BottomNavTab {
+  final String path;
+  final String segment;
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+>>>>>>> Stashed changes
 
-  String _initials(UserEntity user) {
-    final f = user.firstName.trim();
-    final l = user.lastName.trim();
-    if (f.isNotEmpty && l.isNotEmpty) return '${f[0]}${l[0]}'.toUpperCase();
-    if (f.isNotEmpty) return f[0].toUpperCase();
-    if (user.username.isNotEmpty) return user.username[0].toUpperCase();
-    return '?';
-  }
+  const _BottomNavTab({required this.path, required this.segment, required this.icon, required this.activeIcon, required this.label});
+}
 
-  Future<void> _openMenu(BuildContext avatarContext, WidgetRef ref, UserEntity user) async {
-    // `PopupMenuButton` (the usual way to do this) internally calls
-    // `Navigator.of(context)` using *this* widget's own context, which has
-    // no Navigator ancestor here (see class doc on `GlobalAppShell`) — so
-    // build the menu manually with `showMenu()`, anchored via go_router's
-    // root navigator context instead.
-    final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
-    if (navContext == null) return;
-    final box = avatarContext.findRenderObject() as RenderBox?;
-    if (box == null) return;
+const _bottomNavTabs = [
+  _BottomNavTab(path: '/home', segment: 'home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
+  _BottomNavTab(path: '/widgets', segment: 'widgets', icon: Icons.widgets_outlined, activeIcon: Icons.widgets_rounded, label: 'Widgets'),
+  _BottomNavTab(path: '/profile', segment: 'profile', icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Profile'),
+];
 
-    // `localToGlobal` with no `ancestor` resolves to true screen
-    // coordinates (there is exactly one `RenderView` root regardless of
-    // where a widget sits relative to the Navigator), which is what
-    // `showMenu`'s `position` needs relative to the full-screen overlay.
-    final globalPos = box.localToGlobal(Offset.zero);
-    final screenSize = MediaQuery.of(navContext).size;
-    final position = RelativeRect.fromLTRB(
-      globalPos.dx,
-      globalPos.dy + box.size.height + 4,
-      screenSize.width - (globalPos.dx + box.size.width),
-      0,
-    );
+/// Persistent bottom tab bar — the app's primary navigation surface on
+/// mobile, replacing the desktop-style header module strip/flyout this
+/// header used to carry. Highlights whichever tab owns the current route's
+/// first path segment (via [currentRoutePathProvider]); every other tap
+/// just calls `appRouterProvider`'s `go`, same pattern as the rest of this
+/// shell (see class doc on [GlobalAppShell] for why — no Navigator ancestor
+/// here to use `context.go` with).
+class _GlobalBottomNav extends ConsumerWidget {
+  const _GlobalBottomNav();
 
-    final value = await showMenu<String>(
-      context: navContext,
-      position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: _navBorder)),
-      items: [
-        PopupMenuItem<String>(
-          enabled: false,
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentPath = ref.watch(currentRoutePathProvider);
+    final segments = currentPath.split('/').where((s) => s.isNotEmpty).toList();
+    final currentSegment = segments.isNotEmpty ? segments.first : 'home';
+
+    return Material(
+      // Same reasoning as `_GlobalTopBar` — this bar sits outside any real
+      // `Navigator`/`Scaffold`, so it needs its own `Material` ancestor for
+      // the tab `InkWell`s to paint ink splashes without throwing.
+      type: MaterialType.transparency,
+      child: Container(
+        decoration: const BoxDecoration(color: _navBg, border: Border(top: BorderSide(color: _navBorder))),
+        child: SafeArea(
+          top: false,
           child: SizedBox(
-            width: 160,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            height: 56,
+            child: Row(
               children: [
-                Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w700, color: _navInk1, fontSize: 13), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(user.email, style: const TextStyle(color: _navInk3, fontSize: 11), overflow: TextOverflow.ellipsis),
+                for (final tab in _bottomNavTabs)
+                  Expanded(
+                    child: _BottomNavButton(
+                      tab: tab,
+                      isActive: currentSegment == tab.segment,
+                      onTap: () => ref.read(appRouterProvider).go(tab.path),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: 'logout',
-          child: Text('Logout', style: TextStyle(color: _navInk1, fontSize: 13, fontWeight: FontWeight.w500)),
-        ),
-      ],
+      ),
     );
-
-    if (value == 'logout') {
-      ref.read(authNotifierProvider.notifier).logout();
-    }
   }
+}
+
+class _BottomNavButton extends StatelessWidget {
+  final _BottomNavTab tab;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _BottomNavButton({required this.tab, required this.isActive, required this.onTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authNotifierProvider);
-    final user = authState.maybeWhen(authenticated: (u) => u, orElse: () => null);
-    if (user == null) return const SizedBox.shrink();
-
+  Widget build(BuildContext context) {
+    final color = isActive ? _navPurple : _navInk3;
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => _openMenu(context, ref, user),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: _navPurple,
-              child: Text(_initials(user), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-            ),
-            const SizedBox(width: 2),
-            const Icon(Icons.keyboard_arrow_down, size: 16, color: _navInk2),
-          ],
-        ),
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(isActive ? tab.activeIcon : tab.icon, size: 22, color: color),
+          const SizedBox(height: 3),
+          Text(
+            tab.label,
+            style: TextStyle(fontSize: 10.5, fontWeight: isActive ? FontWeight.w700 : FontWeight.w500, color: color),
+          ),
+        ],
       ),
     );
   }

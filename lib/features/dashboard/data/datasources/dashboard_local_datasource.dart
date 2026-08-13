@@ -135,17 +135,24 @@ class DashboardLocalDataSource {
     }
   }
 
+  /// Paths never tracked as "recent" — mirrors web's `recentsStore.ts`
+  /// `SKIP_PATHS` exactly (Home and Dashboard are the landing pages
+  /// themselves, not something worth surfacing as a "recently visited"
+  /// destination).
+  static const Set<String> _skipPaths = {'/', '/home', '/dashboard'};
+
   /// Records a real navigation to [path] as the most-recent entry, moving it
-  /// to the front if already present and capping the list at 8 (matching
-  /// `getRecentModules`'s own default limit) — this is the piece that was
-  /// missing: `saveLocalRecentModules` existed but nothing ever called it
-  /// from an actual navigation event, so "Recently Visited" never populated.
+  /// to the front if already present. Storage is capped at 12 entries
+  /// (matching web's `recentsStore.ts` storage cap) even though the Home
+  /// screen only ever displays the first 8 — a separate, smaller display
+  /// cap already applied in `getRecentModules`/`RecentsRow`.
   Future<void> recordVisit(String path) async {
+    if (_skipPaths.contains(path)) return;
     try {
       final current = await getLocalRecentModules();
       final filtered = current.where((r) => r.path != path).toList();
       filtered.insert(0, RecentItemEntity(path: path, visitedAt: DateTime.now()));
-      await saveLocalRecentModules(filtered.take(8).toList());
+      await saveLocalRecentModules(filtered.take(12).toList());
     } catch (e) {
       AppLogger.error('Record visit error', e);
     }

@@ -126,7 +126,7 @@ class AttendanceRemoteDataSource {
       'date': date,
       'class_id': classId,
       'section_id': sectionId,
-      if (academicYearId != null) 'academic_year_id': academicYearId,
+      'academic_year_id': ?academicYearId,
       'id': ids,
       'attendance': {for (final e in attendance.entries) k(e.key): e.value},
       if (note != null) 'note': {for (final e in note.entries) k(e.key): e.value},
@@ -154,7 +154,7 @@ class AttendanceRemoteDataSource {
       'section_id': sectionId,
       'month': month,
       'year': year,
-      if (academicYear != null) 'academic_year': academicYear,
+      'academic_year': ?academicYear,
       'page_size': 100,
     });
     return PaginatedResult.fromJson(response.data, MonthlyReportRowEntity.fromJson).results;
@@ -170,9 +170,9 @@ class AttendanceRemoteDataSource {
     final response = await _dioClient.get('/api/v1/attendance/student-attendance/report-insights/', queryParameters: {
       'month': month,
       'year': year,
-      if (classId != null) 'class_id': classId,
-      if (sectionId != null) 'section_id': sectionId,
-      if (academicYear != null) 'academic_year': academicYear,
+      'class_id': ?classId,
+      'section_id': ?sectionId,
+      'academic_year': ?academicYear,
     });
     return ReportInsightsEntity.fromJson(response.data as Map<String, dynamic>);
   }
@@ -192,9 +192,9 @@ class AttendanceRemoteDataSource {
       baseParams: {
         'month': month,
         'year': year,
-        if (classId != null) 'class_id': classId,
-        if (sectionId != null) 'section_id': sectionId,
-        if (academicYear != null) 'academic_year': academicYear,
+        'class_id': ?classId,
+        'section_id': ?sectionId,
+        'academic_year': ?academicYear,
       },
       pageSize: 100,
     );
@@ -224,14 +224,14 @@ class AttendanceRemoteDataSource {
       '/api/v1/attendance/student-attendance/export/',
       queryParameters: {
         'fmt': fmt,
-        if (classId != null) 'class_id': classId,
-        if (sectionId != null) 'section_id': sectionId,
-        if (month != null) 'month': month,
-        if (year != null) 'year': year,
-        if (academicYear != null) 'academic_year': academicYear,
-        if (date != null) 'date': date,
-        if (dateFrom != null) 'date_from': dateFrom,
-        if (dateTo != null) 'date_to': dateTo,
+        'class_id': ?classId,
+        'section_id': ?sectionId,
+        'month': ?month,
+        'year': ?year,
+        'academic_year': ?academicYear,
+        'date': ?date,
+        'date_from': ?dateFrom,
+        'date_to': ?dateTo,
       },
       options: Options(responseType: ResponseType.bytes),
     );

@@ -1,6 +1,8 @@
 import '../../../../core/constants/api_constants.dart';
 import '../../../../data/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
+import '../../domain/entities/attendance_pulse_entity.dart';
+import '../../domain/entities/fees_today_entity.dart';
 import '../../domain/models/kpi_data.dart';
 
 /// Dashboard Remote Data Source
@@ -29,4 +31,14 @@ class DashboardRemoteDataSource {
 
   // NOTE: Recently Visited API endpoint does not exist in backend
   // Web frontend uses localStorage only. No backend API call needed.
+
+  Future<AttendancePulseEntity> getAttendancePulse() async {
+    final response = await _dioClient.get(ApiConstants.attendanceDashboardToday);
+    return AttendancePulseEntity.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<FeesTodayEntity> getFeesToday() async {
+    final response = await _dioClient.get(ApiConstants.feesTodaySummary);
+    return FeesTodayEntity.fromJson(response.data as Map<String, dynamic>);
+  }
 }

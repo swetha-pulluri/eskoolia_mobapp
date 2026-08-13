@@ -20,8 +20,9 @@ String _statusForOutcome(String outcome, String fallbackStatus) {
   if (outcome == 'enrolled') return 'enrolled';
   if (outcome == 'called_not_interested') return 'declined';
   if (outcome == 'visit_done' || outcome == 'visit_scheduled') return 'visited';
-  if (outcome.startsWith('called_') || outcome == 'whatsapp_sent')
+  if (outcome.startsWith('called_') || outcome == 'whatsapp_sent') {
     return 'contacted';
+  }
   return fallbackStatus;
 }
 
@@ -346,10 +347,11 @@ class _LogContactModalState extends ConsumerState<LogContactModal> {
           firstDate: DateTime(2020),
           lastDate: DateTime(2035),
         );
-        if (picked != null)
+        if (picked != null) {
           setState(
             () => _nextFollowUpDate = picked.toIso8601String().substring(0, 10),
           );
+        }
       },
     );
   }

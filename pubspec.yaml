@@ -30,9 +30,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
 
   # Icons
   cupertino_icons: ^1.0.8
+
+  # Home screen ambient background particles (school-themed .lottie files
+  # in assets/animations/)
+  lottie: ^3.1.0
 
   # State Management & DI
   flutter_riverpod: ^2.5.1
@@ -41,6 +46,10 @@ dependencies:
   # Networking
   dio: ^5.7.0
   pretty_dio_logger: ^1.3.1
+  # Sets an explicit Content-Type on the School Info logo upload's
+  # MultipartFile (a transitive dep of dio; declared directly since we import
+  # it ourselves in school_info_remote_datasource.dart)
+  http_parser: ^4.0.2
 
   # Local Storage
   flutter_secure_storage: ^9.2.2
@@ -94,6 +103,19 @@ dependencies:
   # Fonts (matching frontend: Plus Jakarta Sans from Google Fonts)
   google_fonts: ^6.2.1
 
+  # Settings > School Info: campus location map (mirrors web's Leaflet +
+  # OpenStreetMap tiles in SchoolLocationMap.tsx)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Settings > School Info: "Use My Current Location" (mirrors web's
+  # navigator.geolocation)
+  geolocator: ^13.0.1
+
+  # Settings > School Info: brand-color swatch picker dialog (mirrors web's
+  # native <input type="color">, which has no Flutter built-in equivalent)
+  flutter_colorpicker: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -121,6 +143,8 @@ flutter:
   # Assets
   assets:
     - assets/images/
+    - assets/icons/
+  
   
   # Note: Fonts loaded via google_fonts package (Plus Jakarta Sans)
   # Matches frontend: https://fonts.google.com/specimen/Plus+Jakarta+Sans

@@ -1,5 +1,6 @@
 /// Billing Entity for Super Admin Billing Module
 /// UI-only entity with local sample data
+library;
 
 class BillingStateEntity {
   final List<InvoiceEntity> invoices;

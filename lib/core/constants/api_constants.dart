@@ -31,6 +31,90 @@ class ApiConstants {
   // School Info Endpoint (public - no auth required)
   static const String schoolInfo = '$apiBasePath/tenancy/school-info/';
 
+  // Tenancy — School Setup (a super-admin cross-school CRUD surface, NOT the
+  // Settings → School Info screen — see settingsSchoolInfo below for that).
+  // Reference: backend/apps/tenancy/urls.py (SchoolViewSet, router-registered
+  // "schools").
+  static const String tenancySchools = '$apiBasePath/tenancy/schools/';
+  static String tenancySchoolDetail(int id) => '$tenancySchools$id/';
+
+  // Settings → School Info screen (the single-school-tenant profile wizard:
+  // identity, principal contact, address/map, compliance, branding).
+  // Reference: backend/apps/settings/{urls,views,serializers}.py
+  // (SchoolInfoView, SchoolInfoLogoUploadView), frontend/components/settings/
+  // SchoolInfoPanel.tsx. Logo upload's multipart field name is `file`, not
+  // `logo` — confirmed from SchoolInfoLogoUploadView.post().
+  static const String settingsSchoolInfo = '$apiBasePath/settings/school-info/';
+  static const String settingsSchoolInfoLogo = '${settingsSchoolInfo}logo/';
+
+  // Settings → Leave Policy screen (leave-type CRUD + carry-forward
+  // sub-resources). Reference: backend/apps/settings/{urls,views,
+  // serializers}.py (LeavePolicyViewSet, LeaveCarryForward*View),
+  // frontend/components/settings/LeavePolicyPanel.tsx.
+  static const String settingsLeavePolicy = '$apiBasePath/settings/leave-policy/';
+  static String settingsLeavePolicyDetail(int id) => '$settingsLeavePolicy$id/';
+  static const String settingsLeaveCarryForwardPreview =
+      '$apiBasePath/settings/leave-carry-forward/preview/';
+  static const String settingsLeaveCarryForwardRun =
+      '$apiBasePath/settings/leave-carry-forward/run/';
+  static const String settingsLeaveCarryForwardHistory =
+      '$apiBasePath/settings/leave-carry-forward/history/';
+  // Filtered with ?module=<ModelName>&object_id=<id> — confirmed against
+  // SettingsAuditLogViewSet.get_queryset() (object_type__iexact=module).
+  static const String settingsAuditLog = '$apiBasePath/settings/audit-log/';
+
+  // Settings → Holiday Calendar screen. Reads/writes the same `Holiday` rows
+  // as Academics > Foundation's own calendar (via `coreHolidays` below) plus
+  // a Settings-only exclusion join-table and a read-only aggregation view.
+  // Reference: backend/apps/settings/{urls,views,serializers}.py
+  // (StaffHolidayCalendarView, StaffHolidayExclusionViewSet),
+  // frontend/components/settings/HolidaysPanel.tsx.
+  static const String settingsStaffHolidayCalendar = '$apiBasePath/settings/staff-holiday-calendar/';
+  static const String settingsStaffHolidayExclusions = '$apiBasePath/settings/staff-holiday-exclusions/';
+  static String settingsStaffHolidayExclusionDetail(int id) => '$settingsStaffHolidayExclusions$id/';
+
+  // Settings → SMTP Settings screen. Reference: backend/apps/settings/
+  // {urls,views,serializers}.py (SchoolSMTPSettingsViewSet),
+  // frontend/components/settings/SmtpSettingsPanel.tsx. `password` is
+  // write-only server-side (never returned — only a masked
+  // `password_display`); `test_send` accepts the raw unsaved draft, no
+  // saved config id required.
+  static const String settingsSmtp = '$apiBasePath/settings/smtp/';
+  static String settingsSmtpDetail(int id) => '$settingsSmtp$id/';
+  static String settingsSmtpActivate(int id) => '${settingsSmtpDetail(id)}activate/';
+  static const String settingsSmtpTestSend = '${settingsSmtp}test_send/';
+
+  // Settings → Attendance Rules screen. Reference: backend/apps/settings/
+  // {urls,views,serializers}.py (SchoolAttendancePolicyViewSet — a real CRUD
+  // list, unlike SMTP/School Info's singleton endpoints; exactly one policy
+  // per school is flagged `is_default` via the `make_default/` action),
+  // frontend/components/settings/AttendanceRulesPanel.tsx.
+  static const String settingsAttendancePolicies = '$apiBasePath/settings/attendance-policies/';
+  static String settingsAttendancePolicyDetail(int id) => '$settingsAttendancePolicies$id/';
+  static String settingsAttendancePolicyMakeDefault(int id) => '${settingsAttendancePolicyDetail(id)}make_default/';
+
+  // Settings → Documents screen ("Policy Documents"). Reference:
+  // backend/apps/settings/{urls,views,serializers}.py
+  // (SchoolPolicyDocumentViewSet — multipart create, JSON-only PATCH for
+  // title/category, soft delete via is_active), frontend/components/
+  // settings/DocumentsPanel.tsx. Category is a fixed 4-value enum, not a
+  // manageable list.
+  static const String settingsDocuments = '$apiBasePath/settings/documents/';
+  static String settingsDocumentDetail(int id) => '$settingsDocuments$id/';
+
+  // Settings → Document Branding screen. Reference: backend/apps/settings/
+  // {urls,views,serializers}.py (DocumentBrandingSettingsView,
+  // DocumentBrandingUploadLetterheadView, DocumentBrandingHeaderImageView,
+  // DocumentBrandingPreviewView), frontend/components/settings/
+  // DocumentBrandingPanel.tsx. A singleton settings form (one row per
+  // school), unlike the letterhead/rendered image itself, which has no URL
+  // field at all — only fetched via the two binary PNG endpoints below.
+  static const String settingsDocumentBranding = '$apiBasePath/settings/document-branding/';
+  static const String settingsDocumentBrandingUploadLetterhead =
+      '${settingsDocumentBranding}upload-letterhead/';
+  static const String settingsDocumentBrandingHeaderImage = '${settingsDocumentBranding}header-image/';
+  static const String settingsDocumentBrandingPreview = '${settingsDocumentBranding}preview/';
+
   // Access Control — Login Permission Endpoints
   // Reference: backend/apps/access_control/views.py - LoginPermissionViewSet
   static const String accessControlBasePath = '$apiBasePath/access-control';
@@ -137,6 +221,12 @@ class ApiConstants {
   // frontend/components/aibot/AbsenceFlow.tsx): single-student, one-shot
   // mark, returns the resolved student/class/section names in the response.
   static const String studentAttendanceChatbotMark = '${studentAttendance}chatbot-mark/';
+  // Home screen's "Today's Pulse" attendance card. Reference:
+  // backend/apps/attendance/views.py::StudentAttendanceDashboardAPIView,
+  // frontend/components/widgets/pulse/AttendanceSnapshot.tsx (via
+  // frontend/lib/services/attendanceDashboardService.ts). Accepts an
+  // optional `?date=YYYY-MM-DD` query param (defaults to today server-side).
+  static const String attendanceDashboardToday = '$attendanceBasePath/dashboard/today/';
 
   // Core — Classes / Sections / Academic Years / Streams / Rooms / Holidays
   // Reference: backend/apps/core/urls.py + views.py
@@ -175,6 +265,15 @@ class ApiConstants {
   static const String feesAssignmentsSummary =
       '$feesBasePath/assignments/summary/';
   static const String feesPayments = '$feesBasePath/payments/';
+  // Home screen's "Today's Fees" card. Reference:
+  // backend/apps/fees/views.py::TodayFeesSummaryAPIView, frontend/components/
+  // widgets/pulse/FeesToday.tsx. The frontend calls the non-versioned
+  // `/api/fees/today-summary/`, but the backend registers the exact same
+  // view at `/api/v1/fees/today-summary/` too (config/urls.py) — using the
+  // versioned path here for consistency with every other endpoint in this
+  // file; same data either way. Response fields are camelCase (unlike most
+  // of this backend), confirmed against the real view — not a typo.
+  static const String feesTodaySummary = '$feesBasePath/today-summary/';
   // NOTE: no `home/` route exists on the backend yet — see
   // fees_repository_impl.dart::fetchHomeDashboard doc comment.
   static const String feesHome = '$feesBasePath/home/';
@@ -200,9 +299,10 @@ class ApiConstants {
   // Reference: frontend components/fees/FeesCollectionPanel.tsx.
   static const String feesReconciliations = '$feesBasePath/reconciliations/';
   static String feesReconciliationDetail(int id) => '$feesReconciliations$id/';
-  // Authenticated variant of `schoolInfo` above — distinct endpoint used only
-  // by the Collection screen's receipt/ledger header (schoolInfo is public,
-  // no-auth; this one requires a logged-in session).
+  // Used by the Collection screen's receipt/ledger header
+  // (fees_collection_remote_datasource.dart::fetchMySchoolInfo) — kept
+  // as-is; out of scope for the School Info (Settings) screen rebuild,
+  // which now uses the real `tenancySchools` CRUD endpoint instead.
   static const String tenancyMySchoolInfo = '$apiBasePath/tenancy/my-school-info/';
 
   // Fees — Dues & Reminders screen (escalation tiers, class-wise due lists,

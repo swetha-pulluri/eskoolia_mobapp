@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/shared_prefs.dart';
@@ -8,6 +10,8 @@ import '../../data/datasources/dashboard_remote_datasource.dart';
 import '../../data/datasources/dashboard_local_datasource.dart';
 import '../../data/repositories/dashboard_repository_impl.dart';
 import '../../domain/repositories/dashboard_repository.dart';
+import '../../domain/entities/attendance_pulse_entity.dart';
+import '../../domain/entities/fees_today_entity.dart';
 import '../../domain/entities/pin_item_entity.dart';
 import '../../domain/entities/recent_item_entity.dart';
 import '../../domain/entities/module_entity.dart';
@@ -57,6 +61,28 @@ final recentModulesProvider = FutureProvider<List<RecentItemEntity>>((ref) async
   final result = await repository.getRecentModules();
   debugPrint('[DashboardProvider] recentModulesProvider: result count=${result.length}');
   return result;
+});
+
+/// Home screen → "Today's Pulse" → Student Attendance card data. Re-fetches
+/// itself every 5 minutes while the Home screen is on-screen (autoDispose
+/// stops the timer once nobody's watching) — mirrors the web's own
+/// `refetchInterval: 300000` in `useAttendanceDashboard`. Errors propagate
+/// through [AsyncValue.error] so the card can show its real "Failed to load
+/// attendance data" + Retry state, matching `AttendanceSnapshot.tsx`.
+final attendancePulseProvider = FutureProvider.autoDispose<AttendancePulseEntity>((ref) async {
+  final timer = Timer(const Duration(minutes: 5), () => ref.invalidateSelf());
+  ref.onDispose(timer.cancel);
+  return ref.watch(dashboardRepositoryProvider).getAttendancePulse();
+});
+
+/// Home screen → "Today's Pulse" → Today's Fees card data. Never throws —
+/// the repository itself catches and returns a zeroed [FeesTodayEntity] on
+/// failure, matching the real web card's own silent-failure behavior
+/// (`FeesToday.tsx` has no loading/error UI at all).
+final feesTodayProvider = FutureProvider.autoDispose<FeesTodayEntity>((ref) async {
+  final timer = Timer(const Duration(minutes: 5), () => ref.invalidateSelf());
+  ref.onDispose(timer.cancel);
+  return ref.watch(dashboardRepositoryProvider).getFeesToday();
 });
 
 /// Records a real navigation to [path] as a "Recently Visited" entry and

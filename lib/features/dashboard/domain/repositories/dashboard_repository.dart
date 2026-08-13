@@ -1,3 +1,5 @@
+import '../entities/attendance_pulse_entity.dart';
+import '../entities/fees_today_entity.dart';
 import '../entities/pin_item_entity.dart';
 import '../entities/recent_item_entity.dart';
 import '../models/kpi_data.dart';
@@ -9,6 +11,10 @@ abstract class DashboardRepository {
 
   // Attention count
   Future<int> getAttentionCount();
+
+  // Home screen "Today's Pulse" cards
+  Future<AttendancePulseEntity> getAttendancePulse();
+  Future<FeesTodayEntity> getFeesToday();
 
   // Recent modules
   Future<List<RecentItemEntity>> getRecentModules({int limit = 8});

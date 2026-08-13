@@ -1,33 +1,9 @@
 import '../../features/dashboard/domain/entities/module_entity.dart';
 
 /// Pure route-derived active-state helpers, porting the exact rules the web
-/// frontend uses in `components/nav/ModulePill.tsx` and
-/// `components/nav/ModuleSubNav.tsx`. Deliberately plain functions (not
-/// Riverpod providers) — active state is a computation over
+/// frontend uses in `components/nav/ModuleSubNav.tsx`. Deliberately plain
+/// functions (not Riverpod providers) — active state is a computation over
 /// `currentRoutePathProvider`'s value + `Modules.all`, not state of its own.
-
-bool _matchesFirstSegment(String path, String currentPath) {
-  final segments = path.split('/').where((s) => s.isNotEmpty);
-  final seg = segments.isEmpty ? null : segments.first;
-  return seg != null && currentPath.startsWith('/$seg');
-}
-
-/// Ports `ModulePill.tsx`'s active rule: the module is active when the
-/// current path starts with the module path's first segment, plus the
-/// dashboard/home special case. Also checks each submodule's own first
-/// segment — most submodules share their parent's path prefix (e.g.
-/// `/hr/attendance` under `hr`'s `/hr/setup`), but a few don't (Roles &
-/// Permissions' "Login Permission" lives at `/login-permission`, entirely
-/// outside `/roles-permissions`) — without this, the parent module's
-/// underline would incorrectly disappear while on that submodule's page.
-bool isModuleActive(ModuleEntity module, String currentPath) {
-  if (_matchesFirstSegment(module.path, currentPath)) return true;
-  if (module.subModules.any((s) => _matchesFirstSegment(s.path, currentPath))) return true;
-  if (module.id == 'dashboard' && (currentPath == '/dashboard' || currentPath == '/home')) {
-    return true;
-  }
-  return false;
-}
 
 /// Ports `ModuleSubNav.tsx`'s `reduce()`: among a module's sub-items, picks
 /// the one whose path exactly matches or prefix-matches the current path,

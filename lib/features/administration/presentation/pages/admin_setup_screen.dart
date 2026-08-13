@@ -62,12 +62,13 @@ class _AdminSetupScreenState extends ConsumerState<AdminSetupScreen> {
     Future.delayed(const Duration(milliseconds: 50), () {
       if (!mounted) return;
       final ctx = key.currentContext;
-      if (ctx != null)
+      if (ctx != null) {
         Scrollable.ensureVisible(
           ctx,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
         );
+      }
     });
   }
 

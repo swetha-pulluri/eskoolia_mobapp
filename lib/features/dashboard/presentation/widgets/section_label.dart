@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../theme/home_dark_theme.dart';
 
 class SectionLabel extends StatelessWidget {
   final IconData? icon;
@@ -22,56 +23,60 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Row(
         children: [
           // Icon and Title
           if (icon != null) ...[
             Icon(
               icon,
-              size: 14,
-              color: AppColors.ink3,
+              size: 16,
+              color: AppColors.brandPurple,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
           if (pinnedCount != null) ...[
-            const Icon(
-              Icons.star,
-              size: 14,
-              color: AppColors.ink3,
+            Icon(
+              Icons.star_rounded,
+              size: 16,
+              color: AppColors.brandPurple,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
           Text(
             title,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.ink2,
-              letterSpacing: 0.6,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: HomeDarkTheme.textPrimary,
+              letterSpacing: -0.1,
             ),
           ),
-          
+
           const Spacer(),
-          
+
           // Count or Pinned Count
           if (count != null) ...[
-            Text(
-              count.toString(),
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.ink3,
-                letterSpacing: 0.6,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: HomeDarkTheme.cardFill, borderRadius: BorderRadius.circular(999)),
+              child: Text(
+                count.toString(),
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: HomeDarkTheme.textSecondary),
               ),
             ),
           ],
           if (pinnedCount != null) ...[
-            Text(
-              '$pinnedCount PINNED',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.ink3,
-                letterSpacing: 0.6,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: HomeDarkTheme.cardFill, borderRadius: BorderRadius.circular(999)),
+              child: Text(
+                '$pinnedCount pinned',
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: HomeDarkTheme.textSecondary),
               ),
             ),
           ],
-          
+
           // Action Button
           if (actionText != null && onAction != null) ...[
             const SizedBox(width: 12),
@@ -79,9 +84,7 @@ class SectionLabel extends StatelessWidget {
               onTap: onAction,
               child: Text(
                 '$actionText →',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.ink3,
-                ),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.brandPurple),
               ),
             ),
           ],

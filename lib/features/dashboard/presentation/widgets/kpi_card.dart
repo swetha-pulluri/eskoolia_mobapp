@@ -39,7 +39,7 @@ class KpiCard extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -48,23 +48,23 @@ class KpiCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   color: backgroundColor,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Center(child: Icon(icon, size: 15, color: iconColor)),
+                child: Center(child: Icon(icon, size: 13, color: iconColor)),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   label.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF9197AE), // ink-3
-                    letterSpacing: 0.7,
+                    letterSpacing: 0.6,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -72,12 +72,12 @@ class KpiCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           // Value
           Text(
             value,
             style: const TextStyle(
-              fontSize: 28,
+              fontSize: 21,
               fontWeight: FontWeight.w700,
               color: Color(0xFF0F1222), // ink-1
               height: 1.2,
@@ -85,12 +85,12 @@ class KpiCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           // Delta
           Text(
             '${deltaUp ? '↑' : '↓'} $delta',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10.5,
               color: deltaUp
                   ? AppColors.deltaPositive
                   : AppColors.deltaNegative,
@@ -116,7 +116,7 @@ class KpiCardSkeleton extends StatelessWidget {
         border: Border.all(color: AppColors.cardBorder),
         borderRadius: BorderRadius.circular(14),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -130,20 +130,20 @@ class KpiCardSkeleton extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           // Skeleton for value
           Container(
-            width: 80,
-            height: 28,
+            width: 70,
+            height: 21,
             decoration: BoxDecoration(
               color: const Color(0xFFF0F0F0),
               borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           // Skeleton for delta
           Container(
-            width: 120,
+            width: 100,
             height: 10,
             decoration: BoxDecoration(
               color: const Color(0xFFF0F0F0),

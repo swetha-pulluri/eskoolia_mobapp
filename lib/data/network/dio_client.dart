@@ -34,6 +34,7 @@ class DioClient {
     // Add interceptors
     _dio.interceptors.addAll([
       _authInterceptor(),
+      _databaseUnavailableRetryInterceptor(),
       _errorInterceptor(),
       // Temporarily disabled - may interfere with response parsing
       // PrettyDioLogger(
@@ -85,6 +86,48 @@ class DioClient {
             }
           }
         }
+        return handler.next(error);
+      },
+    );
+  }
+
+  /// Retries idempotent GET requests when the backend reports its Neon
+  /// free-tier "database is asleep" 503 (see backend/config/
+  /// exception_handler.py::custom_exception_handler — it returns
+  /// `error.code == "database_unavailable"` specifically for this and its
+  /// own message literally says "please try again in a few seconds").
+  /// Neon's serverless Postgres auto-suspends when idle and needs a couple
+  /// of seconds to wake on the next query, so a short delay-and-retry here
+  /// resolves it silently instead of surfacing a scary error for what is
+  /// normally a one-off cold start. Scoped to GET only — POST/PATCH/DELETE
+  /// aren't safe to blindly retry.
+  static const int _maxDbUnavailableRetries = 2;
+  static const Duration _dbUnavailableRetryDelay = Duration(seconds: 2);
+
+  InterceptorsWrapper _databaseUnavailableRetryInterceptor() {
+    return InterceptorsWrapper(
+      onError: (error, handler) async {
+        final data = error.response?.data;
+        final isDbUnavailable = error.response?.statusCode == 503 &&
+            data is Map &&
+            data['error'] is Map &&
+            (data['error'] as Map)['code'] == 'database_unavailable';
+
+        final options = error.requestOptions;
+        final attempt = (options.extra['dbRetryCount'] as int?) ?? 0;
+
+        if (isDbUnavailable && options.method == 'GET' && attempt < _maxDbUnavailableRetries) {
+          print('[DioClient] Database unavailable, retrying ${options.path} (attempt ${attempt + 1})');
+          await Future.delayed(_dbUnavailableRetryDelay);
+          try {
+            options.extra['dbRetryCount'] = attempt + 1;
+            final response = await _dio.fetch(options);
+            return handler.resolve(response);
+          } catch (e) {
+            return handler.next(e is DioException ? e : error);
+          }
+        }
+
         return handler.next(error);
       },
     );

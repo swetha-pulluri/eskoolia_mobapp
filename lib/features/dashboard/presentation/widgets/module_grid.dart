@@ -16,20 +16,20 @@ class ModuleGrid extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionLabel(
-          title: 'ALL MODULES',
+          title: 'All Modules',
           count: visibleModules.length,
         ),
         
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+              crossAxisCount: 3,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
-              childAspectRatio: 1.0,
+              childAspectRatio: 1.05,
             ),
             itemCount: visibleModules.length,
             itemBuilder: (context, index) {

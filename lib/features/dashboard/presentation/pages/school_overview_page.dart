@@ -66,7 +66,7 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
               _buildHeader(),
               _buildKPISection(),
               _buildQuickActionsSection(),
-              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+              const SliverToBoxAdapter(child: SizedBox(height: 20)),
             ],
           ),
         ),
@@ -86,7 +86,7 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
           children: [
             // Breadcrumb
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
                   GestureDetector(
@@ -147,7 +147,7 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
 
             // Title + Description
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -155,9 +155,9 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
                   RichText(
                     text: const TextSpan(
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: -0.7,
+                        letterSpacing: -0.5,
                         color: Color(0xFF0F1222), // ink-1
                         height: 1.15,
                       ),
@@ -174,12 +174,12 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 5),
                   // Description
                   const Text(
                     'Live KPIs and key metrics across all school operations',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12.5,
                       color: Color(0xFF5A607A), // ink-2
                     ),
                   ),
@@ -201,41 +201,26 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
 
   Widget _buildKPISection() {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
       sliver: SliverLayoutBuilder(
         builder: (context, constraints) {
-          // Responsive grid based on screen width
+          // 2 cards per row on phones, 3 on tablets — the compact KpiCard
+          // (~106px tall) is small enough to always pair up, so this no
+          // longer drops to a single column on narrow phones (that used to
+          // leave a full card's width of blank space to the right of the
+          // icon/number on screens like an iPhone SE).
+          const spacing = 10.0;
+          const cardHeight = 106.0;
           final screenWidth = constraints.crossAxisExtent;
-          int crossAxisCount;
-          double childAspectRatio;
-
-          if (screenWidth < 360) {
-            // Very small phones
-            // Card height needs ~125px for content
-            crossAxisCount = 1;
-            childAspectRatio = 2.1;
-          } else if (screenWidth < 500) {
-            // Small phones
-            // Card width ~169px, needs ~130px height
-            crossAxisCount = 2;
-            childAspectRatio = 1.2;
-          } else if (screenWidth < 700) {
-            // Medium phones / small tablets
-            // Card width ~269px, needs ~130px height
-            crossAxisCount = 2;
-            childAspectRatio = 1.95;
-          } else {
-            // Large tablets
-            // Card width ~241px, needs ~130px height
-            crossAxisCount = 3;
-            childAspectRatio = 1.75;
-          }
+          final crossAxisCount = screenWidth < 700 ? 2 : 3;
+          final cardWidth = (screenWidth - spacing * (crossAxisCount - 1)) / crossAxisCount;
+          final childAspectRatio = cardWidth / cardHeight;
 
           return SliverGrid(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 14,
-              mainAxisSpacing: 14,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
               childAspectRatio: childAspectRatio,
             ),
             delegate: SliverChildBuilderDelegate((context, index) {
@@ -367,7 +352,7 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
   Widget _buildQuickActionsSection() {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+        padding: const EdgeInsets.fromLTRB(14, 20, 14, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -375,18 +360,18 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
             const Text(
               'QUICK ACTIONS',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF9197AE), // ink-3
                 letterSpacing: 0.8,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // Responsive wrap for quick action buttons
             Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 QuickActionButton(
                   label: 'Mark Attendance',

@@ -37,7 +37,7 @@ class FeesDuesRepositoryImpl implements FeesDuesRepository {
   Future<DueInteraction> resolveDue(String studentId, {String? note}) {
     return _remote.resolveDue({
       'student_id': studentId,
-      if (note != null) 'note': note,
+      'note': ?note,
     });
   }
 
