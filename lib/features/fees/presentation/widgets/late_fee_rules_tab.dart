@@ -200,34 +200,63 @@ class _LateFeeRulesTabState extends ConsumerState<LateFeeRulesTab> {
     );
   }
 
+  /// Column widths shared by the header row and every data row — matches
+  /// web's real 5-column table exactly ("NAME", "GRACE", "PENALTY", "CAP",
+  /// "ACTIONS" — see `FeeConfigurationPanel.tsx`'s `renderLateFeeRules`).
+  /// Wrapped in a horizontally-scrolling container so the fixed widths
+  /// never overflow on a narrow screen.
+  static const _colName = 150.0;
+  static const _colGrace = 100.0;
+  static const _colPenalty = 150.0;
+  static const _colCap = 100.0;
+  static const _colActions = 120.0;
+  // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
+  static const _tableWidth = _colName + _colGrace + _colPenalty + _colCap + _colActions + 32;
+
   Widget _buildTable() {
     return Container(
       decoration: feeConfigCardDecoration,
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            color: const Color(0xFFF8F8FB),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: const Row(
-              children: [
-                Expanded(flex: 3, child: Text('NAME / GRACE', style: feeConfigThStyle)),
-                Expanded(flex: 3, child: Text('PENALTY / CAP', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('ACTIONS', style: feeConfigThStyle, textAlign: TextAlign.right)),
-              ],
-            ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: _tableWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderRow(),
+              if (_isLoading)
+                const Padding(padding: EdgeInsets.all(24), child: Text('Loading late fee rules...', style: TextStyle(color: feeConfigInk2)))
+              else if (_rows.isEmpty)
+                const Padding(padding: EdgeInsets.all(24), child: Text('No late fee rules yet.', style: TextStyle(color: feeConfigInk2)))
+              else
+                for (final rule in _rows) _buildRow(rule),
+            ],
           ),
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(24), child: Text('Loading late fee rules...', style: TextStyle(color: feeConfigInk2)))
-          else if (_rows.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Text('No late fee rules yet.', style: TextStyle(color: feeConfigInk2)))
-          else
-            for (final rule in _rows) _buildRow(rule),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow() {
+    return Container(
+      color: const Color(0xFFF8F8FB),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: const Row(
+        children: [
+          SizedBox(width: _colName, child: Text('NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colGrace, child: Text('GRACE', style: feeConfigThStyle)),
+          SizedBox(width: _colPenalty, child: Text('PENALTY', style: feeConfigThStyle)),
+          SizedBox(width: _colCap, child: Text('CAP', style: feeConfigThStyle)),
+          SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
     );
   }
 
+  /// Each rule shown as one table row, fields lined up under their own
+  /// column headings above — matches web's real table structure
+  /// (`renderLateFeeRules`) exactly rather than combining fields.
   Widget _buildRow(LateFeeRule rule) {
     final deleting = _deletingId == rule.id;
     return Container(
@@ -236,31 +265,14 @@ class _LateFeeRulesTabState extends ConsumerState<LateFeeRulesTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
+          SizedBox(width: _colName, child: Text(rule.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          SizedBox(width: _colGrace, child: Text('${rule.gracePeriodDays} days', style: feeConfigTdMuted)),
+          SizedBox(width: _colPenalty, child: Text(rule.penaltyRule.isEmpty ? '—' : rule.penaltyRule, style: feeConfigTdMuted)),
+          SizedBox(width: _colCap, child: Text(rule.capAmount ?? '—', style: feeConfigTdMuted)),
+          SizedBox(
+            width: _colActions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(rule.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1)),
-                Text('${rule.gracePeriodDays} days', style: feeConfigTdMuted),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(rule.penaltyRule.isEmpty ? '—' : rule.penaltyRule, style: feeConfigTdMuted),
-                Text(rule.capAmount ?? '—', style: feeConfigTdMuted),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _startEdit(rule)),
                 const SizedBox(height: 8),

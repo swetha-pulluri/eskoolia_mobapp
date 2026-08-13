@@ -479,7 +479,12 @@ class _FeesCollectionPageState extends ConsumerState<FeesCollectionPage> with Wi
     const tabs = [('Collection', 0), ('Student Ledger', 1), ('Recent Payments', 2)];
     return Container(
       decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: fcBorder, width: 2))),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [for (final t in tabs) _tabButton(t.$1, t.$2)]),
+      // The three tab labels' padded width exceeds a phone screen — scroll
+      // horizontally instead of overflowing past the right edge.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [for (final t in tabs) _tabButton(t.$1, t.$2)]),
+      ),
     );
   }
 

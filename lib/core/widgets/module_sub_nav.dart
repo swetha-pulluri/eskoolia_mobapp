@@ -15,13 +15,19 @@ const _comingSoonPurple = Color(0xFF6D28D9);
 /// hand-coded per-module copies (Students/Fees/Academics). Flutter port of
 /// `components/nav/ModuleSubNav.tsx`.
 class ModuleSubNav extends ConsumerWidget {
-  const ModuleSubNav({super.key});
+  /// Explicit module list to resolve the sub-nav against (e.g. Teacher's
+  /// own `TeacherModules.all`). When omitted, falls back to the Admin
+  /// `visibleModulesProvider` — preserves the exact original behavior for
+  /// every existing Admin call site.
+  final List<ModuleEntity>? modules;
+
+  const ModuleSubNav({super.key, this.modules});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPath = ref.watch(currentRoutePathProvider);
-    final modules = ref.watch(visibleModulesProvider);
-    final owner = findOwnerModule(currentPath, modules);
+    final List<ModuleEntity> resolvedModules = modules ?? ref.watch(visibleModulesProvider);
+    final owner = findOwnerModule(currentPath, resolvedModules);
     if (owner == null || owner.subModules.isEmpty) return const SizedBox.shrink();
 
     final active = activeSubModule(owner, currentPath);

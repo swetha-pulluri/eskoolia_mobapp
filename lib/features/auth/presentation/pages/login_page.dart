@@ -11,6 +11,7 @@ import '../widgets/security_panel.dart';
 import '../widgets/auth_input_field.dart';
 import '../widgets/atrium_button.dart';
 import '../providers/auth_providers.dart';
+import '../../../../config/router/portal_routes.dart';
 
 /// Login Page
 /// Fully responsive mobile-first implementation
@@ -77,7 +78,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
           initial: () {},
           loading: () {},
           authenticated: (user) {
-            debugPrint('[LoginPage] authenticated -> navigating to /home (user: ${user.username}, portalType: ${user.portalType})');
+            final target = resolveHomeRouteForPortal(user.portalType);
+            debugPrint('[LoginPage] authenticated -> navigating to $target (user: ${user.username}, portalType: ${user.portalType})');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -87,7 +89,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
               );
               // Explicit navigation — do not rely solely on the router's
               // redirect-on-rebuild side effect (see app_router.dart).
-              context.go('/home');
+              // Role→route mapping lives once in portal_routes.dart, used
+              // by both this and the router's own redirect callback.
+              context.go(target);
             }
           },
           unauthenticated: () {},

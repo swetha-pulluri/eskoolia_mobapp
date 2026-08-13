@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/file_download_helper.dart';
@@ -26,6 +27,60 @@ const _kActionOptions = [
   'api_key.rotate', 'policy.updated', 'backup.complete',
   'migration.complete', 'migration.rollback',
 ];
+
+/// Matches web's `fmtTs()` (`audit/page.tsx:66-73`) — split time/date, not
+/// a single combined string, so the table cell can stack them like web
+/// does (bold time, muted date below).
+(String time, String date) _fmtTimestamp(String iso) {
+  final d = DateTime.parse(iso).toLocal();
+  return (DateFormat('HH:mm:ss').format(d), DateFormat('dd MMM yyyy').format(d));
+}
+
+/// Matches web's `SEV[key].dotCls` (`audit/page.tsx:14-18`) — the small
+/// leading severity dot shown before the Time column, distinct from the
+/// `SeverityBadge` chip shown in the Severity column.
+Color _severityDotColor(String severity) {
+  switch (_normalizeSeverity(severity)) {
+    case 'error':
+      return const Color(0xFFF87171); // red-400
+    case 'warning':
+      return const Color(0xFFFBBF24); // amber-400
+    default:
+      return const Color(0xFF38BDF8); // sky-400
+  }
+}
+
+/// Matches web's `ACTION_CLS` map (`audit/page.tsx:26-44`) — text color per
+/// specific action string; anything not listed falls back to the same
+/// neutral gray web uses for its own unmatched default.
+Color _actionBadgeColor(String action) {
+  const green = AppColors.successGreen;
+  const amber = AppColors.warningAmber;
+  const red = AppColors.dangerRed;
+  const blue = AppColors.infoBlue;
+  const purple = AppColors.primaryPurple;
+  const gray = AppColors.textSecondary;
+  const map = <String, Color>{
+    'auth.login': green,
+    'auth.logout': gray,
+    'auth.impersonate': amber,
+    'school.provision': purple,
+    'school.update': purple,
+    'school.archive': red,
+    'plan.upgrade': green,
+    'plan.downgrade': amber,
+    'invoice.generated': blue,
+    'invoice.sent': blue,
+    'invoice.overdue': red,
+    'api_key.rotate': amber,
+    'policy.updated': amber,
+    'migration.start': blue,
+    'migration.complete': green,
+    'migration.rollback': red,
+    'backup.complete': green,
+  };
+  return map[action] ?? gray;
+}
 
 /// Super Admin Audit Log Page — real server-side pagination + filters,
 /// matching web's actual behavior (`audit/page.tsx`) exactly. Previously
@@ -435,6 +490,7 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                   border: Border.all(color: AppColors.borderPrimary),
                   borderRadius: BorderRadius.circular(14),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: events.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
@@ -456,105 +512,27 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                           ),
                         ),
                       )
-                    : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: events.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, color: AppColors.borderPrimary),
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    return InkWell(
-                      onTap: () => _showEventDetail(context, event),
-                      child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Action badge and timestamp
-                          Row(
+                    // Matches web's real column-based table exactly
+                    // (`audit/page.tsx:381-443`: TIME / ACTOR / ACTION /
+                    // DETAIL / IP ADDRESS / SEVERITY, plus the leading
+                    // severity dot) — replaces the previous per-event card
+                    // layout, which had no column headers at all.
+                    // Horizontally scrollable (same fixed-width-column
+                    // pattern used by the Fee Configuration tables) since
+                    // 6 real columns don't fit a phone screen at once.
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: _auditTableWidth,
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Flexible(
-                                child: ActionBadge(
-                                  action: event.action,
-                                  color: AppColors.primaryPurple,
-                                ),
-                              ),
-                              const Spacer(),
-                              Text(
-                                _relativeTime(event.timestamp),
-                                style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11),
-                              ),
+                              _auditHeaderRow(),
+                              for (var i = 0; i < events.length; i++) _auditRow(events[i], isLast: i == events.length - 1),
                             ],
                           ),
-                          const SizedBox(height: 8),
-
-                          // Detail
-                          Text(
-                            event.detail,
-                            style: AppTextStyles.boardLabel.copyWith(fontSize: 13),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Actor and severity
-                          Row(
-                            children: [
-                              const Icon(Icons.person_outline, size: 14, color: AppColors.textTertiary),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  event.actor,
-                                  style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace'),
-                                ),
-                              ),
-                              SeverityBadge(severity: event.severity),
-                            ],
-                          ),
-
-                          // IP Address — matches web's "IP Address" column
-                          // (`audit/page.tsx:352`).
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(Icons.lan_outlined, size: 14, color: AppColors.textTertiary),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  event.actorIp.isEmpty ? '—' : event.actorIp,
-                                  style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          if (event.schoolName != null) ...[
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(Icons.business_outlined, size: 14, color: AppColors.textTertiary),
-                                const SizedBox(width: 4),
-                                // A real school name can be long — without
-                                // `Expanded`+ellipsis this row could overflow
-                                // horizontally on a 320dp screen.
-                                Expanded(
-                                  child: Text(
-                                    event.schoolName!,
-                                    style: AppTextStyles.sectionSubtitle,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
+                        ),
                       ),
-                      ),
-                    );
-                  },
-                ),
               ),
 
               // PAGINATION — real page navigation matching web's real
@@ -598,6 +576,120 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
           ),
         ),
       ),
+      ),
+    );
+  }
+
+  // ── Audit table columns — matches web's fixed column widths exactly
+  // (`audit/page.tsx:382-389`: w-[90px]/w-[150px]/w-[160px]/flex-1/
+  // w-[110px]/w-[72px], "Detail" given a generous fixed width here since a
+  // horizontally-scrolling table has no "remaining space" to flex into).
+  // +32 accounts for the 16px horizontal padding on each side of the
+  // header/row Containers below (the same fixed overflow this exact
+  // pattern needed in the Fee Configuration tables).
+  static const _colDot = 14.0;
+  static const _colTime = 90.0;
+  static const _colActor = 150.0;
+  static const _colAction = 150.0;
+  static const _colDetail = 220.0;
+  static const _colIp = 110.0;
+  static const _colSeverity = 90.0;
+  static const _auditTableWidth =
+      _colDot + _colTime + _colActor + _colAction + _colDetail + _colIp + _colSeverity + 32;
+
+  static const _auditThStyle = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.5,
+    color: AppColors.textTertiary,
+  );
+
+  Widget _auditHeaderRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
+        color: AppColors.bgSecondary,
+        border: Border(bottom: BorderSide(color: AppColors.borderPrimary)),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(width: _colDot),
+          SizedBox(width: _colTime, child: Text('TIME', style: _auditThStyle)),
+          SizedBox(width: _colActor, child: Text('ACTOR', style: _auditThStyle)),
+          SizedBox(width: _colAction, child: Text('ACTION', style: _auditThStyle)),
+          SizedBox(width: _colDetail, child: Text('DETAIL', style: _auditThStyle)),
+          SizedBox(width: _colIp, child: Text('IP ADDRESS', style: _auditThStyle)),
+          SizedBox(width: _colSeverity, child: Text('SEVERITY', style: _auditThStyle)),
+        ],
+      ),
+    );
+  }
+
+  Widget _auditRow(AuditEventEntity event, {required bool isLast}) {
+    final (time, date) = _fmtTimestamp(event.timestamp);
+    return InkWell(
+      onTap: () => _showEventDetail(context, event),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: AppColors.borderPrimary))),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: _colDot,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: _severityDotColor(event.severity), shape: BoxShape.circle),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: _colTime,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(time, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
+                  Text(date, style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: _colActor,
+              child: Text(
+                event.actor,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              ),
+            ),
+            SizedBox(
+              width: _colAction,
+              child: ActionBadge(action: event.action, color: _actionBadgeColor(event.action)),
+            ),
+            SizedBox(
+              width: _colDetail,
+              child: Text(
+                event.detail,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ),
+            SizedBox(
+              width: _colIp,
+              child: Text(
+                event.actorIp.isEmpty ? '—' : event.actorIp,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textTertiary),
+              ),
+            ),
+            SizedBox(width: _colSeverity, child: SeverityBadge(severity: event.severity)),
+          ],
+        ),
       ),
     );
   }

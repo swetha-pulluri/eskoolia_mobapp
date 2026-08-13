@@ -158,6 +158,11 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const FeeConfigSectionHeading(
+          title: 'Fee Groups',
+          description:
+              'Fee Groups organise fee types into logical buckets such as Day Scholar, Transport, or Boarding. They let you apply and report fees by category and student segment.',
+        ),
         FeeConfigCard(child: _buildCreateForm()),
         const SizedBox(height: 16),
         _buildTable(visible),
@@ -242,35 +247,64 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
     );
   }
 
+  /// Column widths shared by the header row and every data row so they
+  /// line up — matches web's real 5-column table exactly ("GROUP NAME",
+  /// "DESCRIPTION", "CLASSES", "STATUS", "ACTIONS" — see
+  /// `FeeConfigurationPanel.tsx`'s `renderFeeGroups`). Wrapped in a
+  /// horizontally-scrolling container so the fixed widths never overflow
+  /// on a narrow screen.
+  static const _colGroupName = 150.0;
+  static const _colDescription = 170.0;
+  static const _colClasses = 170.0;
+  static const _colStatus = 120.0;
+  static const _colActions = 110.0;
+  // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
+  static const _tableWidth = _colGroupName + _colDescription + _colClasses + _colStatus + _colActions + 32;
+
   Widget _buildTable(List<FeesGroup> visible) {
     return Container(
       decoration: feeConfigCardDecoration,
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            color: const Color(0xFFF8F8FB),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: const Row(
-              children: [
-                Expanded(flex: 2, child: Text('GROUP NAME', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('CLASSES', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('STATUS', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('ACTIONS', style: feeConfigThStyle, textAlign: TextAlign.right)),
-              ],
-            ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: _tableWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderRow(),
+              if (_isLoading)
+                const Padding(padding: EdgeInsets.all(24), child: Text('Loading fee groups...', style: TextStyle(color: feeConfigInk3)))
+              else if (_groups.isEmpty)
+                const Padding(padding: EdgeInsets.all(24), child: Text('No fee groups yet.', style: TextStyle(color: feeConfigInk3)))
+              else
+                for (final group in visible) _buildRow(group),
+            ],
           ),
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(24), child: Text('Loading fee groups...', style: TextStyle(color: feeConfigInk3)))
-          else if (_groups.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Text('No fee groups yet.', style: TextStyle(color: feeConfigInk3)))
-          else
-            for (final group in visible) _buildRow(group),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow() {
+    return Container(
+      color: const Color(0xFFF8F8FB),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: const Row(
+        children: [
+          SizedBox(width: _colGroupName, child: Text('GROUP NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colDescription, child: Text('DESCRIPTION', style: feeConfigThStyle)),
+          SizedBox(width: _colClasses, child: Text('CLASSES', style: feeConfigThStyle)),
+          SizedBox(width: _colStatus, child: Text('STATUS', style: feeConfigThStyle)),
+          SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
     );
   }
 
+  /// Each fee group shown as one table row, with the fields lined up under
+  /// their own column headings above — matches web's real table structure
+  /// (`renderFeeGroups`) exactly rather than combining fields together.
   Widget _buildRow(FeesGroup group) {
     final classNames = group.applicableClasses.isEmpty
         ? 'All Classes'
@@ -284,25 +318,20 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(group.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF1D2230))),
-                if (group.description.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(group.description, style: const TextStyle(fontSize: 12.5, color: Color(0xFF3B4150))),
-                ],
-              ],
-            ),
+          SizedBox(
+            width: _colGroupName,
+            child: Text(group.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Color(0xFF1D2230))),
           ),
-          Expanded(
-            flex: 2,
-            child: Text(classNames, style: const TextStyle(fontSize: 12, color: Color(0xFF3B4150)), maxLines: 2, overflow: TextOverflow.ellipsis),
+          SizedBox(
+            width: _colDescription,
+            child: Text(group.description.isEmpty ? '—' : group.description, style: const TextStyle(fontSize: 12.5, color: Color(0xFF3B4150))),
           ),
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: _colClasses,
+            child: Text(classNames, style: const TextStyle(fontSize: 12, color: Color(0xFF3B4150))),
+          ),
+          SizedBox(
+            width: _colStatus,
             child: Row(
               children: [
                 FeeConfigStatusPill(group.isActive ? 'Active' : 'Inactive'),
@@ -311,11 +340,10 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
               ],
             ),
           ),
-          Expanded(
-            flex: 2,
+          SizedBox(
+            width: _colActions,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _openEdit(group)),
                 const SizedBox(height: 8),

@@ -69,7 +69,10 @@ class ActionBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
-        action.toUpperCase(),
+        // Matches web's `ActionBadge` (`audit/page.tsx`), which renders the
+        // raw dotted action string verbatim ("school.provision") — not
+        // upper-cased.
+        action,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: AppTextStyles.chipLabel(color: actionColor).copyWith(

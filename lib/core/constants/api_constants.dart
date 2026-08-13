@@ -246,4 +246,44 @@ class ApiConstants {
   static const String notesBasePath = '/api/notes';
   static const String notes = '$notesBasePath/';
   static String noteDetail(int id) => '$notesBasePath/$id/';
+
+  // Teacher Portal — backend/apps/teacher_portal/, mounted under $apiBasePath.
+  static const String teacherBasePath = '$apiBasePath/teacher';
+  static const String teacherMe = '$teacherBasePath/me/';
+
+  // Teacher Portal — Timetable (Weekly View).
+  static const String teacherTimetable = '$teacherBasePath/timetable/';
+
+  // Teacher Portal — My Classes (Class Overview + Student Profile).
+  static const String teacherClasses = '$teacherBasePath/my-classes/';
+  static const String teacherStudents = '$teacherBasePath/students/';
+  static String teacherStudentDetail(int id) => '$teacherStudents$id/';
+  static String teacherStudentCredentials(int id) => '$teacherStudents$id/credentials/';
+  static String teacherStudentResetPassword(int id) => '$teacherStudents$id/reset-password/';
+
+  // Teacher Portal — Attendance. Reference: backend/apps/teacher_portal/urls.py
+  // (TeacherAttendanceFetchView, TeacherAttendanceStoreView) — scoped to only
+  // the class+section(s) the requesting teacher is assigned to; only the
+  // class teacher of a section can actually save (view-only for a subject
+  // teacher of that same section).
+  static const String teacherAttendanceStudents = '$teacherBasePath/attendance/students/';
+  static const String teacherAttendanceStore = '$teacherBasePath/attendance/store/';
+
+  // Teacher Portal — My Profile. Reuses backend/apps/hr/views.py's
+  // StaffViewSet.me() action (the same self-scoped endpoint web's
+  // Settings > Staff Profile panel calls for any non-admin user) — not
+  // teacherMe above, which is a distinct apps.teacher_portal endpoint.
+  static const String hrStaffMe = '$apiBasePath/hr/staff/me/';
+
+  // Smart To-Do — backend/apps/todos/, mounted at the app root like Notes
+  // (bare array responses, no pagination envelope — same convention).
+  static const String todosBasePath = '/api/user/todos';
+  static const String todos = '$todosBasePath/';
+  static String todoDetail(int id) => '$todosBasePath/$id/';
+
+  // Quick Broadcast — backend/apps/communication/, mounted under
+  // $apiBasePath/utilities/communication (same base as Notifications above).
+  static const String broadcastBasePath = '$apiBasePath/utilities/communication/broadcast';
+  static const String broadcastAudienceOptions = '$broadcastBasePath/audience-options/';
+  static const String broadcastSend = '$broadcastBasePath/';
 }

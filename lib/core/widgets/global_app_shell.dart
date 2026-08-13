@@ -10,6 +10,9 @@ import '../../features/dashboard/presentation/providers/dashboard_provider.dart'
 import '../../features/notes/presentation/widgets/note_trigger_button.dart';
 import '../../features/notifications/presentation/providers/notification_provider.dart';
 import '../../features/notifications/presentation/widgets/notification_panel.dart';
+import '../../features/teacher/domain/entities/teacher_module_entity.dart';
+import '../../features/teacher/presentation/widgets/teacher_top_bar.dart';
+import '../../features/widgets_panel/presentation/providers/widget_prefs_provider.dart';
 import '../../features/widgets_panel/presentation/widgets/widget_manager_button.dart';
 import '../providers/module_flyout_provider.dart';
 import '../utils/module_nav_utils.dart';
@@ -58,28 +61,53 @@ class GlobalAppShell extends ConsumerWidget {
     // authenticated route group.
     if (!isAuthenticated) return child;
 
+    // Parent/Student still land on a disclosed "not implemented yet" page
+    // (see portal_routes.dart) rather than the Admin Dashboard — they have
+    // no access to the admin module nav, so it must not wrap them either
+    // (this shell's admin nav strip is admin-module-specific). Teacher gets
+    // its own real shell below (`TeacherTopBar` + `TeacherModules`) — same
+    // flyout-overlay Stack, just a different top bar and module catalog.
+    // Everything else (`'admin'`, the `currentPortalRoleProvider` fallback)
+    // falls through to the existing, unmodified Admin chrome further down —
+    // Admin behavior is unchanged, just now reached via an explicit role
+    // check instead of being the unconditional default.
+    final role = ref.watch(currentPortalRoleProvider);
+    if (role == 'parent' || role == 'student') return child;
+
+    final isTeacher = role == 'teacher';
     final flyoutTarget = ref.watch(moduleFlyoutProvider);
 
     return Stack(
       children: [
         Column(
           children: [
-            const _GlobalTopBar(),
-            const ModuleSubNav(),
+            if (isTeacher) const TeacherTopBar() else const _GlobalTopBar(),
+            isTeacher ? ModuleSubNav(modules: TeacherModules.all) : const ModuleSubNav(),
             Expanded(child: child),
           ],
         ),
         if (flyoutTarget != null) ...[
+          // `Listener.onPointerDown` (not `GestureDetector.onTap`) so this
+          // full-screen dismiss layer never enters the gesture arena against
+          // a module pill's own `InkWell` underneath it. A `GestureDetector`
+          // here previously competed for the same tap — since this overlay
+          // painted on top of the whole module strip whenever a flyout was
+          // open (including one opened by an incidental mouse-hover on the
+          // way to clicking a different pill), that first tap closed the
+          // flyout instead of reaching the pill, and only a second tap
+          // actually navigated. `Listener` fires immediately on pointer-down
+          // without claiming the gesture, so the flyout closes AND the pill
+          // underneath still receives its own tap in the same gesture.
           Positioned.fill(
-            child: GestureDetector(
+            child: Listener(
               behavior: HitTestBehavior.translucent,
-              onTap: () => ref.read(moduleFlyoutProvider.notifier).closeNow(),
+              onPointerDown: (_) => ref.read(moduleFlyoutProvider.notifier).closeNow(),
               child: const SizedBox.expand(),
             ),
           ),
           Builder(
             builder: (context) {
-              final module = Modules.findById(flyoutTarget.moduleId);
+              final module = isTeacher ? TeacherModules.findById(flyoutTarget.moduleId) : Modules.findById(flyoutTarget.moduleId);
               if (module == null) return const SizedBox.shrink();
               return ModuleFlyoutPanel(module: module, top: flyoutTarget.top, left: flyoutTarget.left);
             },
@@ -105,7 +133,7 @@ class _GlobalTopBar extends ConsumerWidget {
     // the module strip even with it collapsed to zero width — drop the
     // purely-decorative "eskoolia" wordmark first (branding, not a control)
     // rather than any actionable button, matching this header's existing
-    // collapse-the-least-useful-thing-first pattern (`_SearchTrigger`,
+    // collapse-the-least-useful-thing-first pattern (`SearchTrigger`,
     // `WidgetManagerButton`).
     final showWordmark = MediaQuery.sizeOf(context).width >= 400;
     // Extra headroom below the wordmark's own breakpoint: also tighten the
@@ -197,7 +225,7 @@ class _GlobalTopBar extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: isNarrow ? 2 : 4),
-                const _SearchTrigger(),
+                const SearchTrigger(),
                 SizedBox(width: trailingGap),
                 const NoteTriggerButton(),
                 if (isHome) ...[
@@ -205,9 +233,9 @@ class _GlobalTopBar extends ConsumerWidget {
                   const WidgetManagerButton(),
                 ],
                 SizedBox(width: trailingGap),
-                const _NotificationBellButton(),
+                const NotificationBellButton(),
                 SizedBox(width: trailingGap),
-                const _AvatarMenu(),
+                const AvatarMenu(),
               ],
             ),
           ),
@@ -220,8 +248,8 @@ class _GlobalTopBar extends ConsumerWidget {
 /// Header "Search" button — Flutter port of `TopBar.tsx`'s search
 /// pill/icon, opening [showSearchCommandPalette]. Collapses to icon-only
 /// below 900px so it never crowds out the module strip on phone widths.
-class _SearchTrigger extends ConsumerWidget {
-  const _SearchTrigger();
+class SearchTrigger extends ConsumerWidget {
+  const SearchTrigger({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -274,11 +302,11 @@ class _SearchTrigger extends ConsumerWidget {
 /// Notification bell — opens [showNotificationPanel] and shows an unread
 /// badge, matching `NotificationBell.tsx`'s always-visible bell + polled
 /// unread count. Needs its own context (routed through go_router's root
-/// `navigatorKey`, same reasoning as `_AvatarMenu._openMenu` — see
+/// `navigatorKey`, same reasoning as `AvatarMenu._openMenu` — see
 /// `GlobalAppShell`'s class doc) since `_GlobalTopBar` itself sits outside
 /// any real `Navigator`/`Overlay`.
-class _NotificationBellButton extends ConsumerWidget {
-  const _NotificationBellButton();
+class NotificationBellButton extends ConsumerWidget {
+  const NotificationBellButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -321,8 +349,8 @@ class _NotificationBellButton extends ConsumerWidget {
   }
 }
 
-class _AvatarMenu extends ConsumerWidget {
-  const _AvatarMenu();
+class AvatarMenu extends ConsumerWidget {
+  const AvatarMenu({super.key});
 
   String _initials(UserEntity user) {
     final f = user.firstName.trim();

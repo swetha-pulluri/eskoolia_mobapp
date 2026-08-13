@@ -17,7 +17,13 @@ import 'add_school_page.dart';
 /// Super Admin Schools Page
 /// Exact conversion of web frontend schools structure
 class SuperAdminSchoolsPage extends ConsumerStatefulWidget {
-  const SuperAdminSchoolsPage({super.key});
+  /// Matches web's `?add=1` query param (`schools/page.tsx`) — when true,
+  /// the "Add a new school" accordion auto-opens and scrolls into view on
+  /// arrival, instead of requiring a second manual tap on this page's own
+  /// "Add school" button. Set by the Dashboard's "Add school" button.
+  final bool autoOpenAdd;
+
+  const SuperAdminSchoolsPage({super.key, this.autoOpenAdd = false});
 
   @override
   ConsumerState<SuperAdminSchoolsPage> createState() => _SuperAdminSchoolsPageState();
@@ -182,7 +188,27 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(schoolsFiltersProvider.notifier).state = const SchoolFilters(status: 'active');
+      // Matches web's `useEffect` that checks `searchParams.get('add') === '1'`
+      // on mount (`schools/page.tsx`) — auto-open + scroll to the "Add a new
+      // school" accordion when arriving from the Dashboard's "Add school"
+      // button, instead of landing on the plain list.
+      if (widget.autoOpenAdd) _openAddSchool();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant SuperAdminSchoolsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If GoRouter/Flutter reuses this page's existing State instead of
+    // mounting a fresh one (e.g. this page was already visited earlier in
+    // the session), `initState()` above never re-runs — so a later visit
+    // via the Dashboard's "Add school" button rebuilds this widget with
+    // `autoOpenAdd` flipping false→true, but the accordion never opened.
+    // React to that transition directly instead of relying on `initState`
+    // alone.
+    if (widget.autoOpenAdd && !oldWidget.autoOpenAdd) {
+      _openAddSchool();
+    }
   }
 
   @override
@@ -647,6 +673,32 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                         padding: const EdgeInsets.all(14),
                         child: Row(
                           children: [
+                            // Matches web's Accordion header `<span
+                            // className="rounded-[6px] border px-[7px]
+                            // py-[3px] font-mono ...">{num}</span>` — the
+                            // numbered badge every accordion shows before
+                            // its icon; this one was missing here.
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _smartFiltersOpen ? AppColors.purpleSoft : AppColors.bgSecondary,
+                                border: Border.all(
+                                  color: _smartFiltersOpen ? Colors.transparent : AppColors.borderPrimary,
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '02',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.4,
+                                  color: _smartFiltersOpen ? AppColors.purpleDeep : AppColors.textTertiary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
                             Container(
                               width: 32,
                               height: 32,
@@ -696,29 +748,35 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 14),
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (value) => _applyFilters(filters, search: value.trim().isEmpty ? null : value.trim()),
-                      decoration: InputDecoration(
-                        hintText: 'Name, tenant ID, GSTIN, UDISE, owner email…',
-                        hintStyle: AppTextStyles.sectionSubtitle,
-                        prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textTertiary),
-                        isDense: true,
-                        filled: true,
-                        fillColor: AppColors.bgSecondary,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.borderPrimary),
+                    // Matches web's `<label>Search</label>` above the
+                    // Smart Filters search box (`schools/page.tsx`) — the
+                    // same missing-heading issue as the "02" badge above.
+                    _filterLabel(
+                      'Search',
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (value) => _applyFilters(filters, search: value.trim().isEmpty ? null : value.trim()),
+                        decoration: InputDecoration(
+                          hintText: 'Name, tenant ID, GSTIN, UDISE, owner email…',
+                          hintStyle: AppTextStyles.sectionSubtitle,
+                          prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textTertiary),
+                          isDense: true,
+                          filled: true,
+                          fillColor: AppColors.bgSecondary,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: AppColors.borderPrimary),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: AppColors.primaryPurple, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.borderPrimary),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.primaryPurple, width: 2),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       ),
                     ),
                     const SizedBox(height: 12),

@@ -76,8 +76,25 @@ class _ModulePillWithFlyoutState extends ConsumerState<ModulePillWithFlyout> {
   // tap-to-open-dropdown on touch platforms, matching the real web (which
   // itself has no touch/mobile fallback for this nav — see
   // `platform_capabilities.dart`'s doc comment).
+  //
+  // Exception: a `comingSoon` module has no real page behind `module.path`
+  // (e.g. Admin's Examination/Reports, Teacher's My Classes/Timetable/
+  // Attendance/Homework/Lessons/Messages before those are built) — calling
+  // `go()` for one would hit GoRouter's error page. Tapping one instead
+  // toggles the flyout so its "Coming Soon" mini-card is visible, matching
+  // the disclosure already shown on hover.
   void _onTap() {
-    if (ref.read(moduleFlyoutProvider)?.moduleId == widget.module.id) {
+    final isThisOpen = ref.read(moduleFlyoutProvider)?.moduleId == widget.module.id;
+    if (widget.module.comingSoon) {
+      if (isThisOpen) {
+        ref.read(moduleFlyoutProvider.notifier).closeNow();
+      } else {
+        final target = _computeTarget();
+        if (target != null) ref.read(moduleFlyoutProvider.notifier).openNow(target);
+      }
+      return;
+    }
+    if (isThisOpen) {
       ref.read(moduleFlyoutProvider.notifier).closeNow();
     }
     ref.read(appRouterProvider).go(widget.module.path);

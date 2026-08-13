@@ -2,8 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/portal_not_implemented_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
+import '../../features/teacher/presentation/pages/teacher_home_page.dart';
+import '../../features/teacher/presentation/pages/my_classes_page.dart';
+import '../../features/teacher/presentation/pages/teacher_student_profile_page.dart';
+import '../../features/teacher/presentation/pages/teacher_timetable_page.dart';
+import '../../features/teacher/presentation/pages/teacher_attendance_page.dart';
+import '../../features/teacher/presentation/pages/teacher_profile_page.dart';
+import '../../features/teacher/presentation/pages/teacher_fees_home_page.dart';
+import 'portal_routes.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/dashboard/presentation/pages/school_overview_page.dart';
 import '../../features/roles/presentation/pages/roles_permissions_page.dart';
@@ -88,10 +97,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       });
 
       final currentAuthState = ref.read(authNotifierProvider);
-      final isAuthenticated = currentAuthState.maybeWhen(
-        authenticated: (_) => true,
-        orElse: () => false,
+      final currentUser = currentAuthState.maybeWhen(
+        authenticated: (user) => user,
+        orElse: () => null,
       );
+      final isAuthenticated = currentUser != null;
       final isLoggingIn = state.matchedLocation == '/login';
       debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated');
 
@@ -101,10 +111,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      // If authenticated and on login page, redirect to home
+      // If authenticated and on login page, redirect to the role's own
+      // home — matches web's `app/login/page.tsx` portal_type branch
+      // exactly (see portal_routes.dart), not always the Admin Dashboard.
       if (isAuthenticated && isLoggingIn) {
-        debugPrint('[AppRouter] redirect -> /home');
-        return '/home';
+        final target = resolveHomeRouteForPortal(currentUser.portalType);
+        debugPrint('[AppRouter] redirect -> $target (portalType=${currentUser.portalType})');
+        return target;
       }
 
       // No redirect needed
@@ -119,10 +132,108 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // Home Route (Admin Home Screen - Quick Access, Recently Visited, All Modules)
+      // Reached by both Super Admin and School Admin — web's own
+      // portal_type-based redirect sends both here too (see
+      // portal_routes.dart's doc comment).
       GoRoute(
         path: '/home',
         name: 'home',
         builder: (context, state) => const AdminHomePage(),
+      ),
+
+      // Teacher/Parent/Student Portal home routes — real, fully-built pages
+      // on web (`(teacher-portal)/teacher/home`, etc.) that have not been
+      // ported to Flutter yet. These exist so a non-admin login lands on a
+      // disclosed "not yet available" page instead of silently falling
+      // back to the Admin Dashboard.
+      GoRoute(
+        path: '/teacher/home',
+        name: 'teacher-home',
+        builder: (context, state) => const TeacherHomePage(),
+      ),
+      GoRoute(
+        path: '/teacher/timetable',
+        name: 'teacher-timetable',
+        builder: (context, state) => const TeacherTimetablePage(),
+      ),
+      GoRoute(
+        path: '/teacher/classes',
+        name: 'teacher-classes',
+        builder: (context, state) => const MyClassesPage(),
+      ),
+      GoRoute(
+        path: '/teacher/attendance',
+        name: 'teacher-attendance',
+        builder: (context, state) => const TeacherAttendancePage(),
+      ),
+      GoRoute(
+        path: '/teacher/profile',
+        name: 'teacher-profile',
+        builder: (context, state) => const TeacherProfilePage(),
+      ),
+
+      // Teacher Portal — Fees. No teacher-scoped Fees backend/web page
+      // exists (apps.fees has no per-teacher data scoping at all — every
+      // fee record is whole-school, not tied to a teacher's own classes,
+      // unlike Attendance/My Classes/Timetable above). These routes reuse
+      // the exact same Admin Fees pages/providers/repositories unchanged —
+      // only the route paths are new, so the pages render inside the
+      // Teacher shell (TeacherTopBar + Teacher module sub-nav) instead of
+      // the Admin shell. See teacher_module_entity.dart's `teacher-fees`
+      // catalog entry for the matching sub-nav tab list.
+      GoRoute(
+        path: '/teacher/fees/payments',
+        name: 'teacher-fees-payments',
+        // Not FeesHomePage — see teacher_fees_home_page.dart's doc comment
+        // for why the header button needed a Teacher-specific replacement.
+        builder: (context, state) => const TeacherFeesHomePage(),
+      ),
+      GoRoute(
+        path: '/teacher/fees/configuration',
+        name: 'teacher-fees-configuration',
+        builder: (context, state) => const FeeConfigurationPage(),
+      ),
+      GoRoute(
+        path: '/teacher/fees/fee-assignment',
+        name: 'teacher-fees-fee-assignment',
+        builder: (context, state) => const FeeAssignmentPage(),
+      ),
+      GoRoute(
+        path: '/teacher/fees/collection',
+        name: 'teacher-fees-collection',
+        builder: (context, state) => const FeesCollectionPage(),
+      ),
+      GoRoute(
+        path: '/teacher/fees/dues-reminders',
+        name: 'teacher-fees-dues-reminders',
+        builder: (context, state) => const FeesDuesRemindersPage(),
+      ),
+      GoRoute(
+        path: '/teacher/fees/year-end',
+        name: 'teacher-fees-year-end',
+        builder: (context, state) => const FeesYearEndPage(),
+      ),
+      // "Student Profiles" sub-nav tab has no distinct page on web either
+      // (a dead 404 link there) — aliased to Class Overview instead of a
+      // broken destination.
+      GoRoute(
+        path: '/teacher/classes/students',
+        builder: (context, state) => const MyClassesPage(),
+      ),
+      GoRoute(
+        path: '/teacher/classes/students/:id',
+        name: 'teacher-student-profile',
+        builder: (context, state) => TeacherStudentProfilePage(studentId: int.parse(state.pathParameters['id']!)),
+      ),
+      GoRoute(
+        path: '/parent/home',
+        name: 'parent-home',
+        builder: (context, state) => const PortalNotImplementedPage(portalLabel: 'Parent Dashboard'),
+      ),
+      GoRoute(
+        path: '/student/home',
+        name: 'student-home',
+        builder: (context, state) => const PortalNotImplementedPage(portalLabel: 'Student Dashboard'),
       ),
 
       // Dashboard KPI Overview
@@ -141,7 +252,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/super-admin/schools',
         name: 'super-admin-schools',
-        builder: (context, state) => const SuperAdminSchoolsPage(),
+        // `?add=1` (matching web's own query param) auto-opens the "Add a
+        // new school" accordion — see the Dashboard's "Add school" button.
+        builder: (context, state) => SuperAdminSchoolsPage(autoOpenAdd: state.uri.queryParameters['add'] == '1'),
       ),
       GoRoute(
         path: '/super-admin/schools/:tenantId',

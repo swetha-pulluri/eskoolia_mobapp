@@ -18,4 +18,8 @@ class StorageKeys {
   // Reuses web's own localStorage key string for traceability (separate
   // storage systems/platforms, zero collision risk).
   static const String widgetPrefs = 'eskoolia_widget_prefs_v2';
+  // Teacher "Week Ahead" planner entries — local-only, matching web's own
+  // localStorage-backed planner (no real backend calendar endpoint exists
+  // even on web — see week_planner_entry.dart's doc comment).
+  static const String teacherWeekPlanner = 'eskoolia_teacher_week_planner_v1';
 }

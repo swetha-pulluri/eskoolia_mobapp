@@ -210,23 +210,38 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
               ],
             ),
             const SizedBox(height: 10),
+            // `LayoutBuilder`+`Wrap`+fixed-width `SizedBox` (same pattern
+            // `KpiCardGrid` already uses) — not a fixed-`childAspectRatio`
+            // `GridView.count`. Web's cards (`ClassPortfolioGrid.tsx`) have
+            // no forced aspect ratio at all; each is only as tall as its
+            // own content (`p-3` padding + a few stacked lines). Forcing a
+            // uniform aspect ratio here made every card far taller than
+            // its actual content, with a `Spacer()` stretching to fill the
+            // leftover space — this now sizes to content instead, matching
+            // web's compact card height.
             widget.isLoading
-                ? GridView.count(
-                    crossAxisCount: 3,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.2,
-                    children: List.generate(
-                      6,
-                      (_) => Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(12),
+                ? LayoutBuilder(
+                    builder: (context, constraints) {
+                      const spacing = 8.0;
+                      final cardWidth = (constraints.maxWidth - spacing) / 2;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: List.generate(
+                          6,
+                          (_) => SizedBox(
+                            width: cardWidth,
+                            height: 88,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF3F4F6),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   )
                 : visible.isEmpty && _filter != _PortfolioFilter.all
                 ? const Padding(
@@ -239,17 +254,19 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
                       ),
                     ),
                   )
-                : GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.15,
-                    children: [
-                      _allClassesCard(allPipeline, allEnrolled),
-                      ...visible.map(_classCard),
-                    ],
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      const spacing = 8.0;
+                      final cardWidth = (constraints.maxWidth - spacing) / 2;
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: [
+                          SizedBox(width: cardWidth, child: _allClassesCard(allPipeline, allEnrolled)),
+                          for (final cls in visible) SizedBox(width: cardWidth, child: _classCard(cls)),
+                        ],
+                      );
+                    },
                   ),
             if (_manageMode && _hiddenClassIds.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -368,10 +385,10 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
                 ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 6),
             Text(
               '$pipeline',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             Text(
               'pipeline · $enrolled enrolled',
@@ -454,16 +471,16 @@ class _ClassPortfolioGridState extends State<ClassPortfolioGrid> {
                   ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 6),
             Text(
               '${cls.pipelineCount}',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             Text(
               '${cls.enrolledCount}/${cls.capacity} seats',
               style: const TextStyle(fontSize: 10.5, color: Color(0xFF9CA3AF)),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             ClipRRect(
               borderRadius: BorderRadius.circular(2),
               child: LinearProgressIndicator(

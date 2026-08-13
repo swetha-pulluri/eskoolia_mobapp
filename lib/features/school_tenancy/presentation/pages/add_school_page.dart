@@ -155,6 +155,18 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
   final _adminPasswordController = TextEditingController();
   final _mobileController = TextEditingController();
 
+  // SMTP configuration (section 10, web `schools/page.tsx` — create-only,
+  // same as Admin login credentials above; `provisionSchool()` on web
+  // sends these as part of the very same request body, not a separate
+  // endpoint/save step).
+  final _smtpHostController = TextEditingController();
+  final _smtpPortController = TextEditingController(text: '587');
+  final _smtpUsernameController = TextEditingController();
+  final _smtpPasswordController = TextEditingController();
+  final _smtpFromEmailController = TextEditingController();
+  final _smtpSenderNameController = TextEditingController();
+  bool _smtpUseTls = true;
+
   String _board = 'OTHER';
   String? _stateCode;
   String _plan = 'trial';
@@ -252,6 +264,12 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     _seatsController.dispose();
     _adminUsernameController.dispose();
     _adminPasswordController.dispose();
+    _smtpHostController.dispose();
+    _smtpPortController.dispose();
+    _smtpUsernameController.dispose();
+    _smtpPasswordController.dispose();
+    _smtpFromEmailController.dispose();
+    _smtpSenderNameController.dispose();
     _mobileController.dispose();
     _acadStartYearController.dispose();
     _acadEndYearController.dispose();
@@ -498,6 +516,17 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
           'admin_username': _adminUsernameController.text.trim(),
         if (_adminPasswordController.text.trim().isNotEmpty)
           'admin_password': _adminPasswordController.text.trim(),
+        // SMTP configuration — always sent (matches web's unconditional
+        // `...provisionForm` spread in `handleProvisionSubmit`), empty
+        // strings included, so a school can be provisioned with SMTP left
+        // blank and configured later in Settings > SMTP Settings.
+        'smtp_host': _smtpHostController.text.trim(),
+        'smtp_port': int.tryParse(_smtpPortController.text.trim()) ?? 587,
+        'smtp_username': _smtpUsernameController.text.trim(),
+        'smtp_password': _smtpPasswordController.text.trim(),
+        'smtp_from_email': _smtpFromEmailController.text.trim(),
+        'smtp_sender_name': _smtpSenderNameController.text.trim(),
+        'smtp_use_tls': _smtpUseTls,
       });
 
       if (_logoBytes != null) {
@@ -678,21 +707,49 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               hint: _isEdit
                   ? 'Immutable · cannot be changed'
                   : 'Lowercase · no spaces',
-              child: Row(
-                children: [
-                  _urlAffix('https://'),
-                  Expanded(
-                    child: TextField(
-                      controller: _subdomainController,
-                      enabled: !_isEdit,
-                      decoration: _fieldDecoration(
-                        hintText: 'vasavi-hyd',
-                        noBorder: true,
+              // Matches web's `schools/page.tsx` Subdomain URL field exactly:
+              // one rounded, bordered group (`overflow-hidden rounded-lg
+              // border`) with "https://" and ".eskoolia.com" as two shaded
+              // end-caps (each with only an inner divider border, not a full
+              // border of their own) around a borderless, transparent middle
+              // input — not three separate boxes.
+              child: Container(
+                height: 36,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppColors.bgPrimary,
+                  border: Border.all(color: AppColors.borderSecondary),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _urlAffix('https://', isLeft: true),
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: TextField(
+                            controller: _subdomainController,
+                            enabled: !_isEdit,
+                            textAlignVertical: TextAlignVertical.center,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: const InputDecoration(
+                              isCollapsed: true,
+                              hintText: 'vasavi-hyd',
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  _urlAffix('.eskoolia.com'),
-                ],
+                    _urlAffix('.eskoolia.com', isLeft: false),
+                  ],
+                ),
               ),
             ),
             _field(
@@ -1139,6 +1196,77 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               ),
             ]),
 
+          if (!_isEdit)
+            _section(
+              '10',
+              'SMTP configuration',
+              [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    border: Border.all(color: AppColors.borderSecondary),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline, size: 13, color: AppColors.textTertiary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Many schools don't know how to configure this themselves. Fill it in now so email "
+                          '(fee reminders, notices, credential resets) works immediately — or leave blank and '
+                          'set it up later in Settings > SMTP Settings.',
+                          style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5, height: 1.55),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _field(
+                  'SMTP host',
+                  hint: 'e.g. smtp.gmail.com',
+                  child: _textCtl(_smtpHostController, 'smtp.gmail.com'),
+                ),
+                _field(
+                  'Port',
+                  child: _textCtl(_smtpPortController, '587', number: true),
+                ),
+                _field(
+                  'Username',
+                  child: _textCtl(_smtpUsernameController, 'smtp username'),
+                ),
+                _field(
+                  'Password',
+                  child: _textCtl(_smtpPasswordController, 'smtp password / app password'),
+                ),
+                _field(
+                  'From email',
+                  hint: 'Must be set if host is set',
+                  child: _textCtl(_smtpFromEmailController, 'noreply@school.edu.in'),
+                ),
+                _field(
+                  'Sender name',
+                  child: _textCtl(_smtpSenderNameController, 'Vasavi Vidyalaya Public School'),
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _smtpUseTls,
+                      onChanged: (v) => setState(() => _smtpUseTls = v ?? true),
+                    ),
+                    const Text(
+                      'Use TLS',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ),
+              ],
+              note: 'Optional — can also be set up later',
+            ),
+
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
@@ -1237,7 +1365,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
 
   // ── Layout helpers ─────────────────────────────────────────────────────
 
-  Widget _section(String num, String title, List<Widget> fields) {
+  Widget _section(String num, String title, List<Widget> fields, {String? note}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: const BoxDecoration(
@@ -1273,6 +1401,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               // address & geography") are long enough to overflow this
               // Row's available width (~284px) on a 320dp phone by itself.
               Expanded(
+                flex: 3,
                 child: Text(
                   title,
                   maxLines: 1,
@@ -1280,6 +1409,22 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                   style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
                 ),
               ),
+              // Matches web's `<span className="ml-auto ... normal-case
+              // tracking-normal text-[var(--ink-4)]">` next to "SMTP
+              // configuration" — `Flexible` (not a fixed-width `Text`) so
+              // it shrinks instead of overflowing on a narrow screen.
+              if (note != null) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    note,
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w400, color: AppColors.textQuaternary),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 14),
@@ -1749,27 +1894,25 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     );
   }
 
-  Widget _urlAffix(String text) {
+  /// One end-cap of the Subdomain URL group — matches web's `<span
+  /// className="border-r|border-l border-[var(--bd-2)] bg-[var(--bg-2)]
+  /// px-[11px] font-mono text-[12px] text-[var(--ink-3)]">`: only an inner
+  /// divider on the side facing the input, not a full border of its own
+  /// (the outer group container supplies the actual outline).
+  Widget _urlAffix(String text, {required bool isLeft}) {
     return Container(
-      height: 38,
       alignment: Alignment.center,
-      // Reduced from 11 — "https://" + ".eskoolia.com" as two fixed,
-      // non-flexible siblings of the Expanded subdomain field genuinely
-      // overflowed the Subdomain URL Row by 11px at 320dp (the Expanded
-      // field can shrink to 0, but that alone can't absorb these fixed
-      // chips exceeding the Row's own width).
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        border: Border.all(color: AppColors.borderPrimary),
-        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          right: isLeft ? const BorderSide(color: AppColors.borderSecondary) : BorderSide.none,
+          left: isLeft ? BorderSide.none : const BorderSide(color: AppColors.borderSecondary),
+        ),
       ),
       child: Text(
         text,
-        style: AppTextStyles.sectionSubtitle.copyWith(
-          fontFamily: 'monospace',
-          fontSize: 11.5,
-        ),
+        style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColors.textTertiary),
       ),
     );
   }

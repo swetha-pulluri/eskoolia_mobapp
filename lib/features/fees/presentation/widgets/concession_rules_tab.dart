@@ -196,35 +196,63 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
     );
   }
 
+  /// Column widths shared by the header row and every data row — matches
+  /// web's real 5-column table exactly ("NAME", "SCOPE", "DISCOUNT",
+  /// "STATUS", "ACTIONS" — see `FeeConfigurationPanel.tsx`'s
+  /// `renderConcessionRules`). Wrapped in a horizontally-scrolling
+  /// container so the fixed widths never overflow on a narrow screen.
+  static const _colName = 150.0;
+  static const _colScope = 150.0;
+  static const _colDiscount = 100.0;
+  static const _colStatus = 100.0;
+  static const _colActions = 120.0;
+  // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
+  static const _tableWidth = _colName + _colScope + _colDiscount + _colStatus + _colActions + 32;
+
   Widget _buildTable() {
     return Container(
       decoration: feeConfigCardDecoration,
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            color: const Color(0xFFF8F8FB),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: const Row(
-              children: [
-                Expanded(flex: 3, child: Text('NAME / SCOPE', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('DISCOUNT', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('STATUS', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('ACTIONS', style: feeConfigThStyle, textAlign: TextAlign.right)),
-              ],
-            ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: _tableWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderRow(),
+              if (_isLoading)
+                const Padding(padding: EdgeInsets.all(24), child: Text('Loading concession rules...', style: TextStyle(color: feeConfigInk2)))
+              else if (_rows.isEmpty)
+                const Padding(padding: EdgeInsets.all(24), child: Text('No concession rules yet.', style: TextStyle(color: feeConfigInk2)))
+              else
+                for (final rule in _rows) _buildRow(rule),
+            ],
           ),
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(24), child: Text('Loading concession rules...', style: TextStyle(color: feeConfigInk2)))
-          else if (_rows.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Text('No concession rules yet.', style: TextStyle(color: feeConfigInk2)))
-          else
-            for (final rule in _rows) _buildRow(rule),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow() {
+    return Container(
+      color: const Color(0xFFF8F8FB),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: const Row(
+        children: [
+          SizedBox(width: _colName, child: Text('NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colScope, child: Text('SCOPE', style: feeConfigThStyle)),
+          SizedBox(width: _colDiscount, child: Text('DISCOUNT', style: feeConfigThStyle)),
+          SizedBox(width: _colStatus, child: Text('STATUS', style: feeConfigThStyle)),
+          SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
     );
   }
 
+  /// Each rule shown as one table row, fields lined up under their own
+  /// column headings above — matches web's real table structure
+  /// (`renderConcessionRules`) exactly rather than combining fields.
   Widget _buildRow(ConcessionRule rule) {
     final deleting = _deletingId == rule.id;
     return Container(
@@ -233,23 +261,14 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
+          SizedBox(width: _colName, child: Text(rule.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          SizedBox(width: _colScope, child: Text(rule.appliesTo.isEmpty ? '—' : rule.appliesTo, style: feeConfigTdMuted)),
+          SizedBox(width: _colDiscount, child: Text('${rule.discountPercentage}%', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          SizedBox(width: _colStatus, child: FeeConfigStatusPill(rule.status == 'Inactive' ? 'Inactive' : 'Active')),
+          SizedBox(
+            width: _colActions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(rule.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1)),
-                Text(rule.appliesTo.isEmpty ? '—' : rule.appliesTo, style: feeConfigTdMuted),
-              ],
-            ),
-          ),
-          Expanded(flex: 2, child: Text('${rule.discountPercentage}%', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
-          Expanded(flex: 2, child: FeeConfigStatusPill(rule.status == 'Inactive' ? 'Inactive' : 'Active')),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _startEdit(rule)),
                 const SizedBox(height: 8),

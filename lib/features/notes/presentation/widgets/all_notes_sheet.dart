@@ -75,9 +75,20 @@ class _AllNotesSheetContentState extends ConsumerState<_AllNotesSheetContent> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _filterChip('All', _colorFilter == null, () => setState(() => _colorFilter = null)),
-                for (final c in noteColors) _filterChip(c.label, _colorFilter == c.key, () => setState(() => _colorFilter = c.key)),
-                const Spacer(),
+                // Chips scroll horizontally instead of overflowing — the
+                // full color list ("All" + every note color) is wider than
+                // the sheet on narrow phones.
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _filterChip('All', _colorFilter == null, () => setState(() => _colorFilter = null)),
+                        for (final c in noteColors) _filterChip(c.label, _colorFilter == c.key, () => setState(() => _colorFilter = c.key)),
+                      ],
+                    ),
+                  ),
+                ),
                 InkWell(
                   onTap: () => setState(() => _showArchived = !_showArchived),
                   child: Row(

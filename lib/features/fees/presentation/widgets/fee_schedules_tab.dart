@@ -458,6 +458,11 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const FeeConfigSectionHeading(
+          title: 'Fee Schedules',
+          description:
+              'Fee Schedules define how much a fee type costs and when it is collected — the amount, frequency, due dates, and any term-wise breakdown.',
+        ),
         _buildAcademicCalendarCard(),
         const SizedBox(height: 20),
         _buildTermSettingsCard(),
@@ -1134,12 +1139,59 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
               ],
             ),
           ),
-          for (var i = 0; i < rows.length; i++) _scheduleRow(rows[i], isLast: i == rows.length - 1),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: _scheduleTableWidth,
+              child: Column(
+                children: [
+                  _buildScheduleHeaderRow(),
+                  for (var i = 0; i < rows.length; i++) _scheduleRow(rows[i], isLast: i == rows.length - 1),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
+  /// Column widths shared by the schedule header row and every schedule
+  /// row — matches web's real 6-column table exactly ("FEE TYPE",
+  /// "STRUCTURE", "AMOUNT / PLAN", "GRACE", "LATE FEE RULE", "ACTIONS" —
+  /// see `FeeConfigurationPanel.tsx`'s per-group schedule table). Wrapped
+  /// in a horizontally-scrolling container so the fixed widths never
+  /// overflow on a narrow screen.
+  static const _colFeeType = 150.0;
+  static const _colStructure = 110.0;
+  static const _colAmountPlan = 220.0;
+  static const _colGrace = 90.0;
+  static const _colLateFeeRule = 140.0;
+  static const _colScheduleActions = 100.0;
+  // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
+  static const _scheduleTableWidth = _colFeeType + _colStructure + _colAmountPlan + _colGrace + _colLateFeeRule + _colScheduleActions + 32;
+
+  Widget _buildScheduleHeaderRow() {
+    return Container(
+      color: const Color(0xFFF4F5FA),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: const Row(
+        children: [
+          SizedBox(width: _colFeeType, child: Text('FEE TYPE', style: feeConfigThStyle)),
+          SizedBox(width: _colStructure, child: Text('STRUCTURE', style: feeConfigThStyle)),
+          SizedBox(width: _colAmountPlan, child: Text('AMOUNT / PLAN', style: feeConfigThStyle)),
+          SizedBox(width: _colGrace, child: Text('GRACE', style: feeConfigThStyle)),
+          SizedBox(width: _colLateFeeRule, child: Text('LATE FEE RULE', style: feeConfigThStyle)),
+          SizedBox(width: _colScheduleActions, child: Text('ACTIONS', style: feeConfigThStyle)),
+        ],
+      ),
+    );
+  }
+
+  /// Each schedule shown as one table row, fields lined up under their own
+  /// column headings above ("FEE TYPE", "STRUCTURE", "AMOUNT / PLAN",
+  /// "GRACE", "LATE FEE RULE", "ACTIONS") — matches web's real per-group
+  /// schedule table exactly instead of combining fields into one column.
   Widget _scheduleRow(FeeSchedule s, {required bool isLast}) {
     final (badgeBg, badgeFg) = s.collectionFrequency == 'Term-wise'
         ? (const Color(0xFFDDF7E7), const Color(0xFF19A159))
@@ -1161,38 +1213,36 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(color: Colors.white, border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: Color(0xFFE5E7EB)))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
+          SizedBox(
+            width: _colFeeType,
+            child: Text(s.feeTypeName ?? '${s.feeType}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+          ),
+          SizedBox(
+            width: _colStructure,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(999)),
+              child: Text(s.collectionFrequency, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: badgeFg)),
+            ),
+          ),
+          SizedBox(width: _colAmountPlan, child: amountChips),
+          SizedBox(width: _colGrace, child: Text('${s.gracePeriod} days', style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280)))),
+          SizedBox(width: _colLateFeeRule, child: Text(s.lateFeeRule.isEmpty ? 'None' : s.lateFeeRule, style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A94A6)))),
+          SizedBox(
+            width: _colScheduleActions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.feeTypeName ?? '${s.feeType}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(999)),
-                  child: Text(s.collectionFrequency, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: badgeFg)),
-                ),
-                const SizedBox(height: 6),
-                amountChips,
-                const SizedBox(height: 6),
-                Text('Grace: ${s.gracePeriod} days', style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280))),
-                Text('Late fee: ${s.lateFeeRule.isEmpty ? 'None' : s.lateFeeRule}', style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A94A6))),
+                FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _openEditSchedule(s)),
+                const SizedBox(height: 8),
+                FeeConfigDangerButton(small: true, label: 'Delete', onPressed: () => _openDeleteSchedule(s)),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _openEditSchedule(s)),
-              const SizedBox(height: 8),
-              FeeConfigDangerButton(small: true, label: 'Delete', onPressed: () => _openDeleteSchedule(s)),
-            ],
           ),
         ],
       ),
@@ -1233,7 +1283,10 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
   late bool _lateFeeApplicable = widget.schedule.lateFeeApplicable;
   late int _gracePeriod = widget.schedule.gracePeriod;
   late final _lateFeeAmountCtrl = TextEditingController(text: RegExp(r'(\d+(\.\d+)?)').firstMatch(widget.schedule.lateFeeRule)?.group(1) ?? '');
-  late String _status = widget.schedule.status;
+  // Backend returns status display-cased ("Active"/"Inactive") but the
+  // dropdown below uses lowercase item values — normalize so the current
+  // value always matches exactly one item (a mismatch crashes the dropdown).
+  late String _status = widget.schedule.status.toLowerCase() == 'inactive' ? 'inactive' : 'active';
   late List<TermBreakdownSlot> _breakdown = widget.schedule.termBreakdown.isNotEmpty
       ? widget.schedule.termBreakdown.map((s) => s.copyWith()).toList()
       : widget.termSettings.map((t) => TermBreakdownSlot(termNumber: t.termNumber, termName: t.termName, dueDate: t.defaultDueDate)).toList();
@@ -1313,11 +1366,14 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = _usesBreakdown;
+    // Side-by-side only when there's actually room for both columns —
+    // forcing it on narrow phone widths squeezed the breakdown column's
+    // fixed-width fields past their minimum size and overflowed.
+    final sideBySide = _usesBreakdown && MediaQuery.of(context).size.width >= 700;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: wide ? 900 : 520, maxHeight: MediaQuery.of(context).size.height * 0.9),
+        constraints: BoxConstraints(maxWidth: sideBySide ? 900 : 520, maxHeight: MediaQuery.of(context).size.height * 0.9),
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -1334,15 +1390,25 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
               const Divider(height: 24, color: feeConfigBorder),
               Flexible(
                 child: SingleChildScrollView(
-                  child: Flex(
-                    direction: wide ? Axis.horizontal : Axis.vertical,
-                    crossAxisAlignment: wide ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _buildLeftColumn()),
-                      if (wide) const SizedBox(width: 28),
-                      if (wide) Expanded(child: _buildBreakdownColumn()) else _buildBreakdownColumn(),
-                    ],
-                  ),
+                  child: sideBySide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildLeftColumn()),
+                            const SizedBox(width: 28),
+                            Expanded(child: _buildBreakdownColumn()),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildLeftColumn(),
+                            if (_usesBreakdown) ...[
+                              const SizedBox(height: 20),
+                              _buildBreakdownColumn(),
+                            ],
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(height: 18),
@@ -1487,7 +1553,10 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Fee Schedule Amount:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+              const Flexible(
+                child: Text('Total Fee Schedule Amount:', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
+              ),
+              const SizedBox(width: 8),
               Text('₹${feesFormatAmountFromString(_amountCtrl.text.isEmpty ? '0' : _amountCtrl.text)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1E293B))),
             ],
           ),
@@ -1502,41 +1571,53 @@ class _EditScheduleDialogState extends ConsumerState<_EditScheduleDialog> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: const Color(0xFFF8F8FB), border: Border.all(color: const Color(0xFFE5E7EB)), borderRadius: BorderRadius.circular(10)),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFEDE9FE), border: Border.all(color: const Color(0xFFC4B5FD))),
-            child: Text(_frequency == 'Term-wise' ? 'T${slot.termNumber}' : '${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6D28D9))),
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFEDE9FE), border: Border.all(color: const Color(0xFFC4B5FD))),
+                child: Text(_frequency == 'Term-wise' ? 'T${slot.termNumber}' : '${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6D28D9))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: slot.termName)..selection = TextSelection.collapsed(offset: slot.termName.length),
+                  readOnly: readOnly,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
+                  decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+                  onChanged: (v) => setState(() => _breakdown[i] = slot.copyWith(termName: v)),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: TextField(
-              controller: TextEditingController(text: slot.termName)..selection = TextSelection.collapsed(offset: slot.termName.length),
-              readOnly: readOnly,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF1F2937)),
-              decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-              onChanged: (v) => setState(() => _breakdown[i] = slot.copyWith(termName: v)),
-            ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              // Amount/date used fixed widths that no longer fit once this
+              // row moved under the term name (previously side-by-side on a
+              // 900px-wide dialog) — Expanded lets them shrink to the
+              // dialog's actual width on any screen size.
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: slot.amount),
+                  keyboardType: TextInputType.number,
+                  decoration: feeConfigInputDecoration(hint: '₹0.00'),
+                  style: const TextStyle(fontSize: 12.5),
+                  onChanged: (v) {
+                    setState(() => _breakdown[i] = slot.copyWith(amount: v));
+                    _recalcTotal();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: _EditDateField(value: slot.dueDate, onChanged: (v) => setState(() => _breakdown[i] = slot.copyWith(dueDate: v)))),
+            ],
           ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 110,
-            child: TextField(
-              controller: TextEditingController(text: slot.amount),
-              keyboardType: TextInputType.number,
-              decoration: feeConfigInputDecoration(hint: '₹0.00'),
-              style: const TextStyle(fontSize: 12.5),
-              onChanged: (v) {
-                setState(() => _breakdown[i] = slot.copyWith(amount: v));
-                _recalcTotal();
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(width: 130, child: _EditDateField(value: slot.dueDate, onChanged: (v) => setState(() => _breakdown[i] = slot.copyWith(dueDate: v)))),
         ],
       ),
     );

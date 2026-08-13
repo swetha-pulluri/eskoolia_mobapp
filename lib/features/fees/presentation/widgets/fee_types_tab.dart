@@ -208,6 +208,11 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const FeeConfigSectionHeading(
+          title: 'Fee Types',
+          description:
+              'Fee Types are the individual chargeable items such as Tuition, Transport, or Lunch. Each belongs to a group and carries a GL code, tax flag, and default structure.',
+        ),
         FeeConfigCard(child: _buildCreateForm()),
         const SizedBox(height: 16),
         _buildTable(),
@@ -281,6 +286,21 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
     );
   }
 
+  /// Column widths shared by the header row and every data row — matches
+  /// web's real 6-column table exactly ("NAME", "GL CODE", "TAXABLE",
+  /// "DEFAULT STRUCTURE", "STATUS", "ACTIONS" — see
+  /// `FeeConfigurationPanel.tsx`'s `renderFeeTypes`). The table portion
+  /// scrolls horizontally on a narrow screen; search/filter/pagination
+  /// above and below stay full-width.
+  static const _colName = 150.0;
+  static const _colGlCode = 130.0;
+  static const _colTaxable = 90.0;
+  static const _colStructure = 150.0;
+  static const _colStatus = 100.0;
+  static const _colActions = 110.0;
+  // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
+  static const _tableWidth = _colName + _colGlCode + _colTaxable + _colStructure + _colStatus + _colActions + 32;
+
   Widget _buildTable() {
     return Container(
       decoration: feeConfigCardDecoration,
@@ -309,24 +329,24 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
             ),
           ),
           const Divider(height: 1, color: feeConfigBorder),
-          Container(
-            color: const Color(0xFFF8F8FB),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: const Row(
-              children: [
-                Expanded(flex: 3, child: Text('NAME / GL CODE', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('TAXABLE / STRUCTURE', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('STATUS', style: feeConfigThStyle)),
-                Expanded(flex: 2, child: Text('ACTIONS', style: feeConfigThStyle, textAlign: TextAlign.right)),
-              ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: _tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderRow(),
+                  if (_isLoading)
+                    const Padding(padding: EdgeInsets.all(24), child: Text('Loading fee types...', style: TextStyle(color: feeConfigInk2)))
+                  else if (_rows.isEmpty)
+                    const Padding(padding: EdgeInsets.all(24), child: Text('No fee types found.', style: TextStyle(color: feeConfigInk2)))
+                  else
+                    for (final row in _rows) _buildRow(row),
+                ],
+              ),
             ),
           ),
-          if (_isLoading)
-            const Padding(padding: EdgeInsets.all(24), child: Text('Loading fee types...', style: TextStyle(color: feeConfigInk2)))
-          else if (_rows.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Text('No fee types found.', style: TextStyle(color: feeConfigInk2)))
-          else
-            for (final row in _rows) _buildRow(row),
           if (!_isLoading && _totalCount > 0) ...[
             const Divider(height: 1, color: feeConfigBorder),
             Padding(padding: const EdgeInsets.all(12), child: _buildPagination()),
@@ -336,6 +356,26 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
     );
   }
 
+  Widget _buildHeaderRow() {
+    return Container(
+      color: const Color(0xFFF8F8FB),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: const Row(
+        children: [
+          SizedBox(width: _colName, child: Text('NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colGlCode, child: Text('GL CODE', style: feeConfigThStyle)),
+          SizedBox(width: _colTaxable, child: Text('TAXABLE', style: feeConfigThStyle)),
+          SizedBox(width: _colStructure, child: Text('DEFAULT STRUCTURE', style: feeConfigThStyle)),
+          SizedBox(width: _colStatus, child: Text('STATUS', style: feeConfigThStyle)),
+          SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
+        ],
+      ),
+    );
+  }
+
+  /// Each fee type shown as one table row, fields lined up under their own
+  /// column headings above — matches web's real table structure
+  /// (`renderFeeTypes`) exactly rather than combining fields together.
   Widget _buildRow(FeesType row) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -343,33 +383,15 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 3,
+          SizedBox(width: _colName, child: Text(row.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          SizedBox(width: _colGlCode, child: Text(row.glCode, style: feeConfigTdMuted)),
+          SizedBox(width: _colTaxable, child: Text(row.taxable, style: feeConfigTdMuted)),
+          SizedBox(width: _colStructure, child: Text(row.defaultStructure, style: feeConfigTdMuted)),
+          SizedBox(width: _colStatus, child: FeeConfigStatusPill(row.status)),
+          SizedBox(
+            width: _colActions,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(row.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1)),
-                const SizedBox(height: 2),
-                Text(row.glCode, style: feeConfigTdMuted),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Taxable: ${row.taxable}', style: feeConfigTdMuted),
-                Text(row.defaultStructure, style: feeConfigTdMuted),
-              ],
-            ),
-          ),
-          Expanded(flex: 2, child: FeeConfigStatusPill(row.status)),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 FeeConfigOutlineButton(small: true, label: 'Edit', onPressed: () => _openEdit(row)),
                 const SizedBox(height: 8),
@@ -488,7 +510,18 @@ class _EditTypeDialogState extends ConsumerState<_EditTypeDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      title: const Text('Edit Fee Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Edit Fee Type', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            icon: const Icon(Icons.close, color: feeConfigInk3),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(

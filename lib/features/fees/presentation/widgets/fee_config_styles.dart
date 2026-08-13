@@ -63,6 +63,32 @@ class FeeConfigFieldError extends StatelessWidget {
   }
 }
 
+/// Section heading + description shown at the top of a Fee Configuration
+/// tab (Fee Groups / Fee Types / Fee Schedules) — the description text is
+/// copied verbatim from `FeeConfigurationPanel.tsx`'s
+/// `HELP_CONTENT[tab].whatIsThis`, which on the real web page is only shown
+/// via a per-tab Help-modal (i) icon rather than always inline.
+class FeeConfigSectionHeading extends StatelessWidget {
+  final String title;
+  final String description;
+  const FeeConfigSectionHeading({super.key, required this.title, required this.description});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: feeConfigInk1)),
+          const SizedBox(height: 6),
+          Text(description, style: const TextStyle(fontSize: 13, color: feeConfigInk2, height: 1.5)),
+        ],
+      ),
+    );
+  }
+}
+
 InputDecoration feeConfigInputDecoration({String? hint, bool hasError = false}) {
   return InputDecoration(
     hintText: hint,

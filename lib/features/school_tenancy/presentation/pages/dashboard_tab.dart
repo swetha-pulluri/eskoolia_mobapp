@@ -278,7 +278,11 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                           ),
                         ),
                         ElevatedButton.icon(
-                          onPressed: () => context.go('/super-admin/schools'),
+                          // Matches web's `router.push('/super-admin/schools?add=1')`
+                          // (dashboard/page.tsx) — `?add=1` tells the Schools
+                          // page to auto-open its "Add a new school" accordion
+                          // instead of just landing on the plain list.
+                          onPressed: () => context.go('/super-admin/schools?add=1'),
                           icon: const Icon(Icons.add, size: 14),
                           label: const Text('Add school'),
                           style: ElevatedButton.styleFrom(
