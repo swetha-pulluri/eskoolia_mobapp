@@ -46,21 +46,19 @@ class ModuleSubNav extends ConsumerWidget {
           children: [
             const SizedBox(width: 16),
             Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(color: owner.bgColor, borderRadius: BorderRadius.circular(5)),
+              width: 26,
+              height: 26,
+              decoration: BoxDecoration(color: owner.bgColor, borderRadius: BorderRadius.circular(6)),
               alignment: Alignment.center,
               child: owner.iconAsset != null
                   ? Padding(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(3),
                       child: Image.asset(owner.iconAsset!, fit: BoxFit.contain),
                     )
-                  : owner.emoji != null
-                      ? Center(child: Text(owner.emoji!, style: const TextStyle(fontSize: 11)))
-                      : Icon(owner.icon, size: 11, color: owner.iconColor),
+                  : Icon(owner.icon, size: 13, color: owner.iconColor),
             ),
             const SizedBox(width: 8),
-            Text(owner.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _navInk2)),
+            Text(owner.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _navInk2)),
             const SizedBox(width: 12),
             Container(width: 1, height: 20, color: _navBorder),
             Expanded(

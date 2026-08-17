@@ -9,23 +9,25 @@ import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/tap_scale.dart';
 import '../../domain/entities/attendance_pulse_entity.dart';
 import '../providers/dashboard_provider.dart';
-import '../theme/home_dark_theme.dart';
 
-// Frosted-glass wash used for both the header icon chip and the donut's
-// background track — translucent so it reads correctly against the Home
-// screen's dark-purple gradient regardless of exactly where the card sits.
-const Color _pulseIconBg = Color(0x26FFFFFF);
+// Light purple wash used for both the header icon chip and the donut's
+// background track, now that the card itself is a solid white surface
+// rather than a frosted glass panel over the purple page background.
+const Color _pulseIconBg = AppColors.purpleSoft;
 const Color _lateDot = Color(0xFF94A3B8); // no AppColors equivalent for this one
-const Color _pendingBg = Color(0x26F59E0B);
-const Color _pendingBorder = Color(0xFFF59E0B);
-const Color _pendingHeading = Color(0xFFFBBF24);
-const Color _pendingBadgeText = Color(0xFFFBBF24);
-const Color _pendingBadgeBg = Color(0x33F59E0B);
-const Color _errorBg = Color(0x26E0463A);
+// "Attendance pending" callout — light purple, readable on the white card.
+const Color _pendingBg = AppColors.purpleSoft;
+const Color _pendingBorder = AppColors.brandPurple;
+const Color _pendingHeading = AppColors.purpleDeep;
+const Color _pendingBadgeText = AppColors.purpleDeep;
+const Color _pendingBadgeBg = Color(0xFFEDE9FE);
+const Color _errorBg = Color(0x14E0463A);
 const Color _errorBorder = Color(0xFFE0463A);
-const Color _errorText = Color(0xFFFF8A80);
-const Color _shimmerA = Color(0x1AFFFFFF);
-const Color _shimmerB = Color(0x33FFFFFF);
+const Color _errorText = Color(0xFFE0463A);
+const Color _shimmerA = Color(0xFFEDEBF5);
+const Color _shimmerB = Color(0xFFE0DCEE);
+// Non-active trend bars — a light purple tint instead of translucent white.
+const Color _trendBarInactive = Color(0xFFE5E1F5);
 
 /// Home screen → "Today's Pulse" → Student Attendance card — a 1:1 port of
 /// `frontend/components/widgets/pulse/AttendanceSnapshot.tsx`. On web this
@@ -84,8 +86,11 @@ class _AttendancePulseCardState extends ConsumerState<AttendancePulseCard> {
     final card = PremiumCard(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       radius: 16,
-      color: HomeDarkTheme.cardFill,
-      borderColor: HomeDarkTheme.cardBorder,
+      color: Colors.white,
+      // Blue edge — distinct from the Greeting card's purple and Fees'
+      // green, so each Home screen card reads as its own color, not a
+      // repeated brand purple everywhere.
+      borderColor: AppColors.dashboardIc.withValues(alpha: 0.55),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
@@ -128,9 +133,9 @@ class _PulseContent extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text('STUDENT ATTENDANCE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: HomeDarkTheme.textSecondary, letterSpacing: 0.5)),
+              child: Text('STUDENT ATTENDANCE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.ink2, letterSpacing: 0.5)),
             ),
-            const Icon(Icons.chevron_right, size: 16, color: HomeDarkTheme.textTertiary),
+            const Icon(Icons.chevron_right, size: 16, color: AppColors.ink3),
           ],
         ),
         const SizedBox(height: 10),
@@ -163,12 +168,12 @@ class _PulseContent extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.access_time, size: 12, color: HomeDarkTheme.textTertiary),
+            const Icon(Icons.access_time, size: 12, color: AppColors.ink3),
             const SizedBox(width: 5),
             Expanded(
               child: Text(
                 'Marked at ${data.lastUpdated} · ${data.markedTeachers}/${data.totalTeachers} teachers',
-                style: const TextStyle(fontSize: 10.5, color: HomeDarkTheme.textTertiary),
+                style: const TextStyle(fontSize: 10.5, color: AppColors.ink3),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -197,8 +202,8 @@ class _Donut extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${percent.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: HomeDarkTheme.textPrimary)),
-              const Text('present', style: TextStyle(fontSize: 8.5, color: HomeDarkTheme.textTertiary)),
+              Text('${percent.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.ink1)),
+              const Text('present', style: TextStyle(fontSize: 8.5, color: AppColors.ink3)),
             ],
           ),
         ),
@@ -255,8 +260,8 @@ class _StatRow extends StatelessWidget {
         children: [
           Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 7),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: HomeDarkTheme.textSecondary))),
-          Text('$value', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: HomeDarkTheme.textPrimary)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.ink2))),
+          Text('$value', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink1)),
         ],
       ),
     );
@@ -353,12 +358,12 @@ class _TrendBars extends StatelessWidget {
                   Container(
                     height: 22 * (trend[i] / maxVal).clamp(0.05, 1.0),
                     decoration: BoxDecoration(
-                      color: i == trend.length - 1 ? AppColors.brandPurple : Colors.white.withValues(alpha: 0.22),
+                      color: i == trend.length - 1 ? AppColors.brandPurple : _trendBarInactive,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(trend[i].round().toString(), style: const TextStyle(fontSize: 8.5, color: HomeDarkTheme.textTertiary)),
+                  Text(trend[i].round().toString(), style: const TextStyle(fontSize: 8.5, color: AppColors.ink3)),
                 ],
               ),
             ),
@@ -425,7 +430,7 @@ class _ErrorState extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(message, style: const TextStyle(fontSize: 11, color: HomeDarkTheme.textSecondary)),
+            Text(message, style: const TextStyle(fontSize: 11, color: AppColors.ink2)),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: onRetry,

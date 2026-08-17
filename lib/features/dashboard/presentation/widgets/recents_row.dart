@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/date_utils.dart' as app_date_utils;
 import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/tap_scale.dart';
 import '../../domain/entities/module_entity.dart';
 import '../providers/dashboard_provider.dart';
-import '../theme/home_dark_theme.dart';
 import 'section_label.dart';
 
 class RecentsRow extends ConsumerWidget {
@@ -39,14 +39,14 @@ class RecentsRow extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: HomeDarkTheme.cardFill,
-                    border: Border.all(color: HomeDarkTheme.cardBorder, width: 1.5),
+                    color: Colors.white,
+                    border: Border.all(color: AppColors.border, width: 1.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     'No recent activity yet',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: HomeDarkTheme.textSecondary,
+                      color: AppColors.ink2,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -117,8 +117,8 @@ class _RecentRow extends StatelessWidget {
     return TapScale(
       child: PremiumCard(
         radius: 12,
-        color: HomeDarkTheme.cardFill,
-        borderColor: HomeDarkTheme.cardBorder,
+        color: Colors.white,
+        borderColor: module.iconColor.withValues(alpha: 0.55),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -129,20 +129,18 @@ class _RecentRow extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: module.bgColor,
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: module.iconAsset != null
                         ? Padding(
-                            padding: const EdgeInsets.all(6.5),
+                            padding: const EdgeInsets.all(5),
                             child: Image.asset(module.iconAsset!, fit: BoxFit.contain),
                           )
-                        : module.emoji != null
-                            ? Center(child: Text(module.emoji!, style: const TextStyle(fontSize: 15)))
-                            : Icon(module.icon, size: 15, color: module.iconColor),
+                        : Icon(module.icon, size: 18, color: module.iconColor),
                   ),
                   const SizedBox(width: 9),
                   Expanded(
@@ -152,10 +150,10 @@ class _RecentRow extends StatelessWidget {
                       children: [
                         Text(
                           module.name,
-                          style: const TextStyle(
-                            fontSize: 12.5,
+                          style: TextStyle(
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: HomeDarkTheme.textPrimary,
+                            color: module.iconColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -163,8 +161,8 @@ class _RecentRow extends StatelessWidget {
                         Text(
                           '${module.name} · $relativeTime',
                           style: const TextStyle(
-                            fontSize: 10.5,
-                            color: HomeDarkTheme.textTertiary,
+                            fontSize: 9.5,
+                            color: AppColors.ink3,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -175,7 +173,7 @@ class _RecentRow extends StatelessWidget {
                   const Icon(
                     Icons.chevron_right,
                     size: 14,
-                    color: HomeDarkTheme.textTertiary,
+                    color: AppColors.ink3,
                   ),
                 ],
               ),

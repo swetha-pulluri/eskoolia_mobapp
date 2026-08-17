@@ -8,13 +8,12 @@ import '../../../../core/widgets/premium_card.dart';
 import '../../../../core/widgets/tap_scale.dart';
 import '../../domain/entities/fees_today_entity.dart';
 import '../providers/dashboard_provider.dart';
-import '../theme/home_dark_theme.dart';
 
 const Color _feesIconBg = Color(0x26059669); // translucent green wash
-const Color _feesIconColor = Color(0xFF34D399);
-const Color _positiveText = Color(0xFF34D399);
+const Color _feesIconColor = Color(0xFF059669);
+const Color _positiveText = Color(0xFF059669);
 const Color _positiveBg = Color(0x2634D399);
-const Color _negativeText = Color(0xFFFF8A80);
+const Color _negativeText = Color(0xFFE0463A);
 const Color _negativeBg = Color(0x26E0463A);
 
 /// Mirrors `formatINR` in `FeesToday.tsx` exactly: `₹{n/100000}L` (2
@@ -51,8 +50,8 @@ class FeesTodayCard extends ConsumerWidget {
       child: PremiumCard(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       radius: 16,
-      color: HomeDarkTheme.cardFill,
-      borderColor: HomeDarkTheme.cardBorder,
+      color: Colors.white,
+      borderColor: _feesIconColor.withValues(alpha: 0.55),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
@@ -77,20 +76,20 @@ class FeesTodayCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     const Expanded(
-                      child: Text("TODAY'S FEES", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: HomeDarkTheme.textSecondary, letterSpacing: 0.5)),
+                      child: Text("TODAY'S FEES", style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.ink2, letterSpacing: 0.5)),
                     ),
-                    const Icon(Icons.chevron_right, size: 16, color: HomeDarkTheme.textTertiary),
+                    const Icon(Icons.chevron_right, size: 16, color: AppColors.ink3),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(formatInr(data.collectedAmount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: HomeDarkTheme.textPrimary)),
+                Text(formatInr(data.collectedAmount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink1)),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text('${data.transactionCount} transactions', style: const TextStyle(fontSize: 12, color: HomeDarkTheme.textSecondary)),
+                    Text('${data.transactionCount} transactions', style: const TextStyle(fontSize: 12, color: AppColors.ink2)),
                     if (hasDelta)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),

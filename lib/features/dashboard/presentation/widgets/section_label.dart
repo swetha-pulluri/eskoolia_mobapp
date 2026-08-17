@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../theme/home_dark_theme.dart';
 
 class SectionLabel extends StatelessWidget {
   final IconData? icon;
@@ -48,7 +47,7 @@ class SectionLabel extends StatelessWidget {
             style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
-              color: HomeDarkTheme.textPrimary,
+              color: AppColors.ink1,
               letterSpacing: -0.1,
             ),
           ),
@@ -59,20 +58,20 @@ class SectionLabel extends StatelessWidget {
           if (count != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: HomeDarkTheme.cardFill, borderRadius: BorderRadius.circular(999)),
+              decoration: BoxDecoration(color: AppColors.bg2, borderRadius: BorderRadius.circular(999)),
               child: Text(
                 count.toString(),
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: HomeDarkTheme.textSecondary),
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.ink2),
               ),
             ),
           ],
           if (pinnedCount != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: HomeDarkTheme.cardFill, borderRadius: BorderRadius.circular(999)),
+              decoration: BoxDecoration(color: AppColors.bg2, borderRadius: BorderRadius.circular(999)),
               child: Text(
                 '$pinnedCount pinned',
-                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: HomeDarkTheme.textSecondary),
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.ink2),
               ),
             ),
           ],

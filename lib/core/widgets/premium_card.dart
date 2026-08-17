@@ -18,6 +18,15 @@ class PremiumCard extends StatelessWidget {
   final Color? color;
   final Color? borderColor;
 
+  /// Border thickness — bumped above Flutter's 1.0 default so a card's
+  /// accent border reads as a clear, thick "highlight" edge rather than a
+  /// barely-there hairline.
+  final double borderWidth;
+
+  /// Overrides [color] with a gradient fill — used by the Greeting card's
+  /// purple-to-magenta wash. When set, [color] is ignored.
+  final Gradient? gradient;
+
   const PremiumCard({
     super.key,
     required this.child,
@@ -25,6 +34,8 @@ class PremiumCard extends StatelessWidget {
     this.radius = 18,
     this.color,
     this.borderColor,
+    this.borderWidth = 2,
+    this.gradient,
   });
 
   @override
@@ -33,9 +44,10 @@ class PremiumCard extends StatelessWidget {
       margin: margin,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: color ?? AppColors.bg1,
+        color: gradient == null ? (color ?? AppColors.bg1) : null,
+        gradient: gradient,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor ?? AppColors.border.withValues(alpha: 0.6)),
+        border: Border.all(color: borderColor ?? AppColors.border.withValues(alpha: 0.6), width: borderWidth),
         boxShadow: [
           BoxShadow(color: AppColors.ink1.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 6)),
         ],

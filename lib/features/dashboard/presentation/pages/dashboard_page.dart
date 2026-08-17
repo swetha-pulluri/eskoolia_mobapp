@@ -13,7 +13,6 @@ import '../widgets/quick_access_grid.dart';
 import '../widgets/recents_row.dart';
 import '../widgets/section_label.dart';
 import '../widgets/module_grid.dart';
-import '../theme/home_dark_theme.dart';
 
 // Staggered entrance timing for each Home screen section — small,
 // incrementing delays so cards reveal in a gentle sequence top-to-bottom
@@ -48,99 +47,90 @@ class AdminHomePage extends ConsumerWidget {
     final showPulseWidgets = currentUser?.portalType == 'admin';
 
     return Scaffold(
-      // Deep-purple gradient page background (Home-only — the rest of the
-      // app keeps its existing light theme). Ambient particles are painted
-      // last in the Stack below, so they float visually *in front of* the
-      // scrollable content — purely decorative and `IgnorePointer`-wrapped
-      // internally, so despite being on top they never intercept a
-      // tap/scroll meant for the real content underneath.
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [HomeDarkTheme.bgTop, HomeDarkTheme.bgBottom],
-          ),
-        ),
-        child: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: () async {
-                // Refresh all data
-                ref.invalidate(attentionCountProvider);
-                ref.invalidate(recentModulesProvider);
-                ref.invalidate(attendancePulseProvider);
-                ref.invalidate(feesTodayProvider);
-                await ref.read(pinsProvider.notifier).refresh();
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Greeting Section
-                    const FadeSlideIn(
-                      delay: _dGreeting,
-                      child: GreetingSection(),
-                    ),
+      // Clean white background — Ambient particles are painted last in the
+      // Stack below, so they float visually *in front of* the scrollable
+      // content — purely decorative and `IgnorePointer`-wrapped internally,
+      // so despite being on top they never intercept a tap/scroll meant for
+      // the real content underneath.
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              // Refresh all data
+              ref.invalidate(attentionCountProvider);
+              ref.invalidate(recentModulesProvider);
+              ref.invalidate(attendancePulseProvider);
+              ref.invalidate(feesTodayProvider);
+              await ref.read(pinsProvider.notifier).refresh();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Greeting Section
+                  const FadeSlideIn(
+                    delay: _dGreeting,
+                    child: GreetingSection(),
+                  ),
 
-                    // "N items need your attention" — its own section/card
-                    // below the greeting card.
-                    const FadeSlideIn(
-                      delay: _dAttention,
-                      child: AttentionBanner(),
-                    ),
+                  // "N items need your attention" — its own section/card
+                  // below the greeting card.
+                  const FadeSlideIn(
+                    delay: _dAttention,
+                    child: AttentionBanner(),
+                  ),
 
-                    // "Today's Pulse" — on web these live in a left rail
-                    // hidden below 1024px viewport width, so there's no
-                    // existing mobile layout to copy; placed here (above
-                    // Quick Access) as the most natural mobile equivalent,
-                    // same cards/data/behavior. Header now uses the same
-                    // `SectionLabel` as every other section for a consistent
-                    // heading style.
-                    if (showPulseWidgets) ...[
-                      FadeSlideIn(
-                        delay: _dPulse,
-                        child: const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SectionLabel(title: "Today's Pulse"),
-                            AttendancePulseCard(),
-                            SizedBox(height: 8),
-                            FeesTodayCard(),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                    ] else
-                      const SizedBox(height: 10),
-
-                    // Quick Access (Pinned Modules)
+                  // "Today's Pulse" — on web these live in a left rail
+                  // hidden below 1024px viewport width, so there's no
+                  // existing mobile layout to copy; placed here (above
+                  // Quick Access) as the most natural mobile equivalent,
+                  // same cards/data/behavior. Header now uses the same
+                  // `SectionLabel` as every other section for a consistent
+                  // heading style.
+                  if (showPulseWidgets) ...[
                     FadeSlideIn(
-                      delay: _dQuickAccess,
-                      child: QuickAccessGrid(
-                        onManagePins: () => showManagePinsModal(context),
+                      delay: _dPulse,
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SectionLabel(title: "Today's Pulse"),
+                          AttendancePulseCard(),
+                          SizedBox(height: 8),
+                          FeesTodayCard(),
+                        ],
                       ),
                     ),
-
+                    const SizedBox(height: 10),
+                  ] else
                     const SizedBox(height: 10),
 
-                    // Recently Visited
-                    const FadeSlideIn(delay: _dRecents, child: RecentsRow()),
+                  // Quick Access (Pinned Modules)
+                  FadeSlideIn(
+                    delay: _dQuickAccess,
+                    child: QuickAccessGrid(
+                      onManagePins: () => showManagePinsModal(context),
+                    ),
+                  ),
 
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                    // All Modules
-                    const FadeSlideIn(delay: _dAllModules, child: ModuleGrid()),
+                  // Recently Visited
+                  const FadeSlideIn(delay: _dRecents, child: RecentsRow()),
 
-                    const SizedBox(height: 16),
-                  ],
-                ),
+                  const SizedBox(height: 10),
+
+                  // All Modules
+                  const FadeSlideIn(delay: _dAllModules, child: ModuleGrid()),
+
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-            const Positioned.fill(child: HomeAmbientParticles()),
-          ],
-        ),
+          ),
+          const Positioned.fill(child: HomeAmbientParticles()),
+        ],
       ),
     );
   }

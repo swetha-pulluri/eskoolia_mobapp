@@ -19,11 +19,6 @@ class ModuleEntity {
   /// before.
   final String? iconAsset;
 
-  /// Optional emoji glyph shown instead of [icon] (but after [iconAsset],
-  /// which always wins if both are set) — a lightweight stand-in for
-  /// modules that don't have custom PNG artwork yet.
-  final String? emoji;
-
   const ModuleEntity({
     required this.id,
     required this.name,
@@ -34,7 +29,6 @@ class ModuleEntity {
     this.comingSoon = false,
     this.subModules = const [],
     this.iconAsset,
-    this.emoji,
   });
 }
 
@@ -78,7 +72,7 @@ class Modules {
       icon: Icons.dashboard_outlined,
       bgColor: AppColors.dashboardBg,
       iconColor: AppColors.dashboardIc,
-      iconAsset: 'assets/icons/dashboard.png',
+      iconAsset: 'assets/icons/dashboard_3d.png',
       // SchoolOverviewPage is implemented and routed at /dashboard —
       // this flag was stale from before that page existed.
     ),
@@ -89,6 +83,7 @@ class Modules {
       icon: Icons.business_outlined,
       bgColor: AppColors.superAdminBg,
       iconColor: AppColors.superAdminIc,
+      iconAsset: 'assets/icons/school_tenancy_3d.png',
       subModules: [
         SubModuleEntity(label: 'Dashboard', path: '/super-admin/dashboard', icon: Icons.dashboard_outlined),
         SubModuleEntity(label: 'Schools', path: '/super-admin/schools', icon: Icons.apartment_outlined),
@@ -104,7 +99,7 @@ class Modules {
       icon: Icons.shield_outlined,
       bgColor: AppColors.rolesBg,
       iconColor: AppColors.rolesIc,
-      iconAsset: 'assets/icons/roles_permissions.png',
+      iconAsset: 'assets/icons/roles_permissions_3d.png',
       // Web's "Assign Permissions" is a tab inside the same page
       // (/roles-permissions), not a separate route, so it isn't listed as
       // its own dropdown entry here (see app_router.dart's note on
@@ -121,7 +116,7 @@ class Modules {
       icon: Icons.work_outline,
       bgColor: AppColors.administrationBg,
       iconColor: AppColors.administrationIc,
-      iconAsset: 'assets/icons/administration.png',
+      iconAsset: 'assets/icons/administration_3d.png',
       subModules: [
         SubModuleEntity(label: 'Communication Hub', path: '/administration/communication-hub', icon: Icons.support_agent_outlined),
         SubModuleEntity(label: 'Postal Management', path: '/administration/postal', icon: Icons.mail_outline),
@@ -136,7 +131,7 @@ class Modules {
       icon: Icons.person_add_outlined,
       bgColor: AppColors.admissionsBg,
       iconColor: AppColors.admissionsIc,
-      iconAsset: 'assets/icons/admissions.png',
+      iconAsset: 'assets/icons/admissions_3d.png',
       subModules: [
         SubModuleEntity(label: 'Command Center', path: '/admissions/command-center', icon: Icons.dashboard_outlined),
         SubModuleEntity(label: 'Analytics', path: '/admissions/analytics', icon: Icons.bar_chart_outlined),
@@ -150,7 +145,7 @@ class Modules {
       icon: Icons.people_outline,
       bgColor: AppColors.studentsBg,
       iconColor: AppColors.studentsIc,
-      iconAsset: 'assets/icons/students.png',
+      iconAsset: 'assets/icons/students_3d.png',
       subModules: [
         SubModuleEntity(label: 'Student Enroll & List', path: '/students', icon: Icons.people_outline),
         SubModuleEntity(label: 'Multi Subject Assignment', path: '/students/multi-subject-assignment', icon: Icons.school_outlined),
@@ -165,7 +160,7 @@ class Modules {
       icon: Icons.check_circle_outline,
       bgColor: AppColors.attendanceBg,
       iconColor: AppColors.attendanceIc,
-      iconAsset: 'assets/icons/attendance.png',
+      iconAsset: 'assets/icons/attendance_3d.png',
       subModules: [
         SubModuleEntity(label: 'Student Attendance', path: '/attendance/student', icon: Icons.check_circle_outline),
       ],
@@ -177,7 +172,7 @@ class Modules {
       icon: Icons.school_outlined,
       bgColor: AppColors.academicsBg,
       iconColor: AppColors.academicsIc,
-      iconAsset: 'assets/icons/academics.png',
+      iconAsset: 'assets/icons/academics_3d.png',
       subModules: [
         SubModuleEntity(label: 'Foundation', path: '/academics/core-setup', icon: Icons.grid_view_outlined),
         SubModuleEntity(label: 'Staff Assignment', path: '/academics/staff-workspace', icon: Icons.people_outline),
@@ -191,12 +186,9 @@ class Modules {
       name: 'Examination',
       path: '/exams/setup',
       icon: Icons.assignment_outlined,
-      // Purple brand theme instead of web's own fuchsia token
-      // (AppColors.examBg/examIc) — an explicit ask, not a web-parity port.
-      bgColor: AppColors.purpleSoft,
-      iconColor: AppColors.brandPurple,
-      emoji: '📝',
-      iconAsset: 'assets/icons/examination.png',
+      bgColor: AppColors.examBg,
+      iconColor: AppColors.examIc,
+      iconAsset: 'assets/icons/examination_3d.png',
       comingSoon: true,
       // "Marks Register" is one of the 4 real default pins
       // (pin_item_entity.dart's DefaultPins.all) — modeled here (with its
@@ -207,7 +199,7 @@ class Modules {
           label: 'Marks Register',
           path: '/exams/marks-register',
           icon: Icons.grade_outlined,
-          iconAsset: 'assets/icons/marksregister.png',
+          iconAsset: 'assets/icons/marks-register.png',
         ),
       ],
     ),
@@ -216,13 +208,9 @@ class Modules {
       name: 'Reports',
       path: '/reports',
       icon: Icons.bar_chart_outlined,
-      // Purple brand theme instead of web's own rose token
-      // (AppColors.reportsBg/reportsIc) — an explicit ask, not a web-parity
-      // port.
-      bgColor: AppColors.purpleSoft,
-      iconColor: AppColors.brandPurple,
-      emoji: '📊',
-      iconAsset: 'assets/icons/reports.png',
+      bgColor: AppColors.reportsBg,
+      iconColor: AppColors.reportsIc,
+      iconAsset: 'assets/icons/reports_3d.png',
       comingSoon: true,
     ),
     ModuleEntity(
@@ -232,7 +220,7 @@ class Modules {
       icon: Icons.payment_outlined,
       bgColor: AppColors.feesBg,
       iconColor: AppColors.feesIc,
-      iconAsset: 'assets/icons/fees.png',
+      iconAsset: 'assets/icons/fees_3d.png',
       comingSoon: false,
       subModules: [
         SubModuleEntity(label: 'Home', path: '/fees/payments', icon: Icons.grid_view_outlined),
@@ -252,7 +240,7 @@ class Modules {
       icon: Icons.badge_outlined,
       bgColor: AppColors.hrBg,
       iconColor: AppColors.hrIc,
-      iconAsset: 'assets/icons/hr.png',
+      iconAsset: 'assets/icons/hr_3d.png',
       comingSoon: false,
       subModules: [
         SubModuleEntity(label: 'Setup', path: '/hr/setup', icon: Icons.business_outlined),
@@ -300,7 +288,7 @@ class Modules {
       icon: Icons.settings_outlined,
       bgColor: AppColors.settingsBg,
       iconColor: AppColors.settingsIc,
-      iconAsset: 'assets/icons/settings.png',
+      iconAsset: 'assets/icons/settings_3d.png',
       comingSoon: false,
       subModules: [
         SubModuleEntity(label: 'School Info', path: '/settings/school-info', icon: Icons.business_outlined),

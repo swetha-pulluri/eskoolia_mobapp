@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../domain/entities/module_entity.dart';
 import '../providers/dashboard_provider.dart';
-import '../theme/home_dark_theme.dart';
 import 'module_card.dart';
 import 'section_label.dart';
 
@@ -37,9 +37,9 @@ class QuickAccessGrid extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: HomeDarkTheme.cardFill,
+                    color: Colors.white,
                     border: Border.all(
-                      color: HomeDarkTheme.cardBorder,
+                      color: AppColors.border,
                       width: 1.5,
                       style: BorderStyle.solid,
                     ),
@@ -48,7 +48,7 @@ class QuickAccessGrid extends ConsumerWidget {
                   child: Text(
                     'No pinned pages yet — tap Manage → to add some',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: HomeDarkTheme.textSecondary,
+                      color: AppColors.ink2,
                     ),
                     textAlign: TextAlign.center,
                   ),

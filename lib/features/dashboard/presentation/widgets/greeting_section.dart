@@ -7,11 +7,12 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/dashboard_provider.dart';
 
 /// Home screen greeting card — a compact mobile card holding just the
-/// greeting, current date, and the Academic Year/School pills, on a solid
-/// deep-purple brand background (white text) so it reads as a bold "hero"
-/// card, visually distinct from the plain-white cards below it. The "N items need your
-/// attention" callout lives in its own section (see `attention_banner.dart`)
-/// below this card, and "Today's Pulse"/Quick Access/Recently Visited/All
+/// greeting, current date, and the Academic Year/School pills. A white
+/// card with a subtle purple-tinted border/edge (not a solid colored
+/// fill) so it stays visually distinct from the page background without
+/// resorting to a bold color wash. The "N items need your attention"
+/// callout lives in its own section (see `attention_banner.dart`) below
+/// this card, and "Today's Pulse"/Quick Access/Recently Visited/All
 /// Modules remain their own sections further down `AdminHomePage` — each
 /// concern on the home screen is its own card. Entrance animation
 /// (fade/slide) is applied by the caller via `FadeSlideIn`, not this
@@ -34,12 +35,9 @@ class GreetingSection extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
       child: PremiumCard(
-        radius: 16,
-        // Solid deep-purple brand color (not a soft tint) with white text,
-        // matching the reference design — reads as a clear, bold "hero"
-        // card rather than a pastel-tinted one.
-        color: AppColors.purpleDeep,
-        borderColor: Colors.transparent,
+        radius: 24,
+        color: Colors.white,
+        borderColor: AppColors.brandPurple.withValues(alpha: 0.55),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -48,22 +46,20 @@ class GreetingSection extends ConsumerWidget {
             // Greeting Row
             Row(
               children: [
-                Text(
-                  app_date_utils.DateUtils.getTimeEmoji(),
-                  style: const TextStyle(fontSize: 20),
-                ),
+                _AnimatedGreetingEmoji(emoji: app_date_utils.DateUtils.getTimeEmoji()),
                 const SizedBox(width: 8),
                 Expanded(
                   child: RichText(
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.ink1),
                       children: [
                         TextSpan(
                           text: 'Good ${app_date_utils.DateUtils.getTimeWord()}',
                         ),
-                        if (displayName.isNotEmpty) TextSpan(text: ', $displayName'),
+                        if (displayName.isNotEmpty)
+                          TextSpan(text: ', $displayName', style: const TextStyle(color: AppColors.brandPurple)),
                       ],
                     ),
                   ),
@@ -75,7 +71,7 @@ class GreetingSection extends ConsumerWidget {
             // Current date
             Text(
               app_date_utils.DateUtils.getFormattedDate(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.ink2),
             ),
 
             const SizedBox(height: 10),
@@ -111,6 +107,32 @@ class GreetingSection extends ConsumerWidget {
   }
 }
 
+/// Plays a one-shot "pop in with a little settle" on first build — a bouncy
+/// scale-up paired with a small rotation that unwinds to 0, so the time-of-day
+/// emoji (☀️/🌤️/🌙) feels alive instead of just appearing as static text.
+class _AnimatedGreetingEmoji extends StatelessWidget {
+  final String emoji;
+
+  const _AnimatedGreetingEmoji({required this.emoji});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(emoji),
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.elasticOut,
+      builder: (context, value, child) {
+        return Transform.rotate(
+          angle: (1 - value) * 0.5,
+          child: Transform.scale(scale: value, child: child),
+        );
+      },
+      child: Text(emoji, style: const TextStyle(fontSize: 20)),
+    );
+  }
+}
+
 class _InfoChip extends StatelessWidget {
   final String label;
   final String value;
@@ -126,15 +148,14 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // White throughout (label, value, spinner) to read cleanly against the
-    // card's solid deep-purple background — only the error state keeps its
-    // own red icon/text so a failed fetch still stands out.
-    final valueColor = isError ? AppColors.error : Colors.white;
+    // Soft purple-tinted pill on the now-white card — only the error state
+    // keeps its own red icon/text so a failed fetch still stands out.
+    final valueColor = isError ? AppColors.error : AppColors.purpleDeep;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
+        color: AppColors.purpleSoft,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -143,7 +164,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: AppColors.ink3,
               letterSpacing: 0.6,
             ),
           ),
@@ -152,7 +173,7 @@ class _InfoChip extends StatelessWidget {
             const SizedBox(
               width: 10,
               height: 10,
-              child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white),
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.purpleDeep),
             ),
             const SizedBox(width: 6),
           ],
