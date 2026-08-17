@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 // import 'package:pretty_dio_logger/pretty_dio_logger.dart'; // Temporarily disabled
 import '../../core/constants/api_constants.dart';
 import '../../core/utils/logger.dart';
@@ -71,9 +72,22 @@ class DioClient {
         // unless this backend-documented header is present — see
         // `SecureStorageService.saveTenantId`. Superusers have none; the
         // header is simply omitted for them.
-        final tenantId = await _secureStorage.getTenantId();
-        if (tenantId != null && tenantId.isNotEmpty) {
-          options.headers['X-Tenant'] = tenantId;
+        //
+        // Skipped on web specifically: a custom header forces a CORS
+        // preflight, and the backend's CORS config doesn't allow-list
+        // `X-Tenant` — the preflight gets rejected and the browser blocks
+        // the request outright (surfaces as a generic connectionError, not
+        // a clean 4xx). Native Android/iOS have no CORS layer, so they're
+        // unaffected either way. Currently a no-op difference server-side
+        // too: `TenantAwareJWTAuthentication` only enforces this header
+        // when `MULTI_TENANCY_ENABLED=True`, which defaults to False
+        // (backend/config/settings/base.py) — so omitting it on web
+        // doesn't change what the backend does with the request today.
+        if (!kIsWeb) {
+          final tenantId = await _secureStorage.getTenantId();
+          if (tenantId != null && tenantId.isNotEmpty) {
+            options.headers['X-Tenant'] = tenantId;
+          }
         }
 
         return handler.next(options);

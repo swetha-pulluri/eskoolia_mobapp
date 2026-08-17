@@ -38,7 +38,15 @@ class EnvConfig {
     }
 
     if (kIsWeb) {
-      // Web: Use localhost
+      // Web: use a local Django dev server, NOT the shared hosted backend
+      // (unlike Android/iOS below) — the hosted backend's CORS policy
+      // (backend/config/settings/production.py: CORS_ALLOW_ALL_ORIGINS =
+      // False, allow-list restricted to *.eskoolia.com origins only) will
+      // block any request from Flutter web's dev server, which always runs
+      // on a random http://localhost:<port> origin. A local Django instance
+      // running dev/base settings (CORS_ALLOW_ALL_ORIGINS = True there) is
+      // the only way to test the web build without a real *.eskoolia.com
+      // deployment to serve it from.
       return 'http://localhost:$_backendPort';
     }
 
