@@ -373,7 +373,17 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
                 child: Text(num, style: AppTextStyles.numberedBadge.copyWith(color: AppColors.purpleDeep, fontSize: 11)),
               ),
               const SizedBox(width: 10),
-              Text(title, style: AppTextStyles.sectionTitle.copyWith(fontSize: 14)),
+              // `Expanded`+ellipsis — a bare `Text` had no shrink fallback,
+              // and "Technical & infrastructure" is long enough to overflow
+              // this Row's available width on a narrow phone by itself.
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sectionTitle.copyWith(fontSize: 14),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -406,7 +416,18 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
         children: [
           Row(
             children: [
-              Text(label, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600)),
+              // `Flexible`+ellipsis — a bare `Text` had no shrink fallback,
+              // and at a 2-column field width (`_fieldRow`) a longer label
+              // like "Trust / Reg. number" is enough to overflow this Row
+              // on a narrow phone by itself.
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600),
+                ),
+              ),
               if (required) const Text(' *', style: TextStyle(color: AppColors.dangerRed, fontSize: 11.5)),
             ],
           ),

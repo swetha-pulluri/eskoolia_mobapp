@@ -6,9 +6,10 @@ import 'hr_theme.dart';
 /// `is_active` exists on the real backend, so no 3-state Active/Inactive/
 /// Archived), Description, designation count and staff count (both real,
 /// client-computed from the designations/staff lists — the backend's
-/// `DepartmentSerializer` has no such fields), Edit/Delete. No "Attendance
-/// today" tile — that field doesn't exist on any backend either, and unlike
-/// the counts above there is no equivalent real data to compute it from.
+/// `DepartmentSerializer` has no such fields), Edit/Delete. The expanded
+/// panel's "Attendance today" tile always reads "--%" — `attendance_pct`
+/// doesn't exist on the real backend response, so web's own fallback for
+/// this tile is the same static placeholder, never a real number.
 class HrDepartmentCard extends StatefulWidget {
   final DepartmentEntity dept;
   final int designationCount;
@@ -44,7 +45,7 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
             onTap: () => setState(() => _expanded = !_expanded),
             child: Container(
               decoration: const BoxDecoration(border: Border(left: BorderSide(color: HrColors.brand, width: 4))),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -53,19 +54,24 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                     duration: const Duration(milliseconds: 250),
                     child: const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF94A3B8)),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
+                  // Matches web's `DeptCard`: name/badge/meta live in their
+                  // own `flex-1 min-w-0` column, and "N staff"/Edit/Delete
+                  // sit in a SEPARATE, fixed-position column pinned to the
+                  // right — never inside the same Wrap as the name. Folding
+                  // everything into one Wrap (the previous approach) let a
+                  // long department name/description push Edit/Delete to a
+                  // different horizontal spot — or even a different line —
+                  // on every card, which is what read as misaligned.
+                  // `Expanded` (not a plain Row sibling) is what makes both
+                  // columns overflow-safe: each gets a fixed share of the
+                  // row's width up front, so the right column's own `Wrap`
+                  // only ever needs to shrink/wrap *within that share*
+                  // rather than the whole Row overflowing regardless of the
+                  // Expanded name column (the exact failure a widget test
+                  // caught previously with a long department name).
                   Expanded(
-                    // Was: Column(header-info) sitting inside this Expanded,
-                    // with "N staff" + Edit + Delete as separate FIXED-width
-                    // siblings of this Expanded directly in the outer Row.
-                    // Those fixed siblings' combined intrinsic width (badge +
-                    // staff text + 2 buttons) alone exceeds the Row's
-                    // available width at 320-412dp regardless of what the
-                    // Expanded gets, causing a hard `RenderFlex overflowed`
-                    // (confirmed via widget test with a long department
-                    // name). Folding "N staff"/Edit/Delete into this Wrap —
-                    // which is already bounded by the Expanded — lets them
-                    // wrap onto their own line instead of overflowing.
+                    flex: 3,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -82,21 +88,9 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                               style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: dept.isActive ? const Color(0xFF15803D) : const Color(0xFF64748B)),
                             ),
                           ),
-                          if (widget.staffCount > 0)
-                            Text('${widget.staffCount} staff', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
-                          TextButton(
-                            onPressed: widget.onEdit,
-                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                            child: const Text('Edit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
-                          ),
-                          TextButton(
-                            onPressed: widget.onDelete,
-                            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                            child: const Text('Delete', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: HrColors.red)),
-                          ),
                         ]),
                         const SizedBox(height: 4),
-                        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 6, children: [
+                        Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
                           Text('${widget.designationCount} designations', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: HrColors.brand)),
                           if (dept.description.isNotEmpty) ...[
                             const Text('|', style: TextStyle(fontSize: 10, color: Color(0xFFCBD5E1))),
@@ -106,6 +100,30 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                             ),
                           ],
                         ]),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 6,
+                      children: [
+                        if (widget.staffCount > 0)
+                          Text('${widget.staffCount} staff', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF22C55E))),
+                        TextButton(
+                          onPressed: widget.onEdit,
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          child: const Text('Edit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                        ),
+                        TextButton(
+                          onPressed: widget.onDelete,
+                          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                          child: const Text('Delete', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: HrColors.red)),
+                        ),
                       ],
                     ),
                   ),
@@ -123,6 +141,14 @@ class _HrDepartmentCardState extends State<HrDepartmentCard> {
                   Expanded(child: _statTile(widget.staffCount > 0 ? '${widget.staffCount}' : '--', 'Assigned staff')),
                   Container(width: 1, height: 32, color: const Color(0xFFF1F5F9)),
                   Expanded(child: _statTile(widget.designationCount > 0 ? '${widget.designationCount}' : '--', 'Designation levels')),
+                  Container(width: 1, height: 32, color: const Color(0xFFF1F5F9)),
+                  // Web's own `DeptCard` shows this same static "--%" — its
+                  // `attendance_pct` field doesn't exist on the real backend
+                  // response either, so web's fallback is exactly this
+                  // placeholder, never a real computed number. Rendering the
+                  // identical placeholder here isn't fabricating data — it's
+                  // matching what the real deployed page actually displays.
+                  Expanded(child: _statTile('--%', 'Attendance today')),
                 ],
               ),
             ),

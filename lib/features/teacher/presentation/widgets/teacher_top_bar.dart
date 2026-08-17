@@ -92,17 +92,39 @@ class TeacherTopBar extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: isNarrow ? 2 : 4),
-                const SearchTrigger(),
-                SizedBox(width: trailingGap),
-                const NoteTriggerButton(),
-                if (isHome) ...[
-                  SizedBox(width: trailingGap),
-                  const WidgetManagerButton(),
-                ],
-                SizedBox(width: trailingGap),
-                const NotificationBellButton(),
-                SizedBox(width: trailingGap),
-                const AvatarMenu(),
+                // Wrapped in its own `Expanded` + horizontally-scrolling
+                // `SingleChildScrollView` — matches the same fix in
+                // `_GlobalTopBar` (`global_app_shell.dart`). At typical
+                // widths this renders exactly as before (ample leftover
+                // space after the modules `Expanded` above means nothing
+                // visibly scrolls); on a very narrow window — well under
+                // the ~400dp this bar's own `isNarrow` breakpoint assumes —
+                // the combined width of these fixed icon buttons could
+                // exceed what's left even with the modules row already
+                // shrunk to 0, a real overflow this bar had no safety net
+                // against. Scrolling instead of crashing matches the same
+                // safety net already used for the modules row.
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SearchTrigger(),
+                        SizedBox(width: trailingGap),
+                        const NoteTriggerButton(),
+                        if (isHome) ...[
+                          SizedBox(width: trailingGap),
+                          const WidgetManagerButton(),
+                        ],
+                        SizedBox(width: trailingGap),
+                        const NotificationBellButton(),
+                        SizedBox(width: trailingGap),
+                        const AvatarMenu(),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

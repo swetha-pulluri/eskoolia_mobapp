@@ -112,7 +112,20 @@ class _SmartTodoCardState extends ConsumerState<SmartTodoCard> {
               padding: EdgeInsets.symmetric(vertical: 8),
               child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
             ),
-            error: (e, _) => Text('$e', style: const TextStyle(fontSize: 12, color: AppColors.error)),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$e', style: const TextStyle(fontSize: 12, color: AppColors.error)),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () => ref.invalidate(todosProvider),
+                    child: const Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.brandPurple)),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

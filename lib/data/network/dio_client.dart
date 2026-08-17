@@ -65,6 +65,17 @@ class DioClient {
           options.headers['Authorization'] = 'Bearer $accessToken';
         }
 
+        // Tenant users hitting the app's single fixed base URL (no
+        // per-school subdomain, unlike web) get rejected by
+        // `TenantAwareJWTAuthentication` with "requires tenant context"
+        // unless this backend-documented header is present — see
+        // `SecureStorageService.saveTenantId`. Superusers have none; the
+        // header is simply omitted for them.
+        final tenantId = await _secureStorage.getTenantId();
+        if (tenantId != null && tenantId.isNotEmpty) {
+          options.headers['X-Tenant'] = tenantId;
+        }
+
         return handler.next(options);
       },
       onError: (error, handler) async {

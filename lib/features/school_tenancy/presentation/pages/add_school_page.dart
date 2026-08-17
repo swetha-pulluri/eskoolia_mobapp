@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_dropdown.dart';
+import '../../domain/entities/invoice_entity.dart';
 import '../../domain/entities/school_entity.dart';
 import '../providers/school_tenancy_provider.dart';
 
@@ -121,18 +122,23 @@ const _kStateOptions = [
   ['19', 'West Bengal'],
 ];
 
-// Matches the live backend's actual `ProvisionSchoolRequestSerializer.plan`
-// `ChoiceField(["trial", "premium", "enterprise", "custom"])` exactly
-// (`apps/super_admin/serializers.py` on `main`). The previous 'standard'
-// option isn't a valid choice there — selecting it made every submission
-// with that plan fail with a 400 "is not a valid choice" the backend never
-// surfaced to the user (see the plain `rethrow` in
-// `school_tenancy_remote_datasource.dart`'s `provisionSchool`).
-const _kPlanOptions = [
-  ['trial', 'Trial — ₹4,500/mo'],
-  ['premium', 'Premium — ₹19,500/mo'],
-  ['enterprise', 'Enterprise — ₹34,500/mo'],
-  ['custom', 'Custom — contact sales'],
+// Web's Section 07 "Subscription plan" select (`schools/page.tsx`) doesn't
+// use the backend's create-time `ProvisionSchoolRequestSerializer.plan`
+// choice list at all — it renders the real, server-driven billing plans
+// catalog (`getPlans()` → `GET /api/super-admin/billing/plans/`, the exact
+// same endpoint and shape [`plansProvider`] already backs the Billing tab
+// with), `<option value={p.code}>{p.name}</option>` per plan, in whatever
+// order the API returns. `validate_plan` on the backend
+// (`apps/super_admin/serializers.py`) confirms this: it accepts any
+// `SubscriptionPlan.code` from that same table, plus the two special
+// literals `trial`/`custom` — it does not accept a fixed enum. This
+// fallback (shown only while the catalog hasn't loaded yet, or came back
+// empty) exactly matches web's own fallback branch — plain names, no price
+// suffix, no `custom` entry (web's Section 07 select never offers one).
+const _kPlanFallbackOptions = [
+  ['starter', 'Starter'],
+  ['premium', 'Premium'],
+  ['enterprise', 'Enterprise'],
 ];
 
 const _kMonths = [
@@ -707,17 +713,16 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               hint: _isEdit
                   ? 'Immutable · cannot be changed'
                   : 'Lowercase · no spaces',
-              // Matches web's `schools/page.tsx` Subdomain URL field exactly:
-              // one rounded, bordered group (`overflow-hidden rounded-lg
-              // border`) with "https://" and ".eskoolia.com" as two shaded
-              // end-caps (each with only an inner divider border, not a full
-              // border of their own) around a borderless, transparent middle
-              // input — not three separate boxes.
+              // ONE single bordered box (matches web's actual
+              // `overflow-hidden rounded-lg border` group) — "https://" and
+              // ".eskoolia.com" are shaded end-caps *inside* this same box
+              // (only an inner divider line between each and the input, not
+              // a full border of their own), not separate boxes with gaps.
               child: Container(
-                height: 36,
+                height: 46,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: AppColors.bgPrimary,
+                  color: Colors.white,
                   border: Border.all(color: AppColors.borderSecondary),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -726,24 +731,57 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
                   children: [
                     _urlAffix('https://', isLeft: true),
                     Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: TextField(
-                            controller: _subdomainController,
-                            enabled: !_isEdit,
-                            textAlignVertical: TextAlignVertical.center,
-                            style: const TextStyle(fontSize: 13),
-                            decoration: const InputDecoration(
-                              isCollapsed: true,
-                              hintText: 'vasavi-hyd',
-                              filled: false,
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              disabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                            ),
-                          ),
+                      child: TextField(
+                        controller: _subdomainController,
+                        // `readOnly` (not `enabled: false`) for the
+                        // immutable-on-edit case — Flutter's `enabled:
+                        // false` overrides the rendered text to a greyed
+                        // "disabled" color regardless of `style.color`,
+                        // which is exactly what made typed text hard to
+                        // see. `readOnly` blocks editing without touching
+                        // color at all, matching web's own
+                        // `readOnly={!!editSchool}` (web dims the whole
+                        // group via a separate opacity wrapper instead —
+                        // not per-character text greying).
+                        readOnly: _isEdit,
+                        textAlign: TextAlign.left,
+                        textAlignVertical: TextAlignVertical.center,
+                        // Deliberately bold + pure black + larger than the
+                        // 12px affixes, so the typed value is unmistakably
+                        // the visual focus of this field, not the muted
+                        // "https://"/".eskoolia.com" chrome around it. No
+                        // explicit `height` on the style — the previous
+                        // `isCollapsed`+zero-padding box left the IME no
+                        // vertical room to draw its own underlined
+                        // "composing" span while typing, which rendered as
+                        // garbled/overlapping glyphs instead of the actual
+                        // text (an Android input-method rendering quirk,
+                        // not a color/visibility bug — the plain
+                        // `contentPadding` below gives it that room back).
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                        cursorColor: AppColors.primaryPurple,
+                        cursorWidth: 2,
+                        // Matches web's `maxLength={63}` — the one real
+                        // input constraint the web field has. No
+                        // `counterText` shown, matching web (a native
+                        // HTML maxlength attribute has no visible
+                        // counter either).
+                        maxLength: 63,
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          hintText: 'vasavi-hyd',
+                          hintStyle: TextStyle(color: AppColors.textTertiary, fontWeight: FontWeight.w400),
+                          filled: false,
+                          counterText: '',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
                         ),
                       ),
                     ),
@@ -992,20 +1030,34 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             _field(
               'Subscription plan',
               required: true,
-              child: AppDropdown<String>(
-                value: _plan,
-                items: _withCurrentValue(
-                  _kPlanOptions
-                      .map(
-                        (o) => DropdownMenuItem(
-                          value: o[0],
-                          child: Text(o[1], overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  _plan,
-                ),
-                onChanged: (v) => setState(() => _plan = v ?? 'trial'),
+              child: Builder(
+                builder: (context) {
+                  final plansAsync = ref.watch(plansProvider);
+                  final catalogPlans = plansAsync.maybeWhen(
+                    data: (catalog) => catalog.plans,
+                    orElse: () => const <SubscriptionPlanEntity>[],
+                  );
+                  final options = catalogPlans.isNotEmpty
+                      ? catalogPlans
+                            .map((p) => [p.code, p.name])
+                            .toList()
+                      : _kPlanFallbackOptions;
+                  return AppDropdown<String>(
+                    value: _plan,
+                    items: _withCurrentValue(
+                      options
+                          .map(
+                            (o) => DropdownMenuItem(
+                              value: o[0],
+                              child: Text(o[1], overflow: TextOverflow.ellipsis),
+                            ),
+                          )
+                          .toList(),
+                      _plan,
+                    ),
+                    onChanged: (v) => setState(() => _plan = v ?? 'trial'),
+                  );
+                },
               ),
             ),
             _field(
@@ -1619,7 +1671,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             LengthLimitingTextInputFormatter(10),
           ],
           style: const TextStyle(fontSize: 13),
-          decoration: _fieldDecoration(hintText: '98765 43210', noBorder: true)
+          decoration: _fieldDecoration(hintText: '98765 43210')
               .copyWith(counterText: ''),
           onChanged: (v) => setState(() {
             if (v.isEmpty) {
@@ -1896,13 +1948,14 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
 
   /// One end-cap of the Subdomain URL group — matches web's `<span
   /// className="border-r|border-l border-[var(--bd-2)] bg-[var(--bg-2)]
-  /// px-[11px] font-mono text-[12px] text-[var(--ink-3)]">`: only an inner
-  /// divider on the side facing the input, not a full border of its own
-  /// (the outer group container supplies the actual outline).
+  /// px-[11px] font-mono text-[12px] text-[var(--ink-3)]">`: shaded, with
+  /// only an inner divider border on the side facing the input (the outer
+  /// group `Container` supplies the actual outline) — both end-caps and the
+  /// input live inside that one shared box, not separate boxes of their own.
   Widget _urlAffix(String text, {required bool isLeft}) {
     return Container(
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
         border: Border(
@@ -1912,7 +1965,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
       ),
       child: Text(
         text,
-        style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: AppColors.textTertiary),
+        style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
       ),
     );
   }

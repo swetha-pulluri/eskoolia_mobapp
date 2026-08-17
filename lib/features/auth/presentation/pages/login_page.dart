@@ -187,6 +187,9 @@ class _LoginPageState extends ConsumerState<LoginPage>
                             // ═══ Header ═══
                             _buildHeader(screenWidth),
 
+                            // ═══ Selected School Strip ═══
+                            _buildSelectedSchoolStrip(),
+
                             // ═══ Main Content ═══
                             Padding(
                               padding: EdgeInsets.symmetric(
@@ -502,6 +505,73 @@ class _LoginPageState extends ConsumerState<LoginPage>
           ),
         ],
       ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Selected School Strip — shows which school this device is pointed at
+  // (identified via the school-select step) with a way back to change it.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildSelectedSchoolStrip() {
+    return Consumer(
+      builder: (context, ref, child) {
+        final subdomain = ref.watch(selectedSchoolSubdomainProvider);
+        if (subdomain == null) return const SizedBox.shrink();
+
+        final schoolInfoAsync = ref.watch(schoolInfoProvider(subdomain));
+        final schoolName = schoolInfoAsync.maybeWhen(
+          data: (info) => info?.name,
+          orElse: () => null,
+        );
+
+        return Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: responsiveSpacing(context, 16),
+            vertical: responsiveSpacing(context, 8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.school, size: responsiveIconSize(context, 14), color: AppColors.airaTeal),
+              SizedBox(width: responsiveSpacing(context, 6)),
+              Flexible(
+                child: Text(
+                  schoolName ?? subdomain,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.atriumIndigo,
+                    fontSize: responsiveFontSize(context, 12),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(width: responsiveSpacing(context, 8)),
+              TextButton(
+                onPressed: () async {
+                  await clearSelectedSchool(ref);
+                  if (context.mounted) context.go('/school-select');
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Change School',
+                  style: TextStyle(
+                    color: AppColors.deepSaffron,
+                    fontSize: responsiveFontSize(context, 12),
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -96,7 +96,22 @@ class _ComposeSheetState extends ConsumerState<_ComposeSheet> {
       builder: (context, scrollController) => optionsAsync.when(
         data: (options) => _buildForm(context, scrollController, options),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e', style: const TextStyle(fontSize: 12, color: AppColors.error))),
+        error: (e, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$e', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.error)),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () => ref.invalidate(audienceOptionsProvider),
+                  child: const Text('Retry', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.brandPurple)),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

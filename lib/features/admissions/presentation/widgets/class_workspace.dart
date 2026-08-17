@@ -533,14 +533,21 @@ class _ClassWorkspaceState extends State<ClassWorkspace> {
               ),
               if (totalPages > 1) ...[
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // `Wrap` (not `Row`) — the summary text plus both buttons at
+                // their natural size don't reliably fit on one line on a
+                // narrow screen; this drops the Prev/Next pair to its own
+                // line instead of overflowing.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
                   children: [
                     Text(
                       '${(_page - 1) * kWorkspacePageSize + 1}–${(_page * kWorkspacePageSize).clamp(0, filtered.length)} of ${filtered.length}',
                       style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         OutlinedButton(
                           onPressed: _page > 1 ? () => setState(() => _page--) : null,

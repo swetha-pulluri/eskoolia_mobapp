@@ -18,14 +18,39 @@ class TimetableKpiRow extends StatelessWidget {
           _kpiCard('FREE PERIODS', kpis.freePeriods, 'For grading & prep', Icons.access_time),
           _kpiCard('COVER ASSIGNMENTS', kpis.coverAssignments, 'This week', Icons.calendar_today_outlined),
         ];
-        return GridView.count(
-          crossAxisCount: narrow ? 2 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: narrow ? 1.5 : 1.1,
-          children: cards,
+        // Web's grid (`gridTemplateColumns: repeat(4,1fr)`) lets each row's
+        // height grow to fit its tallest card's actual content — plain
+        // `<div>`s/`<p>`s size to content naturally. The previous
+        // `GridView.count` locked every card to the SAME computed height
+        // via a fixed `childAspectRatio`, so at the narrower 2-column width
+        // a "sub" line long enough to wrap (e.g. "Days with classes")
+        // silently overflowed past the card's bottom edge instead of
+        // growing it. Rows of `Expanded` cards (2-per-row narrow,
+        // 4-per-row wide) match web's auto-height behavior: each row is
+        // only ever as tall as its content actually needs.
+        if (!narrow) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < cards.length; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                Expanded(child: cards[i]),
+              ],
+            ],
+          );
+        }
+        return Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [Expanded(child: cards[0]), const SizedBox(width: 12), Expanded(child: cards[1])],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [Expanded(child: cards[2]), const SizedBox(width: 12), Expanded(child: cards[3])],
+            ),
+          ],
         );
       },
     );

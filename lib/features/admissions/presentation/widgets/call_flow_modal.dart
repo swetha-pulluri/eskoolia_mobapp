@@ -275,8 +275,19 @@ class _CallFlowModalState extends ConsumerState<CallFlowModal> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(color: const Color(0xFFF8FAFC), border: Border.all(color: const Color(0xFFE5E7EB)), borderRadius: BorderRadius.circular(10)),
                             child: Row(children: [
-                              Text(opt['label']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const Spacer(),
+                              // `Expanded`+ellipsis — a bare `Text` next to
+                              // a `Spacer` has no shrink fallback, and
+                              // "Parent Meet Appointment" is long enough to
+                              // overflow this row on a narrow phone.
+                              Expanded(
+                                child: Text(
+                                  opt['label']!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               const Text('Send via WA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))),
                             ]),
                           ),

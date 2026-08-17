@@ -25,6 +25,7 @@ class SecureStorageService {
   /// race entirely for the lifetime of the process.
   String? _cachedAccessToken;
   String? _cachedRefreshToken;
+  String? _cachedTenantId;
 
   SecureStorageService()
     : _storage = const FlutterSecureStorage(
@@ -112,6 +113,30 @@ class SecureStorageService {
     return await _storage.read(key: AppConstants.schoolNameKey);
   }
 
+  /// Tenant ID for the `X-Tenant` header (`TenantAwareJWTAuthentication`'s
+  /// backend-documented API-access path for non-subdomain clients — the
+  /// mobile app hits a single fixed base URL, so it can't rely on the
+  /// subdomain-based tenant resolution web uses). Null for superusers, who
+  /// authenticate in the public schema and don't need one. Written
+  /// unconditionally (not only when non-null) so a superuser login after a
+  /// tenant-user login clears any previously-cached tenant rather than
+  /// leaving a stale one attached to future requests.
+  Future<void> saveTenantId(String? tenantId) async {
+    _cachedTenantId = tenantId;
+    if (tenantId != null) {
+      await _storage.write(key: AppConstants.tenantIdKey, value: tenantId);
+    } else {
+      await _storage.delete(key: AppConstants.tenantIdKey);
+    }
+  }
+
+  Future<String?> getTenantId() async {
+    if (_cachedTenantId != null) return _cachedTenantId;
+    final value = await _storage.read(key: AppConstants.tenantIdKey);
+    _cachedTenantId = value;
+    return value;
+  }
+
   Future<void> savePortalType(String portalType) async {
     await _storage.write(key: AppConstants.portalTypeKey, value: portalType);
   }
@@ -137,6 +162,7 @@ class SecureStorageService {
   Future<void> clearAll() async {
     _cachedAccessToken = null;
     _cachedRefreshToken = null;
+    _cachedTenantId = null;
     await _storage.deleteAll();
   }
 

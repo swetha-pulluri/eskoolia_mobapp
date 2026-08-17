@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/utils/logger.dart';
@@ -26,15 +28,24 @@ class TodosRemoteDataSource {
 
   Future<List<TodoItemEntity>> getTodos({String? category}) async {
     try {
+      // Explicit client-side bound — same reasoning as the Reports feature's
+      // lookups: without this, a slow/unresponsive request here left the
+      // Smart To-Do widget spinning indefinitely with no feedback (worse
+      // than a clear, actionable error), since `DioClient`'s own configured
+      // timeout is a relatively patient 30s and this widget has no other
+      // safety net.
       final response = await _dioClient.get(
         ApiConstants.todos,
         queryParameters: {'category': ?category},
-      );
+      ).timeout(const Duration(seconds: 45));
       final list = response.data as List;
       return list.map((e) => TodoItemEntity.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
       AppLogger.error('Get todos error', e);
       _throwApiException(e);
+    } on TimeoutException catch (e) {
+      AppLogger.error('Get todos timed out', e);
+      throw const TeacherApiException('Loading tasks is taking too long — please try again.');
     }
   }
 

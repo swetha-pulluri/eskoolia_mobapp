@@ -43,13 +43,18 @@ class _HrDesignationDeptCardState extends State<HrDesignationDeptCard> {
             onTap: () => setState(() => _expanded = !_expanded),
             child: Container(
               decoration: const BoxDecoration(border: Border(left: BorderSide(color: HrColors.brand, width: 3))),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
+                  // Isolated in its own `Expanded` — same reasoning as the
+                  // Department card fix: the name+badges `Wrap` only ever
+                  // grows/wraps within this column, so it can never push the
+                  // "Add"/chevron group (fixed Row siblings right after this
+                  // Expanded) out of its consistent, right-aligned position.
                   Expanded(
                     child: Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 10,
+                      spacing: 12,
                       runSpacing: 6,
                       children: [
                         Text(widget.dept.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: HrColors.ink)),
@@ -60,7 +65,7 @@ class _HrDesignationDeptCardState extends State<HrDesignationDeptCard> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   GestureDetector(
                     onTap: widget.onAddChild,
                     child: Container(
@@ -73,7 +78,7 @@ class _HrDesignationDeptCardState extends State<HrDesignationDeptCard> {
                       ]),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 300),
@@ -103,12 +108,12 @@ class _HrDesignationDeptCardState extends State<HrDesignationDeptCard> {
                       children: [
                         for (var idx = 0; idx < widget.deptDesigs.length; idx++)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                             decoration: BoxDecoration(border: Border(bottom: idx < widget.deptDesigs.length - 1 ? const BorderSide(color: Color(0xFFF8F8FC)) : BorderSide.none)),
                             child: Row(
                               children: [
                                 Expanded(child: Text(widget.deptDesigs[idx].name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: HrColors.ink))),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 12),
                                 // `Flexible` — the badge + Edit + Delete
                                 // cluster's combined natural width can still
                                 // slightly exceed what's left after a long

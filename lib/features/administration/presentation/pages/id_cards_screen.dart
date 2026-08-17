@@ -452,9 +452,12 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       ),
                     ),
                     AdminFileField(
+                      label: 'Background Image (Front)',
+                      dashedDropZone: true,
                       fileName: _bgFrontName,
-                      placeholder:
-                          'Background Image (Front) — PNG, JPG (max 2MB)',
+                      placeholder: 'PNG, JPG (max 2MB)',
+                      helper:
+                          'Upload the front background image for the ID card (recommended: 1000x600px for horizontal).',
                       existingFileUrl: _editingId != null
                           ? _existingBgFrontUrl
                           : null,
@@ -473,9 +476,11 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       },
                     ),
                     AdminFileField(
+                      label: 'Background Image (Back)',
+                      dashedDropZone: true,
                       fileName: _bgBackName,
-                      placeholder:
-                          'Background Image (Back) — PNG, JPG (max 2MB)',
+                      placeholder: 'PNG, JPG (max 2MB)',
+                      helper: 'Upload the back background image for the ID card.',
                       existingFileUrl: _editingId != null
                           ? _existingBgBackUrl
                           : null,
@@ -494,8 +499,11 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       },
                     ),
                     AdminFileField(
+                      label: 'School Logo',
+                      dashedDropZone: true,
                       fileName: _logoName,
-                      placeholder: 'School Logo — PNG, JPG, SVG (max 1MB)',
+                      placeholder: 'PNG, JPG, SVG (max 1MB)',
+                      helper: 'Upload the school logo to display on the ID card.',
                       existingFileUrl: _editingId != null
                           ? _existingLogoUrl
                           : null,
@@ -517,8 +525,11 @@ class _IdCardsScreenState extends ConsumerState<IdCardsScreen> {
                       },
                     ),
                     AdminFileField(
+                      label: 'Signature Image',
+                      dashedDropZone: true,
                       fileName: _signatureName,
-                      placeholder: 'Signature Image — PNG, JPG (max 1MB)',
+                      placeholder: 'PNG, JPG (max 1MB)',
+                      helper: 'Upload the authorized signature image for the ID card.',
                       existingFileUrl: _editingId != null
                           ? _existingSignatureUrl
                           : null,

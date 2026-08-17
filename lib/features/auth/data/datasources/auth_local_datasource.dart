@@ -33,6 +33,7 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
       _secureStorage.saveRefreshToken(response.refresh),
       _secureStorage.savePortalType(response.portal_type),
       _secureStorage.saveMustChangePassword(response.must_change_password),
+      _secureStorage.saveTenantId(response.tenant_id),
       if (response.school_code != null)
         _secureStorage.saveSchoolName(response.school_code!),
     ]);

@@ -161,7 +161,14 @@ class AdminListNotifier<T> extends StateNotifier<AdminListState<T>> {
     state = state.copyWith(deletingId: id);
     try {
       await deleteItem(id);
-      state = state.copyWith(clearDeletingId: true);
+      // Deleting the last remaining item on a page beyond page 1 shrinks
+      // the real page count out from under the still-held page number —
+      // reloading with that same `page` then asks the server for a page
+      // that no longer exists, which DRF's pagination correctly rejects
+      // with a 404 ("Invalid page."). Step back a page first so the
+      // reload always targets a page that still exists.
+      final page = (state.page > 1 && state.items.length <= 1) ? state.page - 1 : state.page;
+      state = state.copyWith(clearDeletingId: true, page: page);
       await load();
       return true;
     } catch (e) {

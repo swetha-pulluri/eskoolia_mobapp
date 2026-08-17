@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../roles/presentation/widgets/add_role_card.dart' show DashedBorderPainter;
 
 /// Shared Administration form field styling — a labeled text input with
 /// an optional `*` required marker and inline error text, matching the
@@ -274,6 +275,16 @@ class AdminFileField extends StatelessWidget {
   /// thumbnail (with a "Current image · click to replace" caption)
   /// instead of a plain "View existing file" link.
   final bool previewExistingAsImage;
+  /// Web's `.file-upload-area` style (`IdCardPanel.tsx` / `CertificatePanel
+  /// .tsx` only — Complaints/Visitor Book/Postal Receive/Dispatch all use a
+  /// plain native `<input type="file">` with no drag-and-drop styling, so
+  /// this defaults to `false` and those screens are unaffected): a dashed,
+  /// generously-padded drop zone with the generic "Click to upload or drag
+  /// and drop" + file-type/size hint, instead of a single-line bordered
+  /// field. When true, [placeholder] is that hint text (e.g. "PNG, JPG (max
+  /// 2MB)") — the field's own name belongs in [label] above the box, not
+  /// baked into this hint, matching how web separates the two.
+  final bool dashedDropZone;
 
   const AdminFileField({
     super.key,
@@ -286,11 +297,13 @@ class AdminFileField extends StatelessWidget {
     this.previewBytes,
     this.previewExistingAsImage = false,
     this.label,
+    this.dashedDropZone = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final showImagePreview = previewBytes != null || (previewExistingAsImage && existingFileUrl != null && existingFileUrl!.isNotEmpty);
+    final dropZoneColor = errorText != null ? AppColors.dangerRed : AppColors.dashedBorder;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
@@ -311,7 +324,54 @@ class AdminFileField extends StatelessWidget {
             ),
           InkWell(
             onTap: onTap,
-            child: showImagePreview
+            child: dashedDropZone
+                ? CustomPaint(
+                    painter: DashedBorderPainter(color: dropZoneColor, strokeWidth: 1.5, dashLength: 5, gapLength: 4, borderRadius: 8),
+                    child: showImagePreview
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: previewBytes != null
+                                      ? Image.memory(previewBytes!, height: 80, fit: BoxFit.contain)
+                                      : Image.network(existingFileUrl!, height: 80, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined, size: 32, color: AppColors.textTertiary)),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  fileName ?? 'Current image · click to replace',
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      const TextSpan(text: 'Click to upload', style: TextStyle(color: AppColors.primaryPurple, fontWeight: FontWeight.w600)),
+                                      TextSpan(text: fileName != null ? ' — $fileName' : ' or drag and drop'),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(placeholder, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+                              ],
+                            ),
+                          ),
+                  )
+                : showImagePreview
                 ? Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(

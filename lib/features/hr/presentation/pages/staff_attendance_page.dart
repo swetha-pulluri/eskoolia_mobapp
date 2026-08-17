@@ -778,25 +778,43 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
               }
             }),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: Row(children: [
-                AnimatedRotation(turns: open ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.keyboard_arrow_down)),
-                const SizedBox(width: 10),
-                // A long department name here is unbounded (a plain `Text`
-                // as a non-flex `Row` child takes its full intrinsic width),
-                // which combined with the badges `Expanded` and the trailing
-                // ring/label can push the row past the screen width and
-                // trigger a real overflow. `Flexible` lets it shrink and
-                // ellipsize instead.
-                Flexible(child: Text(dept.name, overflow: TextOverflow.ellipsis, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink))),
-                const SizedBox(width: 10),
+                // Everything left of the trailing ring/label lives inside
+                // ONE `Expanded` — matching web's own structure exactly:
+                // name + badges are a plain natural-width flex-wrap cluster,
+                // then a `<div className="flex-1" />` spacer absorbs all
+                // remaining space so the trailing ring/label always lands
+                // flush against the right edge. Previously the badges group
+                // itself was `Expanded` (competing with the name's own
+                // `Flexible` for space) — since both grew/shrank together,
+                // the trailing ring/"No staff assigned" text ended up at a
+                // different horizontal position on every card depending on
+                // how long the department name happened to be. Wrapping
+                // name+badges in one `Expanded` (with the trailing element
+                // as a plain sibling right after it) pins that trailing
+                // element to the same right-aligned spot on every card,
+                // regardless of name length.
                 Expanded(
-                  child: Wrap(spacing: 6, runSpacing: 6, children: [
-                    _pillBadge('${deptStaff.length} staff', const Color(0xFFFAFAFD), _ink, border: _line),
-                    if (deptStaff.isNotEmpty) _pillBadge('$present present', const Color(0xFFE4F6ED), const Color(0xFF0A8C5A)),
-                    if (absent > 0) _pillBadge('$absent absent', const Color(0xFFFCE8EE), const Color(0xFFC2264E)),
+                  child: Row(children: [
+                    AnimatedRotation(turns: open ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: const Icon(Icons.keyboard_arrow_down)),
+                    const SizedBox(width: 10),
+                    // A long department name here is unbounded (a plain
+                    // `Text` as a non-flex `Row` child takes its full
+                    // intrinsic width), which combined with the badges can
+                    // push this inner Row past its bounded width and
+                    // trigger a real overflow. `Flexible` lets it shrink
+                    // and ellipsize instead.
+                    Flexible(child: Text(dept.name, overflow: TextOverflow.ellipsis, maxLines: 1, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _ink))),
+                    const SizedBox(width: 10),
+                    Wrap(spacing: 6, runSpacing: 6, children: [
+                      _pillBadge('${deptStaff.length} staff', const Color(0xFFFAFAFD), _ink, border: _line),
+                      if (deptStaff.isNotEmpty) _pillBadge('$present present', const Color(0xFFE4F6ED), const Color(0xFF0A8C5A)),
+                      if (absent > 0) _pillBadge('$absent absent', const Color(0xFFFCE8EE), const Color(0xFFC2264E)),
+                    ]),
                   ]),
                 ),
+                const SizedBox(width: 10),
                 if (deptStaff.isEmpty)
                   const Text('No staff assigned', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF9CA0AE)))
                 else

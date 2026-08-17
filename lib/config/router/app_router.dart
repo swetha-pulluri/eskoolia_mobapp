@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/portal_not_implemented_page.dart';
+import '../../features/auth/presentation/pages/school_select_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
 import '../../features/teacher/presentation/pages/teacher_home_page.dart';
@@ -25,6 +26,7 @@ import '../../features/student/presentation/pages/student_categories_page.dart';
 import '../../features/student/presentation/pages/student_deleted_page.dart';
 import '../../features/student/presentation/pages/student_disabled_page.dart';
 import '../../features/student/presentation/pages/student_enroll_page.dart';
+import '../../features/student/presentation/pages/student_export_page.dart';
 import '../../features/student/presentation/pages/student_groups_page.dart';
 import '../../features/student/presentation/pages/student_list_page.dart';
 import '../../features/student/presentation/pages/student_promotion_page.dart';
@@ -58,6 +60,11 @@ import '../../features/hr/presentation/pages/staff_attendance_page.dart';
 import '../../features/hr/presentation/pages/staff_directory_page.dart';
 import '../../features/hr/presentation/pages/staff_form_page.dart';
 import '../../features/hr/presentation/pages/staff_onboard_page.dart';
+import '../../features/reports/domain/entities/report_definition_entity.dart';
+import '../../features/reports/presentation/pages/report_explorer_page.dart';
+import '../../features/reports/presentation/pages/reports_hub_page.dart';
+import '../../features/reports/presentation/pages/staff_attendance_report_page.dart';
+import '../../features/reports/presentation/pages/student_attendance_report_page.dart';
 import '../../features/settings/presentation/pages/school_info_page.dart';
 import '../../features/settings/presentation/pages/leave_policy_page.dart';
 import '../../features/settings/presentation/pages/holiday_calendar_page.dart';
@@ -113,21 +120,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       );
       final isAuthenticated = currentUser != null;
       final isLoggingIn = state.matchedLocation == '/login';
-      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated');
+      final isSelectingSchool = state.matchedLocation == '/school-select';
+      final hasSelectedSchool = ref.read(selectedSchoolSubdomainProvider) != null;
+      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated, hasSelectedSchool=$hasSelectedSchool');
 
-      // If not authenticated and not on login page, redirect to login
-      if (!isAuthenticated && !isLoggingIn) {
-        debugPrint('[AppRouter] redirect -> /login');
-        return '/login';
+      // Authenticated users should never be stuck on school-select/login —
+      // bounce to their role's own home (matches web's `app/login/page.tsx`
+      // portal_type branch exactly, see portal_routes.dart).
+      if (isAuthenticated) {
+        if (isLoggingIn || isSelectingSchool) {
+          final target = resolveHomeRouteForPortal(currentUser.portalType);
+          debugPrint('[AppRouter] redirect -> $target (portalType=${currentUser.portalType})');
+          return target;
+        }
+        return null;
       }
 
-      // If authenticated and on login page, redirect to the role's own
-      // home — matches web's `app/login/page.tsx` portal_type branch
-      // exactly (see portal_routes.dart), not always the Admin Dashboard.
-      if (isAuthenticated && isLoggingIn) {
-        final target = resolveHomeRouteForPortal(currentUser.portalType);
-        debugPrint('[AppRouter] redirect -> $target (portalType=${currentUser.portalType})');
-        return target;
+      // Not authenticated: each school has its own web subdomain
+      // (Admin > School Tenancy > Add School); mobile identifies which
+      // school it's talking to via this one-time picker instead, before
+      // ever showing the (shared, role-agnostic) login form.
+      if (!hasSelectedSchool) {
+        return isSelectingSchool ? null : '/school-select';
+      }
+      if (!isLoggingIn) {
+        debugPrint('[AppRouter] redirect -> /login');
+        return '/login';
       }
 
       // No redirect needed
@@ -135,6 +153,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       // Auth Routes
+      GoRoute(
+        path: '/school-select',
+        name: 'school-select',
+        builder: (context, state) => const SchoolSelectPage(),
+      ),
       GoRoute(
         path: '/login',
         name: 'login',
@@ -467,6 +490,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'students-promote',
         builder: (context, state) => const StudentPromotionPage(),
       ),
+      // "Student Export" — matches web's `routes.ts` Reports `sub` array
+      // exactly: the module's real, non-"Coming Soon" 14th sub-nav item,
+      // even though its own path lives under `/students/...` there too.
+      GoRoute(
+        path: '/students/export',
+        name: 'students-export',
+        builder: (context, state) => const StudentExportPage(),
+      ),
 
       // Human Resource Routes — UI matches the real, dormant `HrPanels.tsx`
       // components on the current `main` branch; API integration matches
@@ -520,6 +551,45 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // RolesPermissionsPage (see _MainTab), matching the frontend's shared
       // layout/breadcrumb across its Roles/Assign Permissions/Login
       // Permission destinations.
+
+      // Reports Routes — the bare `/reports` Hub, plus the only 2 of the
+      // module's 13 sub-nav items that are live on web itself (the other
+      // 11 are real "Coming Soon" pages there too, with no registered
+      // route here either — matches how every other module's
+      // `comingSoon: true` sub-items are already handled, e.g. HR's
+      // Leave/Offboarding).
+      GoRoute(
+        path: '/reports',
+        name: 'reports-hub',
+        builder: (context, state) => const ReportsHubPage(),
+      ),
+      GoRoute(
+        path: '/reports/student-attendance',
+        name: 'reports-student-attendance',
+        builder: (context, state) => const StudentAttendanceReportPage(),
+      ),
+      GoRoute(
+        path: '/reports/staff-attendance',
+        name: 'reports-staff-attendance',
+        builder: (context, state) => const StaffAttendanceReportPage(),
+      ),
+      // Report Explorer — the Hub's card links (`/reports/{module}/{report}`,
+      // e.g. `/reports/students/student-report`), matching web's dynamic
+      // `app/(dashboard)/reports/[module]/[report]/page.tsx` route. Falls
+      // back to a plain "not found" message for an unrecognized key rather
+      // than crashing, matching web's own `ReportNotFound` fallback.
+      GoRoute(
+        path: '/reports/:module/:report',
+        name: 'reports-explorer',
+        builder: (context, state) {
+          final key = '${state.pathParameters['module']}/${state.pathParameters['report']}';
+          final definition = kReportDefinitions[key];
+          if (definition == null) {
+            return Scaffold(body: Center(child: Text('Report "$key" not found.')));
+          }
+          return ReportExplorerPage(definition: definition);
+        },
+      ),
 
       // Settings Routes
       GoRoute(
@@ -605,6 +675,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier(Ref ref) {
     ref.listen<AuthState>(authNotifierProvider, (previous, next) {
+      notifyListeners();
+    });
+    ref.listen<String?>(selectedSchoolSubdomainProvider, (previous, next) {
       notifyListeners();
     });
   }

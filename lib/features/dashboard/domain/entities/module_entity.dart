@@ -206,12 +206,44 @@ class Modules {
     ModuleEntity(
       id: 'reports',
       name: 'Reports',
+      // Matches web exactly: tapping the Reports module icon itself lands
+      // on the Hub (`ReportsHubPage` — a card grid grouped by module,
+      // ported from `app/(dashboard)/reports/page.tsx`), with the same
+      // 13-item sub-nav still visible above it (none active, since none of
+      // their paths match `/reports` exactly — matches web's own
+      // `findOwnerModule`/`activeSubModule` behavior).
       path: '/reports',
       icon: Icons.bar_chart_outlined,
       bgColor: AppColors.reportsBg,
       iconColor: AppColors.reportsIc,
       iconAsset: 'assets/icons/reports_3d.png',
-      comingSoon: true,
+      comingSoon: false,
+      // Matches web's real `routes.ts` `sub` array for the Reports module
+      // exactly (id/label/path/order) — only Student Attendance and Staff
+      // Attendance are actually live on web itself; the other 11 are real
+      // "Coming Soon" pages there too (their intended designs exist only as
+      // commented-out, non-functional code, so they aren't ported here —
+      // matches the current live web state exactly, not the aspirational
+      // design).
+      subModules: [
+        SubModuleEntity(label: 'Student Report', path: '/reports/student', icon: Icons.insert_chart_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Student List', path: '/reports/student-list', icon: Icons.people_outline, comingSoon: true),
+        SubModuleEntity(label: 'Student Attendance', path: '/reports/student-attendance', icon: Icons.how_to_reg_outlined),
+        SubModuleEntity(label: 'Exam Result', path: '/reports/exam-result', icon: Icons.assignment_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Exam Merit', path: '/reports/exam-merit', icon: Icons.emoji_events_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Staff List', path: '/reports/staff-list', icon: Icons.manage_accounts_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Staff Attendance', path: '/reports/staff-attendance', icon: Icons.how_to_reg_outlined),
+        SubModuleEntity(label: 'Fees Collection', path: '/reports/fees-collection', icon: Icons.payments_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Fees Due', path: '/reports/fees-due', icon: Icons.error_outline, comingSoon: true),
+        SubModuleEntity(label: 'Accounts Ledger', path: '/reports/accounts-ledger', icon: Icons.account_balance_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Library Issue', path: '/reports/library-issue', icon: Icons.bookmark_added_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Transport', path: '/reports/transport', icon: Icons.directions_bus_outlined, comingSoon: true),
+        SubModuleEntity(label: 'Inventory Stock', path: '/reports/inventory-stock', icon: Icons.inventory_2_outlined, comingSoon: true),
+        // Web's real, live 14th entry (`routes.ts`'s Reports `sub` array) —
+        // not "Coming Soon" like most of the above, since `StudentExportPanel`
+        // is a fully working page there (see student_export_page.dart).
+        SubModuleEntity(label: 'Student Export', path: '/students/export', icon: Icons.file_download_outlined),
+      ],
     ),
     ModuleEntity(
       id: 'fees',

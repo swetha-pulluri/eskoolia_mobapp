@@ -66,48 +66,74 @@ class _AttendanceAbsentDialogState extends State<AttendanceAbsentDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Row(children: [
-        const Icon(Icons.cancel, color: Color(0xFFC2264E), size: 20),
-        const SizedBox(width: 10),
+        // Previously just a static `Icon` with no tap handler — visually an
+        // X-in-circle, so tapping it (a natural instinct for "close this
+        // dialog") did nothing at all. Wiring it to actually close the
+        // dialog (same as tapping outside it) is a real close/cancel
+        // action now, not just decoration.
+        IconButton(
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.cancel, color: Color(0xFFC2264E), size: 20),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          tooltip: 'Close',
+        ),
+        const SizedBox(width: 6),
         Expanded(child: Text('Mark ${widget.staffName} Absent', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
       ]),
-      content: ConstrainedBox(
-        // A hardcoded desktop width overflows a 320-360dp phone screen once
-        // the dialog's own insets are subtracted; cap it to whichever is
+      content: SizedBox(
+        // `AlertDialog`'s default content sizing wraps this in an
+        // `IntrinsicWidth`, which — combined with width-flexible children
+        // like `Wrap`/`TextField` — can resolve to a much narrower width
+        // than the dialog actually has room for (seen in practice: ~192px
+        // instead of the ~290-380px available), forcing the quick-reason
+        // chips to wrap across extra lines and overflowing the dialog's
+        // available height. A `SizedBox` with a definite (not just capped)
+        // width removes that ambiguity — a hardcoded desktop width would
+        // otherwise overflow a 320-360dp phone screen once the dialog's own
+        // insets are subtracted, so it's still capped to whichever is
         // smaller.
-        constraints: BoxConstraints(maxWidth: math.min(380, MediaQuery.sizeOf(context).width - 32)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Select a reason to track this absence.', style: TextStyle(fontSize: 12.5, color: Color(0xFF6B6B80))),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(onPressed: _aiSuggest, icon: const Icon(Icons.auto_awesome, size: 14), label: const Text('AI Suggest Reason')),
-            const SizedBox(height: 14),
-            const Text('QUICK REASONS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1, color: Color(0xFF9CA0AE))),
-            const SizedBox(height: 6),
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final r in _quickReasons)
-                ChoiceChip(
-                  label: Text(r, style: const TextStyle(fontSize: 12.5)),
-                  selected: _selected == r,
-                  selectedColor: const Color(0xFFFCE8EE),
-                  labelStyle: TextStyle(color: _selected == r ? const Color(0xFF7C1030) : null, fontWeight: _selected == r ? FontWeight.w700 : FontWeight.w500),
-                  onSelected: (_) => setState(() {
-                    _selected = _selected == r ? null : r;
-                    if (_selected != null) _customCtrl.clear();
-                  }),
-                ),
-            ]),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _customCtrl,
-              decoration: const InputDecoration(hintText: 'Or type a custom reason…', border: OutlineInputBorder(), isDense: true),
-              maxLines: 2,
-              onChanged: (v) {
-                if (v.isNotEmpty) setState(() => _selected = null);
-              },
-            ),
-          ],
+        width: math.min(380, MediaQuery.sizeOf(context).width - 32),
+        child: SingleChildScrollView(
+          // Belt-and-braces: even with a definite width, a short/landscape
+          // screen (or the reason list growing) can still exceed the
+          // dialog's available height — scrolling instead of a hard
+          // `RenderFlex` overflow matches Flutter's own recommended fix for
+          // content that may legitimately not fit.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Select a reason to track this absence.', style: TextStyle(fontSize: 12.5, color: Color(0xFF6B6B80))),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(onPressed: _aiSuggest, icon: const Icon(Icons.auto_awesome, size: 14), label: const Text('AI Suggest Reason')),
+              const SizedBox(height: 14),
+              const Text('QUICK REASONS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1, color: Color(0xFF9CA0AE))),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final r in _quickReasons)
+                  ChoiceChip(
+                    label: Text(r, style: const TextStyle(fontSize: 12.5)),
+                    selected: _selected == r,
+                    selectedColor: const Color(0xFFFCE8EE),
+                    labelStyle: TextStyle(color: _selected == r ? const Color(0xFF7C1030) : null, fontWeight: _selected == r ? FontWeight.w700 : FontWeight.w500),
+                    onSelected: (_) => setState(() {
+                      _selected = _selected == r ? null : r;
+                      if (_selected != null) _customCtrl.clear();
+                    }),
+                  ),
+              ]),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _customCtrl,
+                decoration: const InputDecoration(hintText: 'Or type a custom reason…', border: OutlineInputBorder(), isDense: true),
+                maxLines: 2,
+                onChanged: (v) {
+                  if (v.isNotEmpty) setState(() => _selected = null);
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

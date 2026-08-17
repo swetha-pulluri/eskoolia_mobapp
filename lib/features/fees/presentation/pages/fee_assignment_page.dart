@@ -615,21 +615,45 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            // `Row` (not `Wrap`) with an `Expanded` name column reliably
+            // overflowed at phone widths: the accent bar + "Bulk Assign"
+            // button + "N shown" toggle's combined natural width alone
+            // (independent of how long the class name is) can exceed a
+            // narrow phone's available width — `Expanded` only shrinks the
+            // name column, it can't make its non-flex siblings any
+            // narrower. The roster table below already got a phone-width
+            // fix (see `_rosterTable`'s comment); this header row needed
+            // the same attention. `Wrap` lets the button/toggle cluster
+            // drop to its own line instead, matching the page's own header
+            // (`_buildHeader`) and stats bar, which already use `Wrap` for
+            // exactly this reason.
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 10,
               children: [
-                Container(width: 4, height: 44, decoration: BoxDecoration(color: faPurple, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(cls.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: faInk1)),
-                      const SizedBox(height: 3),
-                      Text('$totalCls students · $asgndCls assigned · ${totalCls - asgndCls} unassigned', style: const TextStyle(fontSize: 12.5, color: faInk3)),
-                    ],
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 4, height: 44, decoration: BoxDecoration(color: faPurple, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(width: 14),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(cls.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: faInk1), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 3),
+                          Text(
+                            '$totalCls students · $asgndCls assigned · ${totalCls - asgndCls} unassigned',
+                            style: const TextStyle(fontSize: 12.5, color: faInk3),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 8),
                 FaOutlineButton(small: true, label: 'Bulk Assign', onPressed: () => _openBulkModal(cls.id, cls.name)),

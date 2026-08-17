@@ -825,12 +825,31 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(icon: const Icon(Icons.visibility_outlined, size: 17), tooltip: 'View', onPressed: () => _openViewSummary(c, all), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30, minHeight: 30)),
-            IconButton(icon: const Icon(Icons.edit_outlined, size: 17), tooltip: 'Edit', onPressed: () => _openForm(editing: c), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30, minHeight: 30)),
-            IconButton(icon: const Icon(Icons.delete_outline, size: 17), tooltip: 'Delete', onPressed: () => _confirmDelete(c), padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 30, minHeight: 30)),
+            _rowActionButton(icon: Icons.visibility_outlined, tooltip: 'View', onTap: () => _openViewSummary(c, all)),
+            const SizedBox(width: 4),
+            _rowActionButton(icon: Icons.edit_outlined, tooltip: 'Edit', onTap: () => _openForm(editing: c)),
+            const SizedBox(width: 4),
+            _rowActionButton(icon: Icons.delete_outline, tooltip: 'Delete', onTap: () => _confirmDelete(c)),
           ],
         ),
       ];
     });
+  }
+
+  /// Plain `InkWell` + fixed-size `Container` — not `IconButton`, whose
+  /// default `MaterialTapTargetSize.padded` reserves a 48dp minimum tap
+  /// target no matter what `constraints` is passed to it. Three of those
+  /// don't fit in this "Actions" column's 90px width even with `minWidth:
+  /// 30` set, which is exactly what overflowed. Matches the same compact
+  /// icon-button technique `AdminIconActionButtons` already uses elsewhere.
+  Widget _rowActionButton({required IconData icon, required String tooltip, required VoidCallback onTap}) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: SizedBox(width: 26, height: 26, child: Icon(icon, size: 16, color: AppColors.textSecondary)),
+      ),
+    );
   }
 }

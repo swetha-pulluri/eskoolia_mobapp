@@ -336,16 +336,23 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    // `Wrap` (not `Row`) — as a single slot inside the outer
+                    // `Wrap`, a `mainAxisSize.min` `Row` with two unguarded
+                    // `Text` children is still measured at its own
+                    // unconstrained natural width, which can exceed the
+                    // width that slot actually gets allotted (reproduced:
+                    // "Carry Forward " + "2024-25 outstanding balances"
+                    // overflowed by 34px at a 246px-wide slot). `Wrap` lets
+                    // the subtitle drop to its own line instead.
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: const [
                         Text('Carry Forward ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fyInk1)),
                         Text('2024-25 outstanding balances', style: TextStyle(fontSize: 12.5, color: fyInk3, fontWeight: FontWeight.w500)),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    Wrap(
                       children: [
                         Text('$_pendingCount pending resolution', style: const TextStyle(fontSize: 12.5, color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
                         const Text('  ·  ', style: TextStyle(fontSize: 12.5, color: fyBorder)),

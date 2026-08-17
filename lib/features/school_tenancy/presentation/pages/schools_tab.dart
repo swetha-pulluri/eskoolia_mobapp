@@ -1321,10 +1321,16 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                 const SizedBox(height: 12),
 
                 // LLM — real toggle wired to `getLLMStates()`/`toggleSchoolLLM()`.
-                Row(
+                // `Wrap` (not `Row`) so the "Not in LLM registry" caption
+                // reflows onto its own line instead of overflowing on
+                // narrower cards — the label + switch + caption together
+                // don't reliably fit on one line at this card width.
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text('LLM access', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5, fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 8),
                     if (llmBusy)
                       const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     else

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../models/login_request_model.dart';
 import '../models/login_response_model.dart';
+import '../models/school_info_model.dart';
 import '../models/user_model.dart';
 
 /// Auth Remote DataSource
@@ -23,6 +24,14 @@ abstract class AuthRemoteDataSource {
   /// Refresh access token
   /// POST /api/v1/auth/refresh/
   Future<String> refreshToken(String refreshToken);
+
+  /// Resolve a school's public branding info from its subdomain, before
+  /// login. `GET /api/v1/tenancy/school-info/?subdomain=<subdomain>`
+  /// (AllowAny — backend/apps/tenancy/views.py::school_info_view). Returns
+  /// null when the subdomain doesn't match any school (backend responds
+  /// 404) rather than throwing, since "not found" is an expected outcome
+  /// while the user is still typing/correcting the subdomain.
+  Future<SchoolInfoModel?> resolveSchoolInfo(String subdomain);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -95,6 +104,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       return response.data['access'] as String;
     } on DioException catch (e) {
       throw Exception(e.error ?? 'Token refresh failed');
+    }
+  }
+
+  @override
+  Future<SchoolInfoModel?> resolveSchoolInfo(String subdomain) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.schoolInfo,
+        queryParameters: {'subdomain': subdomain},
+      );
+      return SchoolInfoModel.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw Exception(e.error ?? 'Could not reach the server');
     }
   }
 }

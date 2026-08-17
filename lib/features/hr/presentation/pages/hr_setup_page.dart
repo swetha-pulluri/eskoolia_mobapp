@@ -37,10 +37,34 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
   int? _desigDefaultDept;
   final _scrollController = ScrollController();
 
+  // Stable identities for the inline forms — kept separate from each form
+  // widget's own `ValueKey`/`key:` (which intentionally changes to force a
+  // state reset on every Add/Edit switch), so `Scrollable.ensureVisible` has
+  // a `GlobalKey` whose `currentContext` survives across those switches.
+  final _deptFormKey = GlobalKey();
+  final _desigFormKey = GlobalKey();
+
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Matches web's `setTimeout(() => document.getElementById(...)
+  /// ?.scrollIntoView({ behavior: "smooth", block: "start" }), 50)` — used
+  /// after every Add/Edit tap so the inline form (which sits above the
+  /// list, off-screen once you've scrolled down to a card) is actually
+  /// visible instead of updating silently out of view. The post-frame delay
+  /// mirrors web's 50ms `setTimeout`: it waits for the `setState` above to
+  /// finish rebuilding (e.g. switching which department a design gets
+  /// scrolled to prefill) before measuring where the form now sits.
+  void _scrollToForm(GlobalKey key) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = key.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeOut, alignment: 0);
+      }
+    });
   }
 
   int _desigCountForDept(List<DesignationEntity> allDesigs, int deptId) {
@@ -157,6 +181,7 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
                 _showAddDeptForm = true;
                 _editDept = null;
               });
+              _scrollToForm(_deptFormKey);
             },
             icon: const Icon(Icons.add, size: 15),
             label: const Text('Add Department'),
@@ -190,28 +215,34 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_showAddDeptForm && _editDept == null)
-          HrDepartmentForm(
-            onSaved: (addAnother) {
-              invalidateHrSetupData(ref);
-              if (!addAnother) {
-                setState(() {
-                  _showAddDeptForm = false;
-                  _step = 2;
-                });
-              }
-            },
-            onCancel: () => setState(() => _showAddDeptForm = false),
+          KeyedSubtree(
+            key: _deptFormKey,
+            child: HrDepartmentForm(
+              onSaved: (addAnother) {
+                invalidateHrSetupData(ref);
+                if (!addAnother) {
+                  setState(() {
+                    _showAddDeptForm = false;
+                    _step = 2;
+                  });
+                }
+              },
+              onCancel: () => setState(() => _showAddDeptForm = false),
+            ),
           ),
         if (_editDept != null)
-          HrDepartmentForm(
-            key: ValueKey('edit-dept-${_editDept!.id}'),
-            initial: _editDept,
-            stepLabel: 'EDIT DEPARTMENT',
-            onSaved: (_) {
-              invalidateHrSetupData(ref);
-              setState(() => _editDept = null);
-            },
-            onCancel: () => setState(() => _editDept = null),
+          KeyedSubtree(
+            key: _deptFormKey,
+            child: HrDepartmentForm(
+              key: ValueKey('edit-dept-${_editDept!.id}'),
+              initial: _editDept,
+              stepLabel: 'EDIT DEPARTMENT',
+              onSaved: (_) {
+                invalidateHrSetupData(ref);
+                setState(() => _editDept = null);
+              },
+              onCancel: () => setState(() => _editDept = null),
+            ),
           ),
         if (state.isLoading)
           const HrSkeleton()
@@ -230,10 +261,13 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
                   dept: dept,
                   designationCount: _desigCountForDept(allDesignations, dept.id),
                   staffCount: _staffCountForDept(activeStaff, dept.id),
-                  onEdit: () => setState(() {
-                    _editDept = dept;
-                    _showAddDeptForm = false;
-                  }),
+                  onEdit: () {
+                    setState(() {
+                      _editDept = dept;
+                      _showAddDeptForm = false;
+                    });
+                    _scrollToForm(_deptFormKey);
+                  },
                   onDelete: () => showHrConfirmDialog(
                     context,
                     title: 'Delete Department',
@@ -293,27 +327,30 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        HrDesignationForm(
-          key: ValueKey(_editDesig != null ? 'edit-${_editDesig!.id}' : 'add-${_desigDefaultDept ?? 0}'),
-          initial: _editDesig,
-          defaultDeptId: _desigDefaultDept,
-          departments: allDepartments,
-          onSaved: (addAnother) {
-            invalidateHrSetupData(ref);
-            ref.read(desigDeptPageProvider.notifier).state = 1;
-            if (!addAnother) {
-              final wasEdit = _editDesig != null;
-              setState(() {
-                _editDesig = null;
-                _desigDefaultDept = null;
-              });
-              if (!wasEdit) {
-                setState(() => _step = 3);
-                _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+        KeyedSubtree(
+          key: _desigFormKey,
+          child: HrDesignationForm(
+            key: ValueKey(_editDesig != null ? 'edit-${_editDesig!.id}' : 'add-${_desigDefaultDept ?? 0}'),
+            initial: _editDesig,
+            defaultDeptId: _desigDefaultDept,
+            departments: allDepartments,
+            onSaved: (addAnother) {
+              invalidateHrSetupData(ref);
+              ref.read(desigDeptPageProvider.notifier).state = 1;
+              if (!addAnother) {
+                final wasEdit = _editDesig != null;
+                setState(() {
+                  _editDesig = null;
+                  _desigDefaultDept = null;
+                });
+                if (!wasEdit) {
+                  setState(() => _step = 3);
+                  _scrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+                }
               }
-            }
-          },
-          onCancel: _editDesig != null ? () => setState(() { _editDesig = null; _desigDefaultDept = null; }) : null,
+            },
+            onCancel: _editDesig != null ? () => setState(() { _editDesig = null; _desigDefaultDept = null; }) : null,
+          ),
         ),
         if (loading || hierCount > 0) ...[
           const Text('DESIGNATIONS ADDED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
@@ -328,14 +365,20 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
                 HrDesignationDeptCard(
                   dept: dept,
                   deptDesigs: allDesignations.where((d) => d.departmentId == dept.id).toList(),
-                  onAddChild: () => setState(() {
-                    _editDesig = null;
-                    _desigDefaultDept = dept.id;
-                  }),
-                  onEdit: (d) => setState(() {
-                    _editDesig = d;
-                    _desigDefaultDept = null;
-                  }),
+                  onAddChild: () {
+                    setState(() {
+                      _editDesig = null;
+                      _desigDefaultDept = dept.id;
+                    });
+                    _scrollToForm(_desigFormKey);
+                  },
+                  onEdit: (d) {
+                    setState(() {
+                      _editDesig = d;
+                      _desigDefaultDept = null;
+                    });
+                    _scrollToForm(_desigFormKey);
+                  },
                   onDelete: (id) => showHrConfirmDialog(
                     context,
                     title: 'Delete Designation',

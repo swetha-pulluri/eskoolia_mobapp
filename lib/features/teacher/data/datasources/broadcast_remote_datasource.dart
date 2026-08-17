@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/utils/logger.dart';
@@ -27,11 +29,18 @@ class BroadcastRemoteDataSource {
 
   Future<BroadcastAudienceOptionsEntity> getAudienceOptions() async {
     try {
-      final response = await _dioClient.get(ApiConstants.broadcastAudienceOptions);
+      // Explicit client-side bound — same reasoning as Todos/Reports: no
+      // timeout here meant a slow/unresponsive request left the compose
+      // sheet's `CircularProgressIndicator` spinning with zero feedback
+      // ("loading but no output") instead of a clear, actionable error.
+      final response = await _dioClient.get(ApiConstants.broadcastAudienceOptions).timeout(const Duration(seconds: 45));
       return BroadcastAudienceOptionsEntity.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       AppLogger.error('Get broadcast audience options error', e);
       _throwApiException(e);
+    } on TimeoutException catch (e) {
+      AppLogger.error('Get broadcast audience options timed out', e);
+      throw const TeacherApiException('Loading audience options is taking too long — please try again.');
     }
   }
 

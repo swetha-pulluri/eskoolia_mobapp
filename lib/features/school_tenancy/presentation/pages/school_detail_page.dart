@@ -211,8 +211,14 @@ class _SchoolDetailPageState extends ConsumerState<SchoolDetailPage> {
                   _row('Provisioned at', _formatDate(school.provisionedAt)),
                 ]),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // `Wrap` (not `Row`) — on a narrow screen these two buttons
+                // at their natural size don't reliably fit on one line;
+                // this drops "Edit School" to its own line instead of
+                // overflowing.
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed: () => context.canPop() ? context.pop() : context.go('/super-admin/schools'),

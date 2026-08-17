@@ -436,21 +436,72 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
     _reloadClasses();
   }
 
-  /// Reloads this section fresh from the server, discarding any unsaved
-  /// local optimistic changes. Note: unlike web (whose "Reset" explicitly
-  /// force-clears every field server-side via empty-string values), the
-  /// real `store/` endpoint has no way to clear a status back to
-  /// "unmarked" — every id submitted must have a real P/A/L status
-  /// (confirmed against the backend's "full coverage" validation rule) —
-  /// so a true destructive clear-all-marks isn't something this endpoint
-  /// supports. Reloading from server truth is the closest safe equivalent.
+  /// Matches web's real `handleReset` exactly: it does NOT merely refetch
+  /// (a previous version of this method assumed the `store/` endpoint had
+  /// no way to clear a mark and just reloaded, which meant a saved "Absent"
+  /// mark was still "Absent" truth on the server, so nothing ever visibly
+  /// reset). Web explicitly wipes state on the server too — since `store/`
+  /// requires a real P/A/L status for every id (its "full coverage" rule,
+  /// there is no true "unmarked" server status), it sends every student in
+  /// the section back to a `status: 'present'` baseline with
+  /// reason/times/pickup all cleared, matching web's own reset payload. The
+  /// UI briefly shows "unmarked" rows optimistically (mirroring web's
+  /// immediate revert before its server round-trip resolves), then the
+  /// final reload settles on "present" for everyone — the real, achievable
+  /// meaning of "reset" here, not a truly blank status.
   void _handleReset(int classId, int sectionId) async {
+    final key = '$classId-$sectionId';
+    final sectionStudents = ref.read(attendanceStudentsProvider).students[key] ?? const <AttendanceStudentEntity>[];
     final notifier = ref.read(attendanceStudentsProvider.notifier);
+
+    if (sectionStudents.isEmpty) {
+      try {
+        await notifier.loadSection(classId, sectionId);
+      } catch (e) {
+        if (mounted) _toast('Unable to reload section: $e', error: true);
+      }
+      return;
+    }
+
+    notifier.replaceSection(classId, sectionId, [
+      for (final s in sectionStudents)
+        s.copyWith(
+          status: 'unmarked',
+          absentReason: null,
+          arrivalTime: null,
+          signInTime: null,
+          signOutTime: null,
+          pickupTime: null,
+          pickupBy: null,
+          notes: const [],
+        ),
+    ]);
+
+    final presentBaseline = [
+      for (final s in sectionStudents)
+        s.copyWith(
+          status: 'present',
+          absentReason: null,
+          arrivalTime: null,
+          signInTime: null,
+          signOutTime: null,
+          pickupTime: null,
+          pickupBy: null,
+        ),
+    ];
+
+    try {
+      await notifier.persistSection(classId, sectionId, presentBaseline);
+      _toast('Section attendance reset.');
+    } catch (e) {
+      if (mounted) _toast('Failed to reset attendance: $e', error: true);
+    }
     try {
       await notifier.loadSection(classId, sectionId);
-      _toast('Section reloaded from server.');
-    } catch (e) {
-      if (mounted) _toast('Unable to reload section: $e', error: true);
+    } catch (_) {
+      // Best-effort refresh — the reset itself already succeeded or failed
+      // above; a failed refetch here just leaves the optimistic rows in
+      // place rather than surfacing a second error for the same action.
     }
   }
 
