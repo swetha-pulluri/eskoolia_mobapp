@@ -28,6 +28,16 @@ class ApiConstants {
   static const String refresh = '$apiBasePath/auth/refresh/';
   static const String changePassword = '$apiBasePath/auth/change-password/';
 
+  // Forgot/Reset Password (public — no auth required). Reference:
+  // backend/apps/users/views.py — ForgotPasswordView, VerifyResetCodeView,
+  // ResetPasswordView; backend/apps/users/urls.py. Same 3-step,
+  // email + 6-digit-OTP flow web's /forgot-password and /reset-password
+  // pages already use (frontend/lib/auth-context.tsx) — reused verbatim,
+  // no backend changes.
+  static const String forgotPassword = '$apiBasePath/auth/forgot-password/';
+  static const String verifyResetCode = '$apiBasePath/auth/verify-reset-code/';
+  static const String resetPassword = '$apiBasePath/auth/reset-password/';
+
   // School Info Endpoint (public - no auth required)
   static const String schoolInfo = '$apiBasePath/tenancy/school-info/';
 

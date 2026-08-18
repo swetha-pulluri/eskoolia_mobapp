@@ -6,31 +6,40 @@ import '../../../../core/utils/module_nav_utils.dart';
 import '../../../../core/widgets/global_app_shell.dart';
 import '../../../../core/widgets/module_pill_with_flyout.dart';
 import '../../../notes/presentation/widgets/note_trigger_button.dart';
-import '../../../widgets_panel/presentation/widgets/widget_manager_button.dart';
 import '../../domain/entities/teacher_module_entity.dart';
 
 const _navBg = Color(0xFFFFFFFF);
 const _navBorder = Color(0xFFECECF2);
-const _navInk1 = Color(0xFF0F1222);
+const _navInk3 = Color(0xFF9197AE);
 const _navPurple = Color(0xFF6D4AFF);
 
-/// Teacher Portal's own top nav bar — near-identical structure to Admin's
-/// `_GlobalTopBar` (same logo/search/notes/widgets/notifications/avatar
-/// cluster, same responsive collapse thresholds), but sourced from
-/// [TeacherModules] instead of the admin `Modules` catalog, with no
-/// back-arrow (Teacher Home has no "back" concept — matches web's
-/// `(teacher-portal)/layout.tsx`, which never renders one either), and the
-/// extra **"TEACHER"** role badge web adds next to the logo.
+/// Teacher Portal's top bar — logo, TEACHER badge, the module-pill
+/// navigation strip (restored — top-level module browsing lives both here
+/// AND on the bottom nav's "All Modules" tab; they're not mutually
+/// exclusive), and exactly three trailing icons: Search, Sticky Notes,
+/// Notifications. No avatar/profile icon here — that's the bottom nav's
+/// Profile tab; logout lives on `TeacherProfilePage` accordingly (same
+/// precedent Admin's own `_GlobalTopBar` set when its Profile bottom-nav tab
+/// replaced its avatar menu — see that class's doc comment on `AvatarMenu`).
+/// No Widgets icon either (Admin-only concept). Deliberately no dynamic page
+/// title here — per explicit user direction, the bar must not switch to
+/// showing whichever module/route is currently open (e.g. "All Mo…" while
+/// on the All Modules tab); it stays the same regardless of route. Still
+/// shows a back chevron on non-main-tab routes so users can navigate up.
+/// [ModuleSubNav] (a separate sibling widget in `GlobalAppShell`, not part
+/// of this bar) still provides contextual sub-tabs for whichever module
+/// you're inside.
 class TeacherTopBar extends ConsumerWidget {
   const TeacherTopBar({super.key});
+
+  static const _mainTabPaths = {'/teacher/home', '/teacher/modules', '/teacher/profile'};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentPath = ref.watch(currentRoutePathProvider);
-    final isHome = currentPath == '/teacher/home';
-    final showWordmark = MediaQuery.sizeOf(context).width >= 400;
-    final isNarrow = MediaQuery.sizeOf(context).width < 400;
-    final trailingGap = isNarrow ? 3.0 : 6.0;
+    final isMainTab = _mainTabPaths.contains(currentPath);
+    final isNarrow = MediaQuery.sizeOf(context).width < 380;
+    final trailingGap = isNarrow ? 4.0 : 8.0;
 
     return Material(
       // Same reasoning as `_GlobalTopBar` — mounted outside any routed
@@ -46,41 +55,47 @@ class TeacherTopBar extends ConsumerWidget {
             decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _navBorder))),
             child: Row(
               children: [
+                if (!isMainTab) ...[
+                  InkWell(
+                    onTap: () {
+                      final router = ref.read(appRouterProvider);
+                      if (router.canPop()) {
+                        router.pop();
+                      } else {
+                        router.go('/teacher/home');
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.chevron_left, size: 18, color: _navInk3),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 InkWell(
                   onTap: () => ref.read(appRouterProvider).go('/teacher/home'),
                   borderRadius: BorderRadius.circular(9),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(9),
-                        child: Image.asset(
-                          AppConstants.eskooliaLogo,
-                          width: 32,
-                          height: 32,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(color: _navPurple, borderRadius: BorderRadius.circular(9)),
-                            alignment: Alignment.center,
-                            child: const Text('e', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-                          ),
-                        ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.asset(
+                      AppConstants.eskooliaLogo,
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(color: _navPurple, borderRadius: BorderRadius.circular(9)),
+                        alignment: Alignment.center,
+                        child: const Text('e', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
                       ),
-                      if (showWordmark) ...[
-                        const SizedBox(width: 8),
-                        const Text(
-                          'eskoolia',
-                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                const _TeacherRoleBadge(),
-                const SizedBox(width: 12),
+                SizedBox(width: isNarrow ? 6 : 8),
+                _TeacherRoleBadge(isNarrow: isNarrow),
+                SizedBox(width: isNarrow ? 6 : 10),
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -92,38 +107,27 @@ class TeacherTopBar extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: isNarrow ? 2 : 4),
-                // Wrapped in its own `Expanded` + horizontally-scrolling
-                // `SingleChildScrollView` — matches the same fix in
-                // `_GlobalTopBar` (`global_app_shell.dart`). At typical
-                // widths this renders exactly as before (ample leftover
-                // space after the modules `Expanded` above means nothing
-                // visibly scrolls); on a very narrow window — well under
-                // the ~400dp this bar's own `isNarrow` breakpoint assumes —
-                // the combined width of these fixed icon buttons could
-                // exceed what's left even with the modules row already
-                // shrunk to 0, a real overflow this bar had no safety net
-                // against. Scrolling instead of crashing matches the same
-                // safety net already used for the modules row.
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SearchTrigger(),
-                        SizedBox(width: trailingGap),
-                        const NoteTriggerButton(),
-                        if (isHome) ...[
-                          SizedBox(width: trailingGap),
-                          const WidgetManagerButton(),
-                        ],
-                        SizedBox(width: trailingGap),
-                        const NotificationBellButton(),
-                        SizedBox(width: trailingGap),
-                        const AvatarMenu(),
-                      ],
-                    ),
-                  ),
+                // Deliberately NOT wrapped in its own `Expanded` (unlike the
+                // module-pill row above): giving these two `Expanded`
+                // regions equal 50/50 weight let the module-pill row's
+                // `Expanded` claim half the width even when it didn't need
+                // it, leaving this row's own `SingleChildScrollView`
+                // partially off-screen — Search stayed visible but Notes/
+                // Notifications needed a manual horizontal scroll to reach,
+                // which read as "the notification icon is missing". A plain
+                // `Row` here takes only its own intrinsic width, so these 3
+                // fixed-size icons are always fully visible; the module-pill
+                // `Expanded` above simply gets whatever width is left over
+                // (it already scrolls internally if that's tight).
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SearchTrigger(),
+                    SizedBox(width: trailingGap),
+                    const NoteTriggerButton(),
+                    SizedBox(width: trailingGap),
+                    const NotificationBellButton(),
+                  ],
                 ),
               ],
             ),
@@ -138,12 +142,13 @@ class TeacherTopBar extends ConsumerWidget {
 /// text "Teacher" rendered uppercase, 10px/700/0.08em letter-spacing,
 /// purple text on a light-lavender pill, 6px radius, 3/8 padding.
 class _TeacherRoleBadge extends StatelessWidget {
-  const _TeacherRoleBadge();
+  final bool isNarrow;
+  const _TeacherRoleBadge({required this.isNarrow});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: isNarrow ? 6 : 8, vertical: 3),
       decoration: BoxDecoration(color: const Color(0xFFEEEAFF), borderRadius: BorderRadius.circular(6)),
       child: const Text(
         'TEACHER',

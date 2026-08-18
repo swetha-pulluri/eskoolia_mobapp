@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../dashboard/presentation/widgets/greeting_section.dart';
-import '../../../dashboard/presentation/widgets/module_card.dart';
 import '../../../dashboard/presentation/widgets/section_label.dart';
 import '../../../widgets_panel/presentation/providers/widget_prefs_provider.dart';
 import '../../domain/entities/teacher_module_entity.dart';
@@ -12,13 +11,29 @@ import '../widgets/quick_broadcast_card.dart';
 import '../widgets/smart_todo_card.dart';
 import '../widgets/teacher_assignments_section.dart';
 import '../widgets/teacher_pending_chips_row.dart';
+import '../widgets/teacher_quick_access_tile.dart';
 import '../widgets/today_schedule_card.dart';
 import '../widgets/week_ahead_card.dart';
+import 'lkg_teacher_home_content.dart';
+
+/// Class name an LKG homeroom teacher's `class_teacher_for` carries —
+/// backend-normalized (`backend/apps/core/models.py`'s fixed `class_names`
+/// list), so an exact match here is safe and never a guess from
+/// username/password or a hardcoded per-teacher condition.
+const _lkgClassName = 'LKG';
 
 /// Teacher Home Screen — the Teacher Portal's landing page after login
 /// (`/teacher/home`, equivalent to web's `(teacher-portal)/teacher/home`).
 /// Single-column mobile-first composition, same simplification
 /// `AdminHomePage` already makes over web's 3-column desktop grid.
+///
+/// No separate route/portal_type exists for an LKG teacher — role routing
+/// (`portal_routes.dart`) only resolves as far as `/teacher/home` for every
+/// teacher. Once here, this page decides between the generic
+/// [_TeacherHomeContent] and [LkgTeacherHomeContent] using
+/// `teacherMeProvider`'s already-fetched `class_teacher_for.class_name`
+/// (`GET /api/v1/teacher/me/`) — real, authenticated backend data, not a
+/// username/password check or a hardcoded per-teacher condition.
 class TeacherHomePage extends ConsumerWidget {
   const TeacherHomePage({super.key});
 
@@ -39,6 +54,10 @@ class TeacherHomePage extends ConsumerWidget {
     final meAsync = ref.watch(teacherMeProvider);
 
     return Scaffold(
+      // Pure white, overriding the app-wide theme's `scaffoldBackgroundColor`
+      // (a very light grey, shared with Admin) — scoped to just this page
+      // rather than touching the shared theme.
+      backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(teacherMeProvider);
@@ -46,7 +65,9 @@ class TeacherHomePage extends ConsumerWidget {
         child: meAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => _PortalLoadError(error: error, onRetry: () => ref.invalidate(teacherMeProvider)),
-          data: (_) => _TeacherHomeContent(isEnabled: isEnabled),
+          data: (teacherMe) => teacherMe.classTeacherFor?.className == _lkgClassName
+              ? LkgTeacherHomeContent(teacherMe: teacherMe, isEnabled: isEnabled)
+              : _TeacherHomeContent(isEnabled: isEnabled),
         ),
       ),
     );
@@ -116,51 +137,69 @@ class _TeacherHomeContent extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(bottom: 0),
-            child: GreetingSection(),
+            child: GreetingSection(borderColor: AppColors.border, nameColor: AppColors.financeIc),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: TeacherPendingChipsRow(),
-          ),
-          const SizedBox(height: 12),
+          const TeacherPendingChipsRow(),
           if (isEnabled('teacher-day-plan')) const TodayScheduleCard(),
-          const SizedBox(height: 10),
-          SectionLabel(title: 'QUICK ACCESS', count: quickAccessModules.length),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.5,
+          // Quick Access — ONE outer card wrapping the heading + grid,
+          // instead of a bare section label floating over bare tiles, so it
+          // reads as a distinct section like Greeting/Attendance/Today's
+          // Schedule above. No horizontal padding on the card itself: the
+          // heading and grid already carry their own 16px horizontal insets
+          // (via `SectionLabel` and the `Padding` below), so adding a second
+          // 16px here would just double it up.
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppColors.bg1,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final module in quickAccessModules)
-                  ModuleCardGrid(module: module, onTap: () => context.go(module.path)),
+                SectionLabel(title: 'QUICK ACCESS', count: quickAccessModules.length),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TeacherModuleWrapGrid(
+                    modules: quickAccessModules,
+                    iconAssetFor: quickAccessIconAssetFor,
+                    onModuleTap: (module) => context.go(module.path),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
           const TeacherAssignmentsSection(),
-          const SizedBox(height: 10),
-          SectionLabel(title: 'ALL MODULES', count: allModules.length),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.0,
+          // Same single-outer-card treatment as Quick Access, so the whole
+          // Home screen reads as a consistent stack of cards rather than
+          // Quick Access being the only carded module grid.
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppColors.bg1,
+              border: Border.all(color: AppColors.border),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final module in allModules)
-                  ModuleCardGrid(module: module, onTap: () => context.go(module.path)),
+                SectionLabel(title: 'ALL MODULES', count: allModules.length),
+                const SizedBox(height: 6),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TeacherModuleWrapGrid(
+                    modules: allModules,
+                    iconAssetFor: quickAccessIconAssetFor,
+                    onModuleTap: (module) => context.go(module.path),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
           if (isEnabled('week-ahead')) const WeekAheadCard(),
           if (isEnabled('smart-todo')) const SmartTodoCard(),
           if (isEnabled('broadcast')) const QuickBroadcastCard(),

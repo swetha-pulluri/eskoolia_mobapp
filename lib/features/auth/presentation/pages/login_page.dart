@@ -517,7 +517,38 @@ class _LoginPageState extends ConsumerState<LoginPage>
     return Consumer(
       builder: (context, ref, child) {
         final subdomain = ref.watch(selectedSchoolSubdomainProvider);
-        if (subdomain == null) return const SizedBox.shrink();
+        if (subdomain == null) {
+          // Default state — this is the Main eskoolia.com login (backend
+          // resolves the account's own school/role from credentials alone,
+          // no tenant needed up front). Identifying a specific school is an
+          // optional, separate path for anyone who already knows their
+          // school's own URL — a plain link to it, not a forced step.
+          return Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: responsiveSpacing(context, 16),
+              vertical: responsiveSpacing(context, 8),
+            ),
+            child: Center(
+              child: TextButton(
+                onPressed: () => context.push('/school-select'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  "Logging into a specific school? Enter your school's URL",
+                  style: TextStyle(
+                    color: AppColors.airaTeal,
+                    fontSize: responsiveFontSize(context, 12),
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
 
         final schoolInfoAsync = ref.watch(schoolInfoProvider(subdomain));
         final schoolName = schoolInfoAsync.maybeWhen(
@@ -530,29 +561,34 @@ class _LoginPageState extends ConsumerState<LoginPage>
             horizontal: responsiveSpacing(context, 16),
             vertical: responsiveSpacing(context, 8),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: responsiveSpacing(context, 8),
+            runSpacing: responsiveSpacing(context, 4),
             children: [
-              Icon(Icons.school, size: responsiveIconSize(context, 14), color: AppColors.airaTeal),
-              SizedBox(width: responsiveSpacing(context, 6)),
-              Flexible(
-                child: Text(
-                  schoolName ?? subdomain,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.atriumIndigo,
-                    fontSize: responsiveFontSize(context, 12),
-                    fontWeight: FontWeight.w700,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.school, size: responsiveIconSize(context, 14), color: AppColors.airaTeal),
+                  SizedBox(width: responsiveSpacing(context, 6)),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
+                    child: Text(
+                      schoolName ?? subdomain,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.atriumIndigo,
+                        fontSize: responsiveFontSize(context, 12),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-              SizedBox(width: responsiveSpacing(context, 8)),
               TextButton(
-                onPressed: () async {
-                  await clearSelectedSchool(ref);
-                  if (context.mounted) context.go('/school-select');
-                },
+                onPressed: () => context.push('/school-select'),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
@@ -564,6 +600,23 @@ class _LoginPageState extends ConsumerState<LoginPage>
                     color: AppColors.deepSaffron,
                     fontSize: responsiveFontSize(context, 12),
                     fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => clearSelectedSchool(ref),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Use main login instead',
+                  style: TextStyle(
+                    color: AppColors.onSurfaceVariant,
+                    fontSize: responsiveFontSize(context, 12),
+                    fontWeight: FontWeight.w600,
                     decoration: TextDecoration.underline,
                   ),
                 ),
@@ -1051,9 +1104,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   Widget _buildForgotPassword(double fontSize) {
     return TextButton(
-      onPressed: () {
-        // TODO: Navigate to forgot password
-      },
+      onPressed: () => context.push('/forgot-password'),
       style: TextButton.styleFrom(
         padding: EdgeInsets.zero,
         minimumSize: Size.zero,

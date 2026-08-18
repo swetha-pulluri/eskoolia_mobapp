@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/router/app_router.dart';
 import '../../../../core/utils/platform_capabilities.dart';
+import '../../../widgets_panel/presentation/providers/widget_prefs_provider.dart';
 import '../../data/ai_search.dart';
 import '../../domain/models/flat_index_entry.dart';
+import '../../domain/teacher_ai_flat_index.dart';
 
 const _navBorder = Color(0xFFECECF2);
 const _navInk1 = Color(0xFF0F1222);
@@ -56,9 +58,16 @@ class _SearchCommandPaletteDialogState extends ConsumerState<_SearchCommandPalet
   }
 
   void _recompute(String query) {
-    final exact = query.trim().isEmpty ? null : exactMatch(query);
+    // Admin's `aiFlatIndex` only contains Admin routes — a Teacher searching
+    // "fees" (or anything else) must resolve against their own
+    // `teacherAiFlatIndex` instead, or every result sends them to an Admin
+    // page they may not even have access to (and, for Fees specifically,
+    // one that crashes — see `teacher_ai_flat_index.dart`'s doc comment).
+    final role = ref.read(currentPortalRoleProvider);
+    final index = role == 'teacher' ? teacherAiFlatIndex : null;
+    final exact = query.trim().isEmpty ? null : exactMatch(query, index: index);
     setState(() {
-      _results = query.trim().isEmpty ? const [] : (exact != null ? [exact] : localFuzzySearch(query));
+      _results = query.trim().isEmpty ? const [] : (exact != null ? [exact] : localFuzzySearch(query, index: index));
       _selectedIndex = 0;
     });
   }

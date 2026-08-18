@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/teacher_profile_entity.dart';
 import '../providers/teacher_profile_providers.dart';
 import '../widgets/my_classes/load_error_card.dart';
+
+const _dangerRed = Color(0xFFE11D48);
 
 /// Teacher Portal — My Profile. Mirrors
 /// `(teacher-portal)/teacher/profile/page.tsx`, which renders
@@ -18,6 +21,26 @@ import '../widgets/my_classes/load_error_card.dart';
 /// upload feature that doesn't exist).
 class TeacherProfilePage extends ConsumerWidget {
   const TeacherProfilePage({super.key});
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log out'),
+        content: const Text('Are you sure you want to log out of Eskoolia?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Log out', style: TextStyle(color: _dangerRed)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      ref.read(authNotifierProvider.notifier).logout();
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,6 +73,27 @@ class TeacherProfilePage extends ConsumerWidget {
                       onRetry: () => ref.invalidate(teacherProfileProvider),
                     ),
                     data: (profile) => _content(profile),
+                  ),
+                ),
+                // Only remaining logout entry point now that the top bar's
+                // avatar dropdown (which used to carry it) is gone in favor
+                // of the bottom-nav Profile tab — mirrors the Admin
+                // `ProfilePage`'s own logout button exactly.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _confirmLogout(context, ref),
+                      icon: const Icon(Icons.logout, size: 16),
+                      label: const Text('Log out'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _dangerRed,
+                        side: const BorderSide(color: _dangerRed),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

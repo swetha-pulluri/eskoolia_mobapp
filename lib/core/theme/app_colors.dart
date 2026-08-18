@@ -117,6 +117,25 @@ class AppColors {
     ],
   );
 
+  // ═══ Account Recovery Design Tokens (frontend/app/globals.css — the
+  // .flow-form-card/.editorial-form/.primary-flow-button rules shared by the
+  // Forgot Password and Reset Password pages). This flow is keyed to
+  // --surface-tint, a distinct, darker teal from --aira-teal used elsewhere
+  // in the auth flow — not a typo, matches web exactly. ═══
+  static const Color surfaceTint = Color(0xFF006A61); // --surface-tint / --tertiary
+
+  static const LinearGradient recoveryButtonGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [surfaceTint, atriumIndigo], // linear-gradient(90deg, --surface-tint, --atrium-indigo)
+  );
+
+  static const LinearGradient recoveryHeadingGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [surfaceTint, atriumIndigo], // linear-gradient(135deg, --surface-tint, --atrium-indigo)
+  );
+
   // ═══ Dashboard KPI Card Colors (from frontend/app/(dashboard)/dashboard/page.tsx) ═══
 
   // Total Students

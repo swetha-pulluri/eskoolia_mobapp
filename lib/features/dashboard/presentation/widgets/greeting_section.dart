@@ -18,7 +18,15 @@ import '../providers/dashboard_provider.dart';
 /// (fade/slide) is applied by the caller via `FadeSlideIn`, not this
 /// widget itself.
 class GreetingSection extends ConsumerWidget {
-  const GreetingSection({super.key});
+  /// Both default to Admin's original purple-tinted look — every existing
+  /// Admin call site (`dashboard_page.dart`, no args) is unaffected. Teacher
+  /// Home passes plain/neutral values instead, to match the plain-white
+  /// card style the rest of its sections (Attendance/Today's Schedule/Quick
+  /// Access) already use.
+  final Color? borderColor;
+  final Color? nameColor;
+
+  const GreetingSection({super.key, this.borderColor, this.nameColor});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +45,7 @@ class GreetingSection extends ConsumerWidget {
       child: PremiumCard(
         radius: 24,
         color: Colors.white,
-        borderColor: AppColors.brandPurple.withValues(alpha: 0.55),
+        borderColor: borderColor ?? AppColors.brandPurple.withValues(alpha: 0.55),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -59,7 +67,7 @@ class GreetingSection extends ConsumerWidget {
                           text: 'Good ${app_date_utils.DateUtils.getTimeWord()}',
                         ),
                         if (displayName.isNotEmpty)
-                          TextSpan(text: ', $displayName', style: const TextStyle(color: AppColors.brandPurple)),
+                          TextSpan(text: ', $displayName', style: TextStyle(color: nameColor ?? AppColors.brandPurple)),
                       ],
                     ),
                   ),

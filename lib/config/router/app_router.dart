@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/portal_not_implemented_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/school_select_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
+import '../../features/teacher/domain/entities/teacher_module_entity.dart';
 import '../../features/teacher/presentation/pages/teacher_home_page.dart';
 import '../../features/teacher/presentation/pages/my_classes_page.dart';
 import '../../features/teacher/presentation/pages/teacher_student_profile_page.dart';
@@ -120,15 +123,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       );
       final isAuthenticated = currentUser != null;
       final isLoggingIn = state.matchedLocation == '/login';
-      final isSelectingSchool = state.matchedLocation == '/school-select';
-      final hasSelectedSchool = ref.read(selectedSchoolSubdomainProvider) != null;
-      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated, hasSelectedSchool=$hasSelectedSchool');
+      // Pre-auth utility pages, reachable only via an explicit link — never
+      // forced, and never require each other.
+      const preAuthPaths = {'/school-select', '/forgot-password', '/reset-password'};
+      final isOnPreAuthPage = preAuthPaths.contains(state.matchedLocation);
+      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated');
 
-      // Authenticated users should never be stuck on school-select/login —
-      // bounce to their role's own home (matches web's `app/login/page.tsx`
+      // Authenticated users should never be stuck on a pre-auth page — bounce
+      // to their role's own home (matches web's `app/login/page.tsx`
       // portal_type branch exactly, see portal_routes.dart).
       if (isAuthenticated) {
-        if (isLoggingIn || isSelectingSchool) {
+        if (isLoggingIn || isOnPreAuthPage) {
           final target = resolveHomeRouteForPortal(currentUser.portalType);
           debugPrint('[AppRouter] redirect -> $target (portalType=${currentUser.portalType})');
           return target;
@@ -136,14 +141,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // Not authenticated: each school has its own web subdomain
-      // (Admin > School Tenancy > Add School); mobile identifies which
-      // school it's talking to via this one-time picker instead, before
-      // ever showing the (shared, role-agnostic) login form.
-      if (!hasSelectedSchool) {
-        return isSelectingSchool ? null : '/school-select';
-      }
-      if (!isLoggingIn) {
+      // Not authenticated: `/login` (the shared, role-agnostic Main
+      // eskoolia.com login — backend resolves the account's own school and
+      // role after credentials are checked, no tenant needed up front) is
+      // the default, un-gated destination. School-select and forgot/reset
+      // password are separate, optional pages reachable only via an
+      // explicit link from the login page.
+      if (!isLoggingIn && !isOnPreAuthPage) {
         debugPrint('[AppRouter] redirect -> /login');
         return '/login';
       }
@@ -162,6 +166,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        name: 'reset-password',
+        builder: (context, state) =>
+            ResetPasswordPage(email: state.uri.queryParameters['email'] ?? ''),
       ),
 
       // Home Route (Admin Home Screen - Quick Access, Recently Visited, All Modules)
@@ -183,6 +198,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/teacher/home',
         name: 'teacher-home',
         builder: (context, state) => const TeacherHomePage(),
+      ),
+      // Teacher bottom nav's "All Modules" tab — same `ModulesPage`/
+      // `ModuleGrid` Admin's own `/modules` route uses, just fed
+      // `TeacherModules.all` (the module catalog every teacher already sees
+      // in Home's own "ALL MODULES" grid — same permissions/module data,
+      // not a new list) instead of Admin's `Modules.all`, and with recents
+      // tracking off (`trackRecents: false`) so a Teacher session never
+      // writes into Admin's own dashboard recents list.
+      GoRoute(
+        path: '/teacher/modules',
+        name: 'teacher-modules',
+        builder: (context, state) => ModulesPage(
+          modules: TeacherModules.all.where((m) => m.id != 'teacher-home').toList(),
+          trackRecents: false,
+          useBareTiles: true,
+          title: 'ALL MODULES',
+        ),
       ),
       GoRoute(
         path: '/teacher/timetable',

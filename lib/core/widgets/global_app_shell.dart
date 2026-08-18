@@ -89,11 +89,11 @@ class GlobalAppShell extends ConsumerWidget {
             if (isTeacher) const TeacherTopBar() else const _GlobalTopBar(),
             isTeacher ? ModuleSubNav(modules: TeacherModules.all) : const ModuleSubNav(),
             Expanded(child: child),
-            // Admin-only: the bottom nav's tab paths (/home, /widgets,
-            // /profile) are Admin routes, so Teacher (which has its own
-            // `/teacher/*` route tree and no use for these tabs) doesn't
-            // get it.
-            if (!isTeacher) const _GlobalBottomNav(),
+            // Admin gets Home/All Modules/Widgets/Profile; Teacher gets its
+            // own Home/All Modules/Profile bar (no Widgets tab — that
+            // preference panel is an Admin-only concept). Both reuse the
+            // same generic `_BottomNavButton`, just different tab lists.
+            if (isTeacher) const _TeacherBottomNav() else const _GlobalBottomNav(),
           ],
         ),
         if (flyoutTarget != null) ...[
@@ -483,6 +483,55 @@ class _GlobalBottomNav extends ConsumerWidget {
             child: Row(
               children: [
                 for (final tab in _bottomNavTabs)
+                  Expanded(
+                    child: _BottomNavButton(
+                      tab: tab,
+                      isActive: currentSegment == tab.segment,
+                      onTap: () => ref.read(appRouterProvider).go(tab.path),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _teacherBottomNavTabs = [
+  _BottomNavTab(path: '/teacher/home', segment: 'home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
+  _BottomNavTab(path: '/teacher/modules', segment: 'modules', icon: Icons.apps_outlined, activeIcon: Icons.apps_rounded, label: 'All Modules'),
+  _BottomNavTab(path: '/teacher/profile', segment: 'profile', icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Profile'),
+];
+
+/// Teacher Portal's bottom tab bar — exactly Home / All Modules / Profile,
+/// deliberately no Widgets tab (that's an Admin-only home-customization
+/// concept). Reuses the same generic [_BottomNavButton] as
+/// [_GlobalBottomNav]; only the tab list and the active-segment lookup
+/// differ, since every Teacher route is nested under `/teacher/*` (so the
+/// tab-owning segment is the route's *second* path segment, not the first —
+/// `segments[0]` is always literally `'teacher'`).
+class _TeacherBottomNav extends ConsumerWidget {
+  const _TeacherBottomNav();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentPath = ref.watch(currentRoutePathProvider);
+    final segments = currentPath.split('/').where((s) => s.isNotEmpty).toList();
+    final currentSegment = segments.length > 1 ? segments[1] : 'home';
+
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        decoration: const BoxDecoration(color: _navBg, border: Border(top: BorderSide(color: _navBorder))),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 56,
+            child: Row(
+              children: [
+                for (final tab in _teacherBottomNavTabs)
                   Expanded(
                     child: _BottomNavButton(
                       tab: tab,

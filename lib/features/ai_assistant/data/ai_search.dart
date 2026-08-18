@@ -25,10 +25,10 @@ String _strip(String s) => s
     .replaceFirst(RegExp(r'^(open|go to|goto|show( me)?|take me to|navigate to|find)\s+', caseSensitive: false), '')
     .replaceFirst(RegExp(r'\s+page$', caseSensitive: false), '');
 
-FlatIndexEntry? exactMatch(String q) {
+FlatIndexEntry? exactMatch(String q, {List<FlatIndexEntry>? index}) {
   final norm = _normalize(q);
   final stripped = _strip(norm);
-  for (final it in aiFlatIndex) {
+  for (final it in index ?? aiFlatIndex) {
     final label = it.label.toLowerCase();
     if (label == stripped || label == norm || it.path.toLowerCase() == stripped) return it;
   }
@@ -41,7 +41,7 @@ class ScoredFlatIndexEntry {
   const ScoredFlatIndexEntry(this.entry, this.score);
 }
 
-List<FlatIndexEntry> localFuzzySearch(String q) {
+List<FlatIndexEntry> localFuzzySearch(String q, {List<FlatIndexEntry>? index}) {
   final norm = _normalize(q);
   final stripped = _strip(norm);
   var expanded = stripped;
@@ -54,7 +54,7 @@ List<FlatIndexEntry> localFuzzySearch(String q) {
   final terms = expanded.split(' ').where((t) => t.isNotEmpty).toList();
 
   final scored = <ScoredFlatIndexEntry>[];
-  for (final it in aiFlatIndex) {
+  for (final it in index ?? aiFlatIndex) {
     final label = it.label.toLowerCase();
     final path = it.path.toLowerCase();
     var score = 0;

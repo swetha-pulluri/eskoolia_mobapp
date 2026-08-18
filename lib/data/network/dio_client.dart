@@ -248,6 +248,7 @@ class DioClient {
       '/api/v1/auth/login/',
       '/api/v1/tenancy/school-info/',
       '/api/v1/auth/forgot-password/',
+      '/api/v1/auth/verify-reset-code/',
       '/api/v1/auth/reset-password/',
       // The refresh endpoint authenticates via the refresh token in the
       // request body, not a bearer access token. It was missing from this

@@ -862,3 +862,154 @@ Developer: Archana
 - No web frontend modifications.
 - All work performed only inside `eskoolia_mobapp`.
 - Not committed or pushed.
+
+---
+
+## 04-08-2026
+Developer: Archana
+**Branch:** Main
+
+*Dated from git history — one commit today, `e1e434c0` ("updated changes", 11:47:47). No per-fix breakdown exists beyond the file list itself, so this is reported at file/module level rather than invented specifics.*
+
+### Work Done
+- A broad refinement/bug-fix pass across several already-built modules in one combined commit:
+  - **Documents Studio / Administration**: `admin_setup_screen.dart`, `generate_certificate_screen.dart`, `generate_id_card_screen.dart`, `id_cards_screen.dart`, `student_categories_screen.dart`, `admin_stepper_shell.dart`.
+  - **Admissions**: `admissions_analytics_page.dart`, `class_portfolio_grid.dart`, `enquiry_form_modal.dart`, `morning_brief.dart`.
+  - **Attendance**: `attendance_filter_bar.dart`, `attendance_kpis.dart`, `attendance_table.dart`, `class_accordion_grid.dart`, `absent_note_dialog.dart`, `export_options_dialog.dart`, `student_attendance_import_dialog.dart`.
+  - **Home Dashboard**: `greeting_section.dart`, `quick_access_grid.dart`, `recents_row.dart`.
+  - **Human Resource**: `designation_entity.dart`, `hr_setup_page.dart`, `staff_attendance_page.dart`, `staff_directory_page.dart`, `staff_onboard_page.dart`, `hr_department_card.dart`, `hr_department_form.dart`, `hr_designation_dept_card.dart`, `hr_designation_form.dart`, onboarding wizard steps (`step_contact.dart`, `step_payroll.dart`).
+  - **Shared infrastructure**: `env_config.dart`, `api_constants.dart`, `global_app_shell.dart`, `kpi_card.dart`, `filter_pill_widget.dart`, `file_download_io.dart`, and an iOS `Info.plist` entry.
+
+### Testing / Verification
+- Not recorded for this date beyond the commit itself.
+
+### Remarks
+- No backend changes; no web frontend modifications.
+
+---
+
+## 06-08-2026
+Developer: Archana
+**Branch:** Main
+
+*Dated from git history — three commits today.*
+
+### Work Done — Commit `40ccfcf8`, "Implement Settings module - School Info" (12:38:38)
+- Built the Settings → School Info screen: new `school_info_entity.dart`, `school_info_repository.dart`/`_impl.dart`, `school_info_remote_datasource.dart`, `school_info_page.dart`, `settings_provider.dart`; registered the route in `app_router.dart`; added a `module_entity.dart` entry and an `app_colors.dart` token for it.
+
+### Work Done — Commit `d2b4ddf0`, "school tenancy" (12:53:48)
+- Refined `add_school_page.dart` (School Tenancy's Add School form).
+
+### Work Done — Commit `4f639a6d`, "home screen" (17:44:35)
+- Built shared module-navigation infrastructure — `module_flyout_provider.dart`, `module_nav_utils.dart`, `module_pill_with_flyout.dart`, `module_sub_nav.dart` (one shared, data-driven sub-nav strip) — replacing three separate hand-coded per-module sub-nav copies (`academics_module_sub_nav.dart`, `fees_module_sub_nav.dart` deleted; `administration_layout.dart`/`admissions_layout.dart`/`attendance_layout.dart` simplified to use the shared widget instead).
+- Added `search_command_palette.dart` (the global search feature).
+- Updated `global_app_shell.dart`, `dashboard_provider.dart`, `module_entity.dart`, `greeting_section.dart`, `api_constants.dart`, `app_colors.dart`/`app_constants.dart`/`storage_keys.dart`, and `platform_capabilities.dart`.
+
+### Testing / Verification
+- Not recorded for this date beyond the 3 commits.
+
+### Remarks
+- No backend changes; no web frontend modifications.
+
+---
+
+## 13-08-2026
+Developer: Archana
+**Branch:** Main
+
+*Dated from git history — two commits today.*
+
+### Work Done — Commit `7eb64b54`, "Implemented teacher modules and updated school tenancy" (10:28:47)
+- Scaffolded the entire Teacher Portal feature's data/domain layer: datasources and repository implementations for Broadcast, My Classes, Teacher Attendance, Teacher Profile, Teacher (general), Teacher Timetable, and To-dos; domain entities for all of the above plus `teacher_me_entity.dart`, `teacher_module_entity.dart`, `student_credentials_entity.dart`, `student_list_item_entity.dart`, `student_profile_entity.dart`, `reset_password_result_entity.dart`.
+- Wired Teacher routing into `app_router.dart`/`portal_routes.dart`; added `portal_not_implemented_page.dart` (the Parent/Student placeholder); small `login_page.dart` tweak.
+- Continued School Tenancy work: significant updates to `add_school_page.dart`, `audit_tab.dart`, `dashboard_tab.dart`, `schools_tab.dart`.
+- Continued Fees Configuration polish: `concession_rules_tab.dart`, `fee_groups_tab.dart`, `fee_schedules_tab.dart`, `fee_types_tab.dart`, `late_fee_rules_tab.dart`, new `fee_config_styles.dart`.
+- Other touches: `class_portfolio_grid.dart`/`class_accordion_grid.dart` (Admissions/Attendance), `fee_collection_page.dart`, `all_notes_sheet.dart`, `action_badge_widget.dart`, `module_pill_with_flyout.dart`/`module_sub_nav.dart`/`global_app_shell.dart`.
+
+### Work Done — Commit `93cbccf6`, "new" (18:00:08)
+- Added real per-module icon assets (`assets/icons/*.png` for every module) and registered them in the Android manifest / iOS `Info.plist`.
+- Added new shared UI/animation widgets: `fade_slide_in.dart`, `premium_card.dart`, `tap_scale.dart`.
+- Built the Home Dashboard's "Today's Pulse" live-data cards: `attendance_pulse_entity.dart`, `fees_today_entity.dart`, plus the matching datasource/repository wiring (`dashboard_local_datasource.dart`, `dashboard_remote_datasource.dart`, `dashboard_repository_impl.dart`/`_repository.dart`) and `dashboard_page.dart` updates.
+- Continued Administration (`administration_remote_datasource.dart`, `admin_setup_screen.dart`, `admin_section_card.dart`, `log_contact_modal.dart`) and Attendance (`attendance_remote_datasource.dart`) work.
+- Further updates to `dio_client.dart`, `global_app_shell.dart`, `module_sub_nav.dart`, `module_nav_utils.dart`, `api_constants.dart`.
+
+### Testing / Verification
+- Not recorded for this date beyond the 2 commits.
+
+### Remarks
+- No backend changes; no web frontend modifications.
+
+---
+
+## 17-08-2026
+Developer: Archana
+**Branch:** Main
+
+*Dated from git evidence, not memory: commits `71c7916f` ("login", 12:32:02) and `6791b0c1` ("new", 13:20:41) both landed today; all further work below remained uncommitted as of this entry, with on-disk file timestamps (15:21–17:51) confirming the same day.*
+
+### Work Done — Git merge-conflict resolution
+- Resolved a git-stash-pop conflict in `module_entity.dart`: reconciled a new `iconAsset` field added to `ModuleEntity` upstream with the same field needing to be added to `SubModuleEntity` (a compile error the visible conflict markers hadn't flagged), and merged per-module `iconAsset`/`comingSoon`/`subModules` changes across Reports, Settings, and the rest of `Modules.all` without losing either side's real work.
+- Resolved a second, larger conflict in `global_app_shell.dart`: compared the local (older, module-pills-in-top-bar) design against a newer upstream redesign (simplified Admin top bar + a real bottom nav) and took upstream's version, since it was a complete, later redesign superseding the older approach — not a live disagreement to guess at.
+- Both files staged (`git add`) but deliberately not committed, per instruction.
+
+### Work Done — Reports, Teacher Timetable, Fees, Attendance fixes (bundled into the `login` commit)
+- **Reports module performance**: added 4 shared, non-autoDispose Riverpod providers (`reportsClassesProvider`, `reportsClassOptionsProvider`, `reportsSectionOptionsProvider`, `reportsExportClassesProvider` in `reports_providers.dart`) so every report submodule's Class/Section dropdowns load once and are reused, instead of each screen independently re-fetching from a cold start. Updated `student_attendance_report_page.dart`, `report_explorer_page.dart`, and `student_export_page.dart` to use them.
+- **Teacher Timetable overflow**: `timetable_kpi_row.dart` — replaced a fixed-aspect-ratio `GridView.count` with responsive `Expanded` cards (2-per-row narrow / 4-per-row wide via `LayoutBuilder`), fixing a vertical overflow when caption text wrapped.
+- **Fees overflow**: `fee_assignment_page.dart`'s class-card header and `fee_year_end_page.dart`'s two carry-forward-card title/subtitle rows converted from `Row` to `Wrap`, fixing overflow when class names/subtitles ran long.
+- **Attendance reset bug**: rewrote `attendance_student_page.dart`'s `_handleReset` to match the real web behavior — reset now sets every student to "unmarked", then persists a "present" baseline for the section, then reloads, instead of a reset that silently did nothing.
+- **Fees "Audit Trial" text bug — investigated, not resolved**: checked `fees_audit_trail_card.dart` and the rest of the Fees module for any code-level cause of a reported rendering glitch; found only a normal `Text('Audit Trail', ...)` widget with nothing unusual. Requested a screenshot to continue; none was received, so this remains open, not fixed.
+- School Tenancy (`add_school_page.dart`, `edit_school_page.dart`, `school_detail_page.dart`, `schools_tab.dart`) and several Administration screens (`id_cards_screen.dart`, `student_categories_screen.dart`, `call_flow_modal.dart`, `class_workspace.dart`) and HR screens (`hr_setup_page.dart`, `staff_attendance_page.dart`, `attendance_absent_dialog.dart`, `hr_department_card.dart`, `hr_designation_dept_card.dart`) are present in the same commit — included here for completeness since they're part of today's git history, though their specific prior changes weren't part of this session's own work log.
+
+### Work Done — Multi-school login (subdomain identification)
+- Built a school-identification step (`school_select_page.dart`) so one APK can serve multiple schools: user enters their school's web address, it's checked against the existing public `GET /tenancy/school-info/?subdomain=` endpoint, and the resolved school's name/logo are shown before handing off to the existing (unmodified) login form.
+- After clarification, made the plain `app.eskoolia.com`-style login the **default, un-gated** path — `/school-select` is a separate, optional page reachable only via a link on the login screen, never forced.
+- New: `school_info_model.dart`. Changed: `auth_providers.dart`, `auth_remote_datasource.dart`, `app_router.dart`, `login_page.dart`, `api_constants.dart`.
+- Confirmed via code inspection that no school URL is ever fabricated or hardcoded — the typed subdomain is only ever passed to the backend's own lookup endpoint.
+
+### Work Done — Chrome "No Internet Connection" bug, root-caused and fixed
+- Diagnosed (via git diff against the pre-feature commit and live console logs, not guesswork) that a newly-added `X-Tenant` header on the post-login `/me/` call forces a CORS preflight in Chrome that the backend's CORS policy doesn't allow-list — harmless on Android (no CORS layer there), but it broke every teacher/admin login on Flutter Web.
+- Fix: `dio_client.dart` now skips the `X-Tenant` header only when `kIsWeb`; Android/iOS behavior is unchanged. Verified live against the real production backend with direct API calls before and after the fix.
+
+### Work Done — Forgot Access Key (full password-reset flow)
+- Confirmed the backend already implements `forgot-password/` / `verify-reset-code/` / `reset-password/` and that web already has a working UI for it — reused both verbatim, no backend or web changes.
+- Built the full Clean Architecture stack: 3 usecases (`forgot_password_usecase.dart`, `verify_reset_code_usecase.dart`, `reset_password_usecase.dart`), repository/datasource methods, a `password_reset_notifier.dart`/`password_reset_state.dart` state layer, and two screens.
+- Rebuilt the two screens a second time after the first pass didn't match web closely enough — pulled the actual web CSS/TSX source and replicated it (gradient heading, watermark text, step progress bar, password-strength meter, resend cooldown) via new shared widgets `recovery_shell.dart`, `recovery_input_field.dart`, `recovery_button.dart`.
+
+### Work Done — LKG Teacher Home screen
+- Investigated the existing login response, teacher role detection, and Teacher Home/routing before writing code; confirmed no LKG-specific screen exists on web to copy from (a greenfield UI decision, not a port).
+- Identified LKG teachers from real, already-fetched backend data — `teacherMeProvider`'s `class_teacher_for.class_name == 'LKG'` (from `GET /api/v1/teacher/me/`) — not a hardcoded condition.
+- `teacher_home_page.dart` now branches to a new `lkg_teacher_home_content.dart`, which reuses every existing Teacher Home widget, just reordered to foreground the class-teacher/attendance card; nothing removed.
+
+### Work Done — Teacher bottom navigation and top-bar correction
+- Added a real Home / All Modules / Profile bottom nav for Teacher (`global_app_shell.dart`) without changing Admin's own bottom nav at all.
+- Made `modules_page.dart`/`module_grid.dart` reusable via optional parameters (Admin's own `/modules` call site behavior is unchanged) instead of duplicating a screen, and added the missing `/teacher/modules` route.
+- Added a Logout button to `teacher_profile_page.dart`, needed once the top bar's avatar/logout dropdown was removed.
+- First redesigned `teacher_top_bar.dart` down to logo/badge/title/search/notes/profile-icon, which turned out to remove functionality still wanted — **corrected same day**: restored the existing module-pill navigation strip exactly as it was, and set the top-right icons to exactly Search, Sticky Notes, and Notifications (no profile icon there, no Widgets icon), per direct follow-up instruction. Bottom nav was not touched during this correction.
+
+### Testing / Verification
+- Ran `flutter analyze` after every change across all of the above — clean, only the same pre-existing baseline info-level lints throughout (`avoid_print`, `non_constant_identifier_names` on backend-mirrored fields, a few `unnecessary_const`/deprecated-API infos elsewhere in the codebase), zero new errors or warnings.
+- Verified the Chrome CORS fix and the Forgot Access Key endpoints live against the real production backend with direct API calls (not just code review).
+- Attempted to test the Teacher bottom-nav/top-bar changes interactively (emulator + login), but no Android emulator and no browser-automation tool were available in this environment — flagged as still needing a manual device test.
+
+### Remarks
+- No backend changes. No web frontend modifications.
+- All work performed only inside `eskoolia_mobapp`.
+- Nothing committed or pushed during this session's own work (the `login`/`new` commits predate it, per git history above).
+
+---
+
+## 17-08-2026 (addendum)
+*Commit `cd622bc0` ("done", 10:35:03) landed earlier the same day, before `login`/`new` above — not part of that entry, added here for completeness.*
+
+### Work Done
+- Replaced the flat icon set with a new "3D" icon set (`*_3d.png` for academics, administration, admissions, attendance, dashboard, examination, fees, hr, reports, roles & permissions, settings, students, plus a new `school_tenancy_3d.png` and `marks-register.png`).
+- Re-added `module_flyout_provider.dart` and built the **Widget Manager** feature (`widget_manager_button.dart`, `widget_manager_panel.dart`) — lets a user toggle which optional Home-dashboard widgets are visible.
+- Continued Home Dashboard refinements: `dashboard_page.dart`, `greeting_section.dart`, `module_card.dart`, `quick_access_grid.dart`, `recents_row.dart`, `section_label.dart`, `attendance_pulse_card.dart`, `attention_banner.dart`, `fees_today_card.dart`, `module_nav_utils.dart`, `module_sub_nav.dart`, `global_app_shell.dart`, `premium_card.dart`, `ai_assistant_overlay.dart`, `module_entity.dart`.
+- Removed an unused `home_dark_theme.dart`.
+
+### Testing / Verification
+- Not recorded for this date beyond the commit itself.
+
+### Remarks
+- No backend changes; no web frontend modifications.
+`

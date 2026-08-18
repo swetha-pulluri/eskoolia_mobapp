@@ -16,6 +16,7 @@ class TodayScheduleCard extends ConsumerWidget {
     final meAsync = ref.watch(teacherMeProvider);
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -26,7 +27,7 @@ class TodayScheduleCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("TODAY'S SCHEDULE", style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: AppColors.ink3)),
+          const Text("TODAY'S SCHEDULE", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2, color: AppColors.ink1)),
           const SizedBox(height: 2),
           Text(app_date_utils.DateUtils.getFormattedDate(), style: const TextStyle(fontSize: 13, color: AppColors.ink2)),
           const SizedBox(height: 12),

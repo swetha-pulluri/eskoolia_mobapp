@@ -144,6 +144,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/icons/teacher/
   
   
   # Note: Fonts loaded via google_fonts package (Plus Jakarta Sans)

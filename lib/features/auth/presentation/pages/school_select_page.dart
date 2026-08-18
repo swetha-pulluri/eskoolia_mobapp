@@ -8,17 +8,19 @@ import '../widgets/auth_input_field.dart';
 import '../widgets/atrium_button.dart';
 import '../providers/auth_providers.dart';
 
-/// School Identification Page
+/// School Identification Page — optional, not a forced gate.
 ///
-/// On web, each school has its own subdomain (e.g. vasavi.eskoolia.com,
-/// created via Admin > School Tenancy > Add School), which is how the
-/// browser tells the backend which school it's talking to before the login
-/// form ever renders. The mobile app hits a single fixed API host instead
-/// (see EnvConfig.apiBaseUrl), so it can't rely on that — this page asks the
-/// user for their school's subdomain once, confirms it against the public
-/// `GET /tenancy/school-info/?subdomain=` lookup, and shows that school's
-/// branding before handing off to the existing login screen. The login
-/// call itself is unchanged; this is purely an identification step.
+/// The Main eskoolia.com login (`LoginPage`, reached directly, no tenant
+/// needed up front) is the default: the backend already resolves an
+/// authenticated account's own school/role from credentials alone. This
+/// page exists only for the separate case of someone who already knows
+/// their own school's web address (e.g. vasavi.eskoolia.com, created via
+/// Admin > School Tenancy > Add School) and wants to identify it — purely
+/// for branding — before logging in. It never fabricates a URL: the
+/// subdomain the user types is only ever handed to the backend's own public
+/// `GET /tenancy/school-info/?subdomain=` lookup, which is the single
+/// source of truth for whether it's real and what that school's actual
+/// name/logo are. The login call itself is entirely unchanged by this page.
 class SchoolSelectPage extends ConsumerStatefulWidget {
   const SchoolSelectPage({super.key});
 
@@ -133,6 +135,23 @@ class _SchoolSelectPageState extends ConsumerState<SchoolSelectPage> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(
+                                onPressed: () {
+                                  if (context.canPop()) {
+                                    context.pop();
+                                  } else {
+                                    context.go('/login');
+                                  }
+                                },
+                                icon: const Icon(Icons.arrow_back, color: AppColors.atriumIndigo),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                splashRadius: 20,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             Image.asset(
                               AppConstants.eskooliaLogo,
                               height: 56,

@@ -32,6 +32,23 @@ abstract class AuthRemoteDataSource {
   /// 404) rather than throwing, since "not found" is an expected outcome
   /// while the user is still typing/correcting the subdomain.
   Future<SchoolInfoModel?> resolveSchoolInfo(String subdomain);
+
+  /// Request a 6-digit reset code be emailed to [email].
+  /// `POST /api/v1/auth/forgot-password/` (AllowAny —
+  /// backend/apps/users/views.py::ForgotPasswordView). Returns the
+  /// backend's confirmation message on success.
+  Future<String> forgotPassword(String email);
+
+  /// Verify a previously-emailed [code] without consuming it.
+  /// `POST /api/v1/auth/verify-reset-code/` (AllowAny —
+  /// backend/apps/users/views.py::VerifyResetCodeView).
+  Future<void> verifyResetCode(String email, String code);
+
+  /// Complete the reset — re-validates [code] and sets [newPassword].
+  /// `POST /api/v1/auth/reset-password/` (AllowAny —
+  /// backend/apps/users/views.py::ResetPasswordView). Returns the
+  /// backend's confirmation message on success.
+  Future<String> resetPassword(String email, String code, String newPassword);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -118,6 +135,46 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
       throw Exception(e.error ?? 'Could not reach the server');
+    }
+  }
+
+  @override
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.forgotPassword,
+        data: {'email': email},
+      );
+      return (response.data as Map<String, dynamic>)['message'] as String? ??
+          'Reset code sent to your email.';
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Could not send the reset code');
+    }
+  }
+
+  @override
+  Future<void> verifyResetCode(String email, String code) async {
+    try {
+      await _dio.post(
+        ApiConstants.verifyResetCode,
+        data: {'email': email, 'code': code},
+      );
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Could not verify the code');
+    }
+  }
+
+  @override
+  Future<String> resetPassword(String email, String code, String newPassword) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.resetPassword,
+        data: {'email': email, 'code': code, 'new_password': newPassword},
+      );
+      return (response.data as Map<String, dynamic>)['message'] as String? ??
+          'Password reset successfully.';
+    } on DioException catch (e) {
+      throw Exception(e.error ?? 'Could not reset the password');
     }
   }
 }

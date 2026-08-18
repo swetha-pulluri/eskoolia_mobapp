@@ -15,4 +15,15 @@ abstract class AuthRepository {
 
   /// Check if user is logged in
   Future<bool> isLoggedIn();
+
+  /// Request a password-reset code be emailed to [email].
+  /// Returns the backend's confirmation message.
+  Future<String> forgotPassword(String email);
+
+  /// Verify a previously-emailed reset [code] without consuming it.
+  Future<void> verifyResetCode(String email, String code);
+
+  /// Complete the reset — re-validates [code] and sets [newPassword].
+  /// Returns the backend's confirmation message.
+  Future<String> resetPassword(String email, String code, String newPassword);
 }

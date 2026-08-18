@@ -30,8 +30,19 @@ class TeacherPendingChipsRow extends ConsumerWidget {
           ));
         }
         if (chips.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
+        // Its own card (same style as `TodayScheduleCard`/the Quick Access
+        // card) so Attendance reads as a separate section rather than
+        // floating chips merging visually into Greeting above or Today's
+        // Schedule below.
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.bg1,
+            border: Border.all(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Wrap(spacing: 8, runSpacing: 8, children: chips),
         );
       },

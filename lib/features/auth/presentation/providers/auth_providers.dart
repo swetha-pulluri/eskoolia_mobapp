@@ -12,11 +12,16 @@ import '../../data/models/school_info_model.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/check_auth_status_usecase.dart';
+import '../../domain/usecases/forgot_password_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
+import '../../domain/usecases/reset_password_usecase.dart';
+import '../../domain/usecases/verify_reset_code_usecase.dart';
 import 'auth_notifier.dart';
 import 'auth_state.dart';
+import 'password_reset_notifier.dart';
+import 'password_reset_state.dart';
 
 // Core Services
 
@@ -85,6 +90,21 @@ final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
   return LogoutUseCase(repository);
 });
 
+final forgotPasswordUseCaseProvider = Provider<ForgotPasswordUseCase>((ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  return ForgotPasswordUseCase(repository);
+});
+
+final verifyResetCodeUseCaseProvider = Provider<VerifyResetCodeUseCase>((ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  return VerifyResetCodeUseCase(repository);
+});
+
+final resetPasswordUseCaseProvider = Provider<ResetPasswordUseCase>((ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  return ResetPasswordUseCase(repository);
+});
+
 final checkAuthStatusUseCaseProvider = Provider<CheckAuthStatusUseCase>((ref) {
   final repository = ref.watch(authRepositoryProvider);
   return CheckAuthStatusUseCase(repository);
@@ -108,41 +128,40 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((
   );
 });
 
-// School Identification (pre-login)
+// School Identification (optional, pre-login)
 //
-// Each school gets its own subdomain on web (e.g. vasavi.eskoolia.com,
-// created via Admin > School Tenancy > Add School); the mobile app hits a
-// single fixed base URL instead, so it asks the user to type that subdomain
-// once, upfront, and shows the matching school's branding before login. This
-// is purely an identification/branding step — the login call itself is
-// unchanged (still just username + password; see auth_notifier.dart) and
-// already resolves the account's own school after authenticating.
+// The Main eskoolia.com login is the default and needs no tenant identified
+// up front — the backend resolves an authenticated account's own school and
+// role from credentials alone (see auth_notifier.dart; the login call itself
+// is untouched by any of this). Separately, a school that has its own
+// subdomain (e.g. vasavi.eskoolia.com, created via Admin > School Tenancy >
+// Add School) can be identified via `SchoolSelectPage` — reachable only by
+// an explicit link from the login page, never forced (see app_router.dart's
+// redirect) — purely so that school's real name/logo can be shown before
+// login. Nothing here ever constructs or guesses a URL: the typed subdomain
+// is only ever handed to the backend's own `school-info` lookup below.
 //
 // The chosen subdomain is a device-level preference, not session auth data,
 // so it's stored via `SharedPrefs` (survives logout) rather than
 // `SecureStorageService` (wiped by clearAuthData() on every logout).
 
-/// The subdomain the user has already identified this device with, or null
-/// if they haven't picked one yet. Read synchronously from `SharedPrefs` at
-/// construction — safe because `main()` awaits `SharedPrefs().init()` before
-/// the `ProviderScope` is even created — so the router's `redirect` callback
-/// (which cannot await) sees the correct value on the very first check, with
-/// no cold-start flicker.
+/// The subdomain the user has identified this device with, or null if
+/// they're using the default Main eskoolia.com login. Read synchronously
+/// from `SharedPrefs` at construction — safe because `main()` awaits
+/// `SharedPrefs().init()` before the `ProviderScope` is even created.
 final selectedSchoolSubdomainProvider = StateProvider<String?>((ref) {
   final stored = SharedPrefs().getString(AppConstants.selectedSchoolSubdomainKey);
   return (stored != null && stored.isNotEmpty) ? stored : null;
 });
 
-/// Persists the chosen subdomain and updates the live provider so the
-/// router's redirect re-evaluates immediately (see _AuthRefreshNotifier in
-/// app_router.dart).
+/// Persists the chosen subdomain and updates the live provider.
 Future<void> selectSchool(WidgetRef ref, String subdomain) async {
   await SharedPrefs().setString(AppConstants.selectedSchoolSubdomainKey, subdomain);
   ref.read(selectedSchoolSubdomainProvider.notifier).state = subdomain;
 }
 
-/// Clears the chosen subdomain — used by the login page's "Change School"
-/// action to go back to the school-identification step.
+/// Clears the chosen subdomain — used by the login page's "Use main login
+/// instead" action to drop back to the default, tenant-agnostic login.
 Future<void> clearSelectedSchool(WidgetRef ref) async {
   await SharedPrefs().remove(AppConstants.selectedSchoolSubdomainKey);
   ref.read(selectedSchoolSubdomainProvider.notifier).state = null;
@@ -156,4 +175,18 @@ final schoolInfoProvider = FutureProvider.autoDispose
     .family<SchoolInfoModel?, String>((ref, subdomain) {
       final dataSource = ref.watch(authRemoteDataSourceProvider);
       return dataSource.resolveSchoolInfo(subdomain);
+    });
+
+// Forgot / Verify / Reset Password
+//
+// `.autoDispose` — this is transient, in-flight flow state, not app-wide
+// state like auth; it should reset once the user leaves the
+// forgot/reset-password pages, not linger for the rest of the app session.
+final passwordResetNotifierProvider =
+    StateNotifierProvider.autoDispose<PasswordResetNotifier, PasswordResetState>((ref) {
+      return PasswordResetNotifier(
+        ref.watch(forgotPasswordUseCaseProvider),
+        ref.watch(verifyResetCodeUseCaseProvider),
+        ref.watch(resetPasswordUseCaseProvider),
+      );
     });
