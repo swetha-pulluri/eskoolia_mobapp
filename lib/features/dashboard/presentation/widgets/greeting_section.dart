@@ -41,16 +41,36 @@ class GreetingSection extends ConsumerWidget {
         : (currentUser.fullName.isNotEmpty ? currentUser.fullName : currentUser.username);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: PremiumCard(
-        radius: 24,
+        radius: 20,
         color: Colors.white,
+<<<<<<< Updated upstream
         borderColor: borderColor ?? AppColors.brandPurple.withValues(alpha: 0.55),
+=======
+        // Flat, barely-there edge — matches the Stitch reference's plain
+        // white cards (no bold brand-colored border).
+        borderColor: AppColors.border.withValues(alpha: 0.8),
+        borderWidth: 1,
+>>>>>>> Stashed changes
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // "— WELCOME BACK" eyebrow, matching the Stitch reference.
+            Row(
+              children: [
+                Container(width: 14, height: 2, color: AppColors.brandPurple),
+                const SizedBox(width: 6),
+                Text(
+                  'WELCOME BACK',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.brandPurple.withValues(alpha: 0.85), letterSpacing: 1.1),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
             // Greeting Row
             Row(
               children: [
@@ -67,7 +87,11 @@ class GreetingSection extends ConsumerWidget {
                           text: 'Good ${app_date_utils.DateUtils.getTimeWord()}',
                         ),
                         if (displayName.isNotEmpty)
+<<<<<<< Updated upstream
                           TextSpan(text: ', $displayName', style: TextStyle(color: nameColor ?? AppColors.brandPurple)),
+=======
+                          TextSpan(text: ', $displayName!', style: const TextStyle(color: AppColors.brandPurple)),
+>>>>>>> Stashed changes
                       ],
                     ),
                   ),
@@ -82,28 +106,33 @@ class GreetingSection extends ConsumerWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.ink2),
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-            // Academic Year and School Info Chips — real data from
+            // Academic Year and School Info pills — real data from
             // /api/v1/core/academic-years/ (isCurrent==true) and the
             // already-fetched /api/v1/auth/me/ response, matching web's
             // `Greeting.tsx`. No hardcoded fallback values: an absent
             // current year or school name renders as "—", not a guess.
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            // Stacked label-over-value pill, side by side, matching the
+            // Stitch reference (was a single-line "label: value" pill).
+            Row(
               children: [
-                academicYearAsync.when(
-                  data: (year) => _InfoChip(label: 'Academic Year', value: year?.name ?? '—'),
-                  loading: () => const _InfoChip(label: 'Academic Year', value: 'Loading…', isLoading: true),
-                  error: (_, _) => const _InfoChip(label: 'Academic Year', value: 'Unavailable', isError: true),
+                Expanded(
+                  child: academicYearAsync.when(
+                    data: (year) => _InfoChip(label: 'Academic Year', value: year?.name ?? '—'),
+                    loading: () => const _InfoChip(label: 'Academic Year', value: 'Loading…', isLoading: true),
+                    error: (_, _) => const _InfoChip(label: 'Academic Year', value: 'Unavailable', isError: true),
+                  ),
                 ),
-                authState.when(
-                  initial: () => const _InfoChip(label: 'School', value: 'Loading…', isLoading: true),
-                  loading: () => const _InfoChip(label: 'School', value: 'Loading…', isLoading: true),
-                  authenticated: (user) => _InfoChip(label: 'School', value: user.schoolName ?? '—'),
-                  unauthenticated: () => const _InfoChip(label: 'School', value: '—'),
-                  error: (_) => const _InfoChip(label: 'School', value: 'Unavailable', isError: true),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: authState.when(
+                    initial: () => const _InfoChip(label: 'School', value: 'Loading…', isLoading: true),
+                    loading: () => const _InfoChip(label: 'School', value: 'Loading…', isLoading: true),
+                    authenticated: (user) => _InfoChip(label: 'School', value: user.schoolName ?? '—'),
+                    unauthenticated: () => const _InfoChip(label: 'School', value: '—'),
+                    error: (_) => const _InfoChip(label: 'School', value: 'Unavailable', isError: true),
+                  ),
                 ),
               ],
             ),
@@ -156,27 +185,37 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Soft purple-tinted pill on the now-white card — only the error state
-    // keeps its own red icon/text so a failed fetch still stands out.
+    // Only the error state keeps its own red text so a failed fetch still
+    // stands out.
     final valueColor = isError ? AppColors.error : AppColors.purpleDeep;
 
+    // Capsule pill — small gray label beside the bold value (both
+    // vertically centered), not stacked — matching the Stitch reference's
+    // Academic Year/School pills exactly.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.purpleSoft,
+        color: AppColors.bg0,
+        border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.ink3,
-              letterSpacing: 0.6,
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.ink3,
+                letterSpacing: 0.1,
+                fontSize: 11,
+                height: 1.15,
+              ),
+              maxLines: 2,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           if (isLoading) ...[
             const SizedBox(
               width: 10,
@@ -189,12 +228,17 @@ class _InfoChip extends StatelessWidget {
             Icon(Icons.error_outline, size: 12, color: AppColors.error),
             const SizedBox(width: 4),
           ],
-          Text(
-            value,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: valueColor,
-              fontWeight: FontWeight.w700,
-              fontStyle: (isLoading || isError) ? FontStyle.italic : FontStyle.normal,
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: valueColor,
+                fontWeight: FontWeight.w800,
+                fontStyle: (isLoading || isError) ? FontStyle.italic : FontStyle.normal,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

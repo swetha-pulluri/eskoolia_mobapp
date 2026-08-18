@@ -22,9 +22,18 @@ class NotificationRemoteDataSource {
   }
 
   Future<int> getUnreadCount() async {
+    // `silent: true` — this is a background 60s poll (see
+    // `UnreadNotificationCountNotifier`), which already discards any
+    // failure and just keeps the last-known badge count. A guardian account
+    // 400s here on every poll (Communication's RBAC has no permission path
+    // for parents — matches web's own `NotificationBell.tsx`, which hits
+    // this same endpoint and silently `.catch(() => {})`s it), so this
+    // would otherwise log an alarming-looking "error" every minute for a
+    // failure that is permanent and already fully handled by the caller.
     final response = await _dioClient.get(
       ApiConstants.notifications,
       queryParameters: {'is_read': false, 'page_size': 1},
+      silent: true,
     );
     final data = response.data;
     if (data is Map<String, dynamic>) return data['count'] as int? ?? 0;

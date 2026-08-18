@@ -9,6 +9,9 @@ import '../../features/dashboard/domain/entities/module_entity.dart';
 import '../../features/notes/presentation/widgets/note_trigger_button.dart';
 import '../../features/notifications/presentation/providers/notification_provider.dart';
 import '../../features/notifications/presentation/widgets/notification_panel.dart';
+import '../../features/parent/domain/entities/parent_module_entity.dart';
+import '../../features/parent/presentation/widgets/parent_bottom_nav.dart';
+import '../../features/parent/presentation/widgets/parent_top_bar.dart';
 import '../../features/teacher/domain/entities/teacher_module_entity.dart';
 import '../../features/teacher/presentation/widgets/teacher_top_bar.dart';
 import '../../features/widgets_panel/presentation/providers/widget_prefs_provider.dart';
@@ -34,9 +37,11 @@ const _mainTabSegments = {'', 'home', 'modules', 'widgets', 'profile'};
 /// bar (logo/name, search, notifications, sticky notes) plus a persistent
 /// bottom tab bar (Home / Modules / Widgets / Profile) that together wrap
 /// every authenticated Admin route. Teacher Portal keeps its own separate
-/// top bar/module catalog (`TeacherTopBar`/`TeacherModules`) — same shared
-/// flyout-overlay Stack below, just no Admin bottom nav (its tab paths are
-/// Admin-route-specific).
+/// desktop-style top bar/module catalog (`TeacherTopBar`/`TeacherModules`,
+/// module pills + no bottom nav). Parent Portal instead reuses Admin's own
+/// top+bottom nav *shape* (`ParentTopBar`/`ParentBottomNav`, sourced from
+/// `ParentNavModules`) per explicit product decision, rather than Teacher's
+/// pills — same shared flyout-overlay Stack below either way.
 ///
 /// Mounted once via `MaterialApp.router`'s `builder:` in `main.dart`. This
 /// means every widget in this file is a *sibling* of the actual routed
@@ -68,32 +73,57 @@ class GlobalAppShell extends ConsumerWidget {
     // authenticated route group.
     if (!isAuthenticated) return child;
 
-    // Parent/Student still land on a disclosed "not implemented yet" page
-    // (see portal_routes.dart) rather than the Admin Dashboard — they have
-    // no access to the admin module nav, so it must not wrap them either.
-    // Teacher gets its own real shell below (`TeacherTopBar` +
-    // `TeacherModules`) — same flyout-overlay Stack, just a different top
-    // bar and module catalog, and no Admin-specific bottom nav. Everything
-    // else (`'admin'`, the `currentPortalRoleProvider` fallback) falls
-    // through to the existing Admin chrome further down.
+    // Student still lands on a disclosed "not implemented yet" page (see
+    // portal_routes.dart) rather than the Admin Dashboard — it has no
+    // access to the admin module nav, so it must not wrap it either.
+    // Teacher gets its own real shell below (`TeacherTopBar`+
+    // `TeacherModules`, desktop-style pills, no bottom nav). Parent gets
+    // Admin's own top+bottom nav shape instead (`ParentTopBar`+
+    // `ParentBottomNav`, sourced from `ParentNavModules`) — same
+    // flyout-overlay Stack either way. Everything else (`'admin'`, the
+    // `currentPortalRoleProvider` fallback) falls through to the existing
+    // Admin chrome further down.
     final role = ref.watch(currentPortalRoleProvider);
-    if (role == 'parent' || role == 'student') return child;
+    if (role == 'student') return child;
 
     final isTeacher = role == 'teacher';
+    final isParent = role == 'parent';
     final flyoutTarget = ref.watch(moduleFlyoutProvider);
 
     return Stack(
       children: [
         Column(
           children: [
-            if (isTeacher) const TeacherTopBar() else const _GlobalTopBar(),
-            isTeacher ? ModuleSubNav(modules: TeacherModules.all) : const ModuleSubNav(),
+            if (isTeacher)
+              const TeacherTopBar()
+            else if (isParent)
+              const ParentTopBar()
+            else
+              const _GlobalTopBar(),
+            if (isTeacher)
+              ModuleSubNav(modules: TeacherModules.all)
+            else if (isParent)
+              ModuleSubNav(modules: ParentNavModules.all)
+            else
+              const ModuleSubNav(),
             Expanded(child: child),
+<<<<<<< Updated upstream
             // Admin gets Home/All Modules/Widgets/Profile; Teacher gets its
             // own Home/All Modules/Profile bar (no Widgets tab — that
             // preference panel is an Admin-only concept). Both reuse the
             // same generic `_BottomNavButton`, just different tab lists.
             if (isTeacher) const _TeacherBottomNav() else const _GlobalBottomNav(),
+=======
+            // Teacher is the only portal with no bottom nav — its own
+            // `/teacher/*` route tree and desktop-style header pills have no
+            // use for these tabs. Admin gets its own tabs; Parent gets its
+            // own `ParentBottomNav` (`/parent/home`, `/parent/modules`,
+            // `/parent/profile`) instead of Admin's un-prefixed paths.
+            if (isParent)
+              const ParentBottomNav()
+            else if (!isTeacher)
+              const _GlobalBottomNav(),
+>>>>>>> Stashed changes
           ],
         ),
         if (flyoutTarget != null) ...[
@@ -117,7 +147,11 @@ class GlobalAppShell extends ConsumerWidget {
           ),
           Builder(
             builder: (context) {
-              final module = isTeacher ? TeacherModules.findById(flyoutTarget.moduleId) : Modules.findById(flyoutTarget.moduleId);
+              final module = isTeacher
+                  ? TeacherModules.findById(flyoutTarget.moduleId)
+                  : isParent
+                      ? ParentNavModules.findById(flyoutTarget.moduleId)
+                      : Modules.findById(flyoutTarget.moduleId);
               if (module == null) return const SizedBox.shrink();
               return ModuleFlyoutPanel(module: module, top: flyoutTarget.top, left: flyoutTarget.left);
             },
@@ -254,7 +288,7 @@ class SearchTrigger extends ConsumerWidget {
         child: const SizedBox(
           width: 34,
           height: 34,
-          child: Icon(Icons.search, size: 15, color: _navInk2),
+          child: Icon(Icons.search, size: 15, color: _navPurple),
         ),
       );
     }
@@ -269,7 +303,7 @@ class SearchTrigger extends ConsumerWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search, size: 14, color: _navInk3),
+            const Icon(Icons.search, size: 14, color: _navPurple),
             const SizedBox(width: 6),
             const Text('Search…', style: TextStyle(fontSize: 12, color: _navInk3)),
             const SizedBox(width: 10),
@@ -449,7 +483,6 @@ class _BottomNavTab {
 const _bottomNavTabs = [
   _BottomNavTab(path: '/home', segment: 'home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
   _BottomNavTab(path: '/modules', segment: 'modules', icon: Icons.apps_outlined, activeIcon: Icons.apps_rounded, label: 'All Modules'),
-  _BottomNavTab(path: '/widgets', segment: 'widgets', icon: Icons.widgets_outlined, activeIcon: Icons.widgets_rounded, label: 'Widgets'),
   _BottomNavTab(path: '/profile', segment: 'profile', icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Profile'),
 ];
 

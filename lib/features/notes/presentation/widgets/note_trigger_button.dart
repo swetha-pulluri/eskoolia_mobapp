@@ -4,7 +4,7 @@ import '../../../../config/router/app_router.dart';
 import '../providers/notes_provider.dart';
 import 'page_notes_sheet.dart';
 
-const _navInk2 = Color(0xFF5A607A);
+const _stickyNoteColor = Color(0xFFF59E0B);
 
 /// Header "Sticky Notes" button — badge shows the current page's note
 /// count. Flutter port of web's `NoteTrigger.tsx`, reshaped for mobile:
@@ -32,7 +32,7 @@ class NoteTriggerButton extends ConsumerWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.sticky_note_2_outlined, size: 16, color: _navInk2),
+            const Icon(Icons.sticky_note_2_outlined, size: 16, color: _stickyNoteColor),
             if (count > 0)
               Positioned(
                 top: 4,

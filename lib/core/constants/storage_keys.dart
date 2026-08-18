@@ -22,4 +22,8 @@ class StorageKeys {
   // localStorage-backed planner (no real backend calendar endpoint exists
   // even on web — see week_planner_entry.dart's doc comment).
   static const String teacherWeekPlanner = 'eskoolia_teacher_week_planner_v1';
+  // Parent Portal — which child the ChildSwitcher currently has selected.
+  // Mirrors web's own `parent_selected_child_id` localStorage key (see
+  // `ParentChildContext.tsx`) so the choice survives app restarts.
+  static const String parentSelectedChildId = 'parent_selected_child_id';
 }

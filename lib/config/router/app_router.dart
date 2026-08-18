@@ -8,7 +8,17 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/school_select_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
+<<<<<<< Updated upstream
 import '../../features/teacher/domain/entities/teacher_module_entity.dart';
+=======
+import '../../features/parent/presentation/pages/attendance_page.dart';
+import '../../features/parent/presentation/pages/children_page.dart';
+import '../../features/parent/presentation/pages/fees_page.dart';
+import '../../features/parent/presentation/pages/modules_page.dart';
+import '../../features/parent/presentation/pages/notices_page.dart';
+import '../../features/parent/presentation/pages/profile_page.dart' show ParentProfilePage;
+import '../../features/parent/presentation/pages/parent_home_page.dart';
+>>>>>>> Stashed changes
 import '../../features/teacher/presentation/pages/teacher_home_page.dart';
 import '../../features/teacher/presentation/pages/my_classes_page.dart';
 import '../../features/teacher/presentation/pages/teacher_student_profile_page.dart';
@@ -293,7 +303,51 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/parent/home',
         name: 'parent-home',
-        builder: (context, state) => const PortalNotImplementedPage(portalLabel: 'Parent Dashboard'),
+        builder: (context, state) => const ParentHomePage(),
+      ),
+      // "My Children" — also what Academics' Timetable/Syllabus/Homework
+      // sub-nav tabs and Student Life's own tabs resolve to on web (see
+      // parent_module_entity.dart's ParentNavModules doc comment).
+      GoRoute(
+        path: '/parent/children',
+        name: 'parent-children',
+        builder: (context, state) => const ChildrenPage(),
+      ),
+      // Attendance Calendar — also what "Daily Log"/"Apply Leave"/
+      // "Holidays" resolve to on web (see ParentNavModules' doc comment).
+      GoRoute(
+        path: '/parent/attendance',
+        name: 'parent-attendance',
+        builder: (context, state) => const AttendancePage(),
+      ),
+      // Fee Summary — also what "Receipts" (under the Fees module) resolves
+      // to on web (see ParentNavModules' doc comment).
+      GoRoute(
+        path: '/parent/fees',
+        name: 'parent-fees',
+        builder: (context, state) => const FeesPage(),
+      ),
+      // School Notices — also what "Messages"/"PTMs"/"Permissions" (under
+      // the Communication module) resolve to on web (see ParentNavModules'
+      // doc comment).
+      GoRoute(
+        path: '/parent/notices',
+        name: 'parent-notices',
+        builder: (context, state) => const NoticesPage(),
+      ),
+      // Bottom-nav "All Modules" tab — mirrors Admin's own `/modules` route.
+      GoRoute(
+        path: '/parent/modules',
+        name: 'parent-modules',
+        builder: (context, state) => const ParentModulesPage(),
+      ),
+      // My Profile + Logout — NOT a web port; web has no dedicated Parent
+      // profile page at all (see ParentProfilePage's doc comment). Reachable
+      // from the bottom-nav Profile tab, mirroring Admin's own `ProfilePage`.
+      GoRoute(
+        path: '/parent/profile',
+        name: 'parent-profile',
+        builder: (context, state) => const ParentProfilePage(),
       ),
       GoRoute(
         path: '/student/home',

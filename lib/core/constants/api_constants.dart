@@ -396,4 +396,15 @@ class ApiConstants {
   static const String broadcastBasePath = '$apiBasePath/utilities/communication/broadcast';
   static const String broadcastAudienceOptions = '$broadcastBasePath/audience-options/';
   static const String broadcastSend = '$broadcastBasePath/';
+
+  // Parent Portal — backend/apps/parent_portal/, mounted under $apiBasePath.
+  // Every endpoint is scoped server-side to request.user.guardian_profile —
+  // no student id in these paths is trusted without that guardian check.
+  static const String parentBasePath = '$apiBasePath/parent';
+  static const String parentMe = '$parentBasePath/me/';
+  static const String parentChildren = '$parentBasePath/children/';
+  static String parentChildDetail(int childId) => '$parentChildren$childId/';
+  static const String parentAttendance = '$parentBasePath/attendance/';
+  static const String parentFees = '$parentBasePath/fees/';
+  static const String parentNotices = '$parentBasePath/notices/';
 }

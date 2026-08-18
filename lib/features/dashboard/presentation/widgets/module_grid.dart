@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+<<<<<<< Updated upstream
 import '../../../teacher/presentation/widgets/teacher_quick_access_tile.dart';
 import '../../domain/entities/module_entity.dart';
+=======
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/premium_card.dart';
+>>>>>>> Stashed changes
 import '../providers/dashboard_provider.dart';
 import 'module_card.dart';
 import 'section_label.dart';
@@ -41,6 +46,7 @@ class ModuleGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<ModuleEntity> visibleModules = modules != null ? modules! : ref.watch(visibleModulesProvider);
 
+<<<<<<< Updated upstream
     // No enclosing card — per explicit user direction, "All Modules" sits
     // directly on the page's white background, same as Admin's own
     // `/modules` page always has. Title-left/count-right via the standard
@@ -114,8 +120,62 @@ class ModuleGrid extends ConsumerWidget {
                     return ModuleCardGrid(module: module, onTap: handleTap);
                   },
                 ),
+=======
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: PremiumCard(
+        radius: 20,
+        color: Colors.white,
+        borderColor: AppColors.border.withValues(alpha: 0.8),
+        borderWidth: 1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SectionLabel(title: 'All Modules', count: visibleModules.length),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  // `crossAxisSpacing` was already at 0 (the minimum) — the
+                  // visible gap between columns was actually coming from each
+                  // (fixed-width) column being much wider than its centered
+                  // icon, not from the grid's own spacing value. 4 columns
+                  // instead of 3 narrows each column so the icons sit visibly
+                  // closer together.
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 0,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: visibleModules.length,
+                itemBuilder: (context, index) {
+                  final module = visibleModules[index];
+
+                  return ModuleCardGrid(
+                    module: module,
+                    onTap: () {
+                      if (module.comingSoon) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${module.name} - Coming Soon'),
+                          ),
+                        );
+                      } else {
+                        recordModuleVisit(ref, module.path);
+                        context.go(module.path);
+                      }
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+>>>>>>> Stashed changes
         ),
-      ],
+      ),
     );
   }
 }

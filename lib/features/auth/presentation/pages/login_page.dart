@@ -84,7 +84,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Welcome, ${user.firstName} ${user.lastName}!'),
-                  backgroundColor: AppColors.airaTeal,
+                  backgroundColor: AppColors.secondary,
                 ),
               );
               // Explicit navigation — do not rely solely on the router's

@@ -307,6 +307,66 @@ Completed Work:
 
 ---
 
+## Date: 2026-08-06 (Thursday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Implemented the Settings module's School Info feature (initial version): entities, repository, remote datasource, provider, and the School Info page
+- Added the `Settings` entry to the dashboard module list and registered its route in `app_router.dart`
+
+---
+
+## Date: 2026-08-13 (Thursday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Rebuilt the Home Dashboard: new theme, redesigned Module Card/Grid, Quick Access Grid, Recents Row, Section Label, Attendance Pulse Card, Fees Today Card, Attention Banner, Greeting Section, and a new Manage Pins modal
+- Added shared UI widgets: `fade_slide_in`, `premium_card`, `tap_scale`
+- Greatly expanded the Settings module beyond School Info: Attendance Rules, Document Branding, Documents, Holiday Calendar, Leave Policy, SMTP Settings, and a Settings Audit Log — each with its own entities, repository, remote datasource, provider, page, and supporting widgets (step indicators, wizards, stat tiles, cards)
+- Rebuilt the School Info page as a full step-by-step wizard (map picker, logo/color fields, review step)
+- Added a new Profile page
+- Updated global app shell, module sub-nav, and navigation utilities to support the new module flyout/pin system
+- Added new app icon assets for all modules
+- Stashed in-progress work once mid-day to pull and merge the latest `Main` (Archana's "home screen" and "school tenancy" commits), then restored the stash and continued
+
+---
+
+## Date: 2026-08-17 (Monday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Replaced the flat module icon set with new 3D icon assets (Academics, Administration, Admissions, Attendance, Dashboard, Examination, Fees, HR, Reports, Roles & Permissions, School Tenancy, Settings, Students, Marks Register)
+- Restored and refined the Widget Manager button/panel (module flyout provider, nav utils) on the dashboard
+- Refined the global app shell, module card, dashboard page, and related dashboard widgets (attendance pulse card, attention banner, fees today card, greeting section, quick access grid, recents row, section label) to work with the new icon set and shell changes
+- Removed the now-unused `home_dark_theme.dart`
+
+---
+
+## Date: 2026-08-18 (Tuesday) — Work in progress, not yet committed
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Built a new Parent portal module from scratch (`lib/features/parent/`): data/domain/presentation layers with entities for attendance calendar, child detail, child fees, notices, parent profile ("parent me"), and parent module list
+- Built the Parent portal pages: Parent Home, Children, Attendance, Fees, Notices, Profile, and a Modules page
+- Built supporting Parent widgets: child switcher, sibling tabs, bottom nav, module grid, quick access grid, attendance/fees/notices/results widgets, top bar
+- Added a Parent repository implementation and remote datasource, plus a dedicated Parent API exception type
+- Reworked the Attendance Pulse Card, Fees Today Card, Greeting Section, Module Card/Grid, Quick Access Grid, and Recents Row on the dashboard; removed `home_ambient_particles.dart`
+- Updated the AI Assistant overlay and launcher button
+- Extended `app_router.dart`, `api_constants.dart`, `storage_keys.dart`, and `dio_client.dart` to support the new Parent module's routes, endpoints, and storage
+- Minor update to the notification remote datasource and the login page
+
+*Note: as of this entry these changes are uncommitted local work (git status shows modified/untracked files only) — not yet committed to `Main`.*
+
+---
+
 ## Project Structure
 
 ```

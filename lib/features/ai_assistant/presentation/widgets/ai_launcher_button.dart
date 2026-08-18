@@ -32,7 +32,7 @@ class _SparklePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: const [Colors.white, Color(0xFFE9DEFB), Color(0xFFA78BFA)],
+        colors: const [Colors.white, Color(0xFFE1F5FE), Color(0xFF4FC3F7)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawPath(star, gradientPaint);
 
@@ -46,7 +46,7 @@ class _SparklePainter extends CustomPainter {
 
 const _orbRadialGradient = RadialGradient(
   center: Alignment(-0.4, -0.44),
-  colors: [Color(0xFF3A2A82), Color(0xFF150D3A), Color(0xFF0A0820)],
+  colors: [Color(0xFFBBE4FF), Color(0xFF4FC3F7), Color(0xFF0288D1)],
   stops: [0.0, 0.6, 1.0],
 );
 
@@ -106,7 +106,7 @@ class _AiLauncherButtonState extends State<AiLauncherButton> with TickerProvider
               shape: BoxShape.circle,
               gradient: _orbRadialGradient,
               boxShadow: [
-                BoxShadow(color: const Color(0xFF5836E0).withValues(alpha: 0.55), blurRadius: 32, offset: const Offset(0, 14), spreadRadius: -10),
+                BoxShadow(color: const Color(0xFF29B6F6).withValues(alpha: 0.55), blurRadius: 32, offset: const Offset(0, 14), spreadRadius: -10),
                 BoxShadow(color: const Color(0xFF0E1020).withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
               ],
             ),
@@ -124,10 +124,10 @@ class _AiLauncherButtonState extends State<AiLauncherButton> with TickerProvider
                         gradient: SweepGradient(
                           colors: [
                             Colors.transparent,
-                            Color(0xFF7C5BFF),
-                            Color(0xFFA78BFA),
+                            Color(0xFF81D4FA),
+                            Color(0xFFB3E5FC),
                             Colors.transparent,
-                            Color(0xFF5836E0),
+                            Color(0xFF29B6F6),
                             Colors.transparent,
                           ],
                           stops: [0.0, 0.25, 0.4, 0.6, 0.8, 1.0],
@@ -144,7 +144,7 @@ class _AiLauncherButtonState extends State<AiLauncherButton> with TickerProvider
                 ),
                 ScaleTransition(
                   scale: _pulseScale,
-                  child: CustomPaint(size: const Size(30, 30), painter: const _SparklePainter(glow: Color(0x99A78BFA))),
+                  child: CustomPaint(size: const Size(30, 30), painter: const _SparklePainter(glow: Color(0x994FC3F7))),
                 ),
                 RotationTransition(
                   turns: ReverseAnimation(_spinRevCtrl),
@@ -160,7 +160,7 @@ class _AiLauncherButtonState extends State<AiLauncherButton> with TickerProvider
                           color: Colors.white,
                           boxShadow: [
                             BoxShadow(color: Colors.white.withValues(alpha: 0.95), blurRadius: 8),
-                            BoxShadow(color: const Color(0xFFA78BFA).withValues(alpha: 0.7), blurRadius: 14),
+                            BoxShadow(color: const Color(0xFF4FC3F7).withValues(alpha: 0.7), blurRadius: 14),
                           ],
                         ),
                       ),

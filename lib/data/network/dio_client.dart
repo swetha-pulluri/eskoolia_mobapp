@@ -172,9 +172,12 @@ class DioClient {
         // the friendly text, never the real cause. Log the original here,
         // before it's discarded, so a release-only failure (which can't be
         // attached to a debugger) is still diagnosable via `adb logcat`.
-        print('[DioClient] Raw error type: ${error.type}');
-        print('[DioClient] Raw error.message: ${error.message}');
-        print('[DioClient] Raw error.error: ${error.error} (${error.error?.runtimeType})');
+        final isSilent = error.requestOptions.extra['silent'] == true;
+        if (!isSilent) {
+          print('[DioClient] Raw error type: ${error.type}');
+          print('[DioClient] Raw error.message: ${error.message}');
+          print('[DioClient] Raw error.error: ${error.error} (${error.error?.runtimeType})');
+        }
         // Format error response
         String errorMessage = 'An unexpected error occurred';
 
@@ -295,15 +298,28 @@ class DioClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     Options? options,
+    // Opt-in for background/non-critical polls whose caller already
+    // swallows the failure itself (e.g. the notification-bell's unread-count
+    // poll, which 400s for every guardian account — the Communication
+    // module's RBAC has no permission path for parents, same as on web —
+    // and just leaves the badge at 0 on error). Mirrors web's own
+    // `silent401` convention (`frontend/lib/api-auth.ts`) for calls where a
+    // failure is expected/handled, not a real bug to surface in logs.
+    bool silent = false,
   }) async {
     try {
       return await _dio.get(
         path,
         queryParameters: queryParameters,
-        options: options,
+        // `silent` must reach the request itself (not just this method's own
+        // catch below) — `_errorInterceptor`'s onError runs *inside*
+        // `_dio.get()`, before control ever returns here, and it printed the
+        // full "[DioClient] Raw error ..." block unconditionally regardless
+        // of this flag until this `extra` tag let it check too.
+        options: (options ?? Options()).copyWith(extra: {...?options?.extra, if (silent) 'silent': true}),
       );
     } catch (e) {
-      AppLogger.error('GET request error: $path', e);
+      if (!silent) AppLogger.error('GET request error: $path', e);
       rethrow;
     }
   }

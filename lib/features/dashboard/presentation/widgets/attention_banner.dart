@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/premium_card.dart';
 import '../providers/dashboard_provider.dart';
 
-const Color _attentionBorder = Color(0xFFF59E0B);
 const Color _attentionIconBg = Color(0xFFFEF3C7);
 const Color _attentionText = Color(0xFF92400E);
 
@@ -33,10 +33,12 @@ class AttentionBanner extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
               child: PremiumCard(
                 radius: 14,
-                // White card, amber edge only — matches the "colored border,
-                // not a filled box" look used across every Home screen card.
+                // Flat, barely-there edge — matches the neutral border now
+                // used on every other Home screen card (was a bold amber
+                // brand-colored border).
                 color: Colors.white,
-                borderColor: _attentionBorder.withValues(alpha: 0.65),
+                borderColor: AppColors.border.withValues(alpha: 0.8),
+                borderWidth: 1,
                 child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
