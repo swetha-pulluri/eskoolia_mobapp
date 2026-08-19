@@ -334,8 +334,8 @@ class _ProfileContent extends ConsumerWidget {
       width: 88,
       height: 88,
       alignment: Alignment.center,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.purpleSoft, border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.35), width: 2)),
-      child: Text(initials, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.purpleDeep)),
+      decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.brandPurple),
+      child: Text(initials, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white)),
     );
   }
 
