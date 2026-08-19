@@ -103,10 +103,23 @@ class _WeekAheadCardState extends ConsumerState<WeekAheadCard> {
     );
   }
 
-  void _addToday(String text) {
-    if (text.trim().isEmpty) return;
-    ref.read(weekPlannerProvider.notifier).addEntry(date: _isoDate(DateTime.now()), text: text);
-    _controller.clear();
+  // Matches web's own `WeekAhead.tsx`: its "Plan your day…" row and day
+  // cells never add anything by themselves — every one of them only opens
+  // `PlannerModal` UNCONDITIONALLY (no text-empty guard blocks that open —
+  // there's no text field on web's home-card row at all). Confirmed via
+  // debug logging that this card's `+` WAS being tapped correctly, but with
+  // an empty `_controller.text` (nothing typed first) it hit an early
+  // `if (text.trim().isEmpty) return;` that skipped everything — including
+  // opening the planner — which is exactly why it read as "no response at
+  // all". Now the planner always opens on tap, exactly like web; a real
+  // entry is added first only when there's actually text to add.
+  Future<void> _addToday(String text) async {
+    if (text.trim().isNotEmpty) {
+      await ref.read(weekPlannerProvider.notifier).addEntry(date: _isoDate(DateTime.now()), text: text);
+      _controller.clear();
+    }
+    if (!mounted) return;
+    _openPlanner(context);
   }
 
   Widget _dayCell(DateTime day) {

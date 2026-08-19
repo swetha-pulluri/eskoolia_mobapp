@@ -45,7 +45,9 @@ class GreetingSection extends ConsumerWidget {
       child: PremiumCard(
         radius: 20,
         color: Colors.white,
-
+        // Flat, barely-there edge — matches the Stitch reference's plain
+        // white cards (no bold brand-colored border). Teacher Home overrides
+        // via `borderColor` to its own equally-plain card border.
         borderColor: borderColor ?? AppColors.border.withValues(alpha: 0.8),
         borderWidth: 1,
 

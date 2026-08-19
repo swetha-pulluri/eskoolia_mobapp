@@ -38,9 +38,6 @@ class ApiConstants {
   static const String verifyResetCode = '$apiBasePath/auth/verify-reset-code/';
   static const String resetPassword = '$apiBasePath/auth/reset-password/';
 
-  // School Info Endpoint (public - no auth required)
-  static const String schoolInfo = '$apiBasePath/tenancy/school-info/';
-
   // Tenancy — School Setup (a super-admin cross-school CRUD surface, NOT the
   // Settings → School Info screen — see settingsSchoolInfo below for that).
   // Reference: backend/apps/tenancy/urls.py (SchoolViewSet, router-registered

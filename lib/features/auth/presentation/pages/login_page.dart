@@ -103,6 +103,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final isLoading = ref.watch(authNotifierProvider).maybeWhen(loading: () => true, orElse: () => false);
 
     return Scaffold(
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -154,6 +155,55 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               errorBuilder: (_, _, _) => const Text(
                                 'Eskoolia',
                                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.brandPurple),
+      body: SafeArea(
+        child: MouseRegion(
+          onHover: (event) => _handleMouseMove(event, screenSize),
+          child: Container(
+            width: screenWidth,
+            height: screenHeight,
+            color: AppColors.surfaceBright,
+            child: Stack(
+              children: [
+                // ═══ Background Layers ═══
+                _buildBackgroundLayers(screenWidth),
+
+                // ═══ Scrollable Content ═══
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // ═══ Header ═══
+                            _buildHeader(screenWidth),
+
+                            // ═══ Main Content ═══
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: responsiveSpacing(
+                                  context,
+                                  isMobile ? 16 : 40,
+                                ),
+                                vertical: responsiveSpacing(
+                                  context,
+                                  isMobile ? 20 : 40,
+                                ),
+                              ),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 1080,
+                                  ),
+                                  child: isMobile
+                                      ? _buildMobileLayout()
+                                      : _buildDesktopLayout(),
+                                ),
+>>>>>>> Stashed changes
                               ),
                             ),
                           ),
@@ -268,6 +318,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 28),
 
+<<<<<<< Updated upstream
                         const Text(
                           "Don't have an account?",
                           textAlign: TextAlign.center,
@@ -280,6 +331,376 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
                         ),
                       ],
+=======
+  Widget _buildHeader(double screenWidth) {
+    final isSmallScreen = screenWidth < 600;
+    final logoHeight = isSmallScreen ? 60.0 : 70.0;
+    final headerPadding = EdgeInsets.symmetric(
+      horizontal: responsiveSpacing(context, isSmallScreen ? 8 : 12),
+      vertical: responsiveSpacing(context, 4),
+    );
+
+    return GlassPanel(
+      padding: headerPadding,
+      child: isSmallScreen
+          ? _buildCompactHeader(logoHeight)
+          : _buildFullHeader(logoHeight, screenWidth),
+    );
+  }
+
+  Widget _buildCompactHeader(double logoHeight) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Logo
+        Flexible(
+          child: Image.asset(
+            AppConstants.eskooliaLogo,
+            height: logoHeight,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              height: logoHeight,
+              width: logoHeight,
+              color: Colors.grey[300],
+              child: Icon(Icons.school, size: logoHeight * 0.5),
+            ),
+          ),
+        ),
+        SizedBox(width: responsiveSpacing(context, 8)),
+        // Status indicator only
+        _buildStatusDot(),
+      ],
+    );
+  }
+
+  Widget _buildFullHeader(double logoHeight, double screenWidth) {
+    final showFullStatus = screenWidth > 700;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Logo
+        Flexible(
+          flex: 2,
+          child: Image.asset(
+            AppConstants.eskooliaLogo,
+            height: logoHeight,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              height: logoHeight,
+              width: logoHeight,
+              color: Colors.grey[300],
+              child: Icon(Icons.school, size: logoHeight * 0.5),
+            ),
+          ),
+        ),
+
+        // Header Actions
+        Flexible(
+          flex: 3,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Status Pill
+              if (showFullStatus)
+                Flexible(child: _buildStatusPill())
+              else
+                _buildStatusDot(),
+              SizedBox(width: responsiveSpacing(context, 12)),
+              // Partner Brand
+              if (screenWidth > 800) Flexible(child: _buildPartnerBrand()),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDot() {
+    return Container(
+      width: responsiveSpacing(context, 8),
+      height: responsiveSpacing(context, 8),
+      decoration: BoxDecoration(
+        color: AppColors.statusActive,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.statusActive.withValues(alpha: 0.5),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill() {
+    final fontSize = responsiveFontSize(context, 9);
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: responsiveSpacing(context, 12),
+        vertical: responsiveSpacing(context, 4),
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.atriumIndigo.withValues(alpha: 0.03),
+        border: Border.all(
+          color: AppColors.atriumIndigo.withValues(alpha: 0.1),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Status Group
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: responsiveSpacing(context, 6),
+                height: responsiveSpacing(context, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.statusActive,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.statusActive.withValues(alpha: 0.5),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: responsiveSpacing(context, 6)),
+              Text(
+                'ACTIVE',
+                style: TextStyle(
+                  color: AppColors.atriumIndigo.withValues(alpha: 0.8),
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            margin: EdgeInsets.symmetric(
+              horizontal: responsiveSpacing(context, 12),
+            ),
+            width: 1,
+            height: responsiveSpacing(context, 12),
+            color: AppColors.atriumIndigo.withValues(alpha: 0.1),
+          ),
+          // Session Group
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: responsiveIconSize(context, 12),
+                color: AppColors.atriumIndigo.withValues(alpha: 0.6),
+              ),
+              SizedBox(width: responsiveSpacing(context, 6)),
+              Text(
+                AppConstants.session.toUpperCase(),
+                style: TextStyle(
+                  color: AppColors.atriumIndigo,
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 2.0,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPartnerBrand() {
+    return Opacity(
+      opacity: 0.6,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'POWERED BY',
+            style: TextStyle(
+              color: AppColors.atriumIndigo.withValues(alpha: 0.6),
+              fontSize: responsiveFontSize(context, 9),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2.0,
+            ),
+          ),
+          SizedBox(width: responsiveSpacing(context, 8)),
+          Image.asset(
+            AppConstants.eskooliaLogo,
+            height: responsiveIconSize(context, 14),
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => const SizedBox(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Desktop Layout
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildDesktopLayout() {
+    return GlassCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Identity Panel (Left)
+          Expanded(child: _buildIdentityPanel()),
+          // Auth Panel (Right)
+          SizedBox(width: 440, child: _buildAuthPanel()),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Mobile Layout
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildMobileLayout() {
+    return GlassCard(
+      borderRadius: 24,
+      child: Column(
+        children: [
+          _buildAuthPanel(),
+          const Divider(height: 1),
+          _buildIdentityPanel(),
+        ],
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Identity Panel (Left Side / Bottom on Mobile)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildIdentityPanel() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isVerySmall = screenWidth < 360;
+    final isSmall = screenWidth < 600;
+
+    return Container(
+      padding: EdgeInsets.all(responsiveSpacing(context, isSmall ? 20 : 32)),
+      decoration: const BoxDecoration(
+        gradient: AppColors.identityPanelGradient,
+      ),
+      child: Stack(
+        children: [
+          // Campus Background Image
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(0),
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  Colors.grey.withValues(alpha: 0.4),
+                  BlendMode.saturation,
+                ),
+                child: Opacity(
+                  opacity: 0.28,
+                  child: Image.network(
+                    AppConstants.campusImage,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.centerLeft,
+                    errorBuilder: (_, _, _) => const SizedBox(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Content
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Gateway Badge
+              const GatewayBadge(),
+              SizedBox(height: responsiveSpacing(context, 14)),
+
+              // Hero Copy
+              _buildHeroCopy(isVerySmall, isSmall),
+              SizedBox(height: responsiveSpacing(context, 14)),
+
+              // Feature Grid
+              _buildFeatureGrid(isVerySmall, isSmall),
+              SizedBox(height: responsiveSpacing(context, 20)),
+
+              // Trust Strip
+              const TrustStrip(facultyImages: AppConstants.facultyImages),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroCopy(bool isVerySmall, bool isSmall) {
+    final eyebrowFontSize = responsiveFontSize(context, isVerySmall ? 9 : 11);
+    final headingFontSize = responsiveFontSize(
+      context,
+      isVerySmall
+          ? 22
+          : isSmall
+          ? 26
+          : 30,
+    );
+    final descriptionFontSize = responsiveFontSize(
+      context,
+      isVerySmall ? 12 : 13,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Eyebrow
+        Text(
+          'EXCELLENCE DEFINED',
+          style: TextStyle(
+            color: AppColors.deepSaffron,
+            fontSize: eyebrowFontSize,
+            fontWeight: FontWeight.w800,
+            letterSpacing: isVerySmall ? 2.0 : 3.0,
+          ).copyWith(fontFamily: 'Plus Jakarta Sans'),
+        ),
+        SizedBox(height: responsiveSpacing(context, 6)),
+
+        // Heading
+        RichText(
+          text: TextSpan(
+            style: TextStyle(
+              color: AppColors.atriumIndigo,
+              fontSize: headingFontSize,
+              fontWeight: FontWeight.w700,
+              height: 1.15,
+              letterSpacing: 0,
+            ).copyWith(fontFamily: 'Plus Jakarta Sans'),
+            children: [
+              const TextSpan(text: 'The Heart of\n'),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.baseline,
+                baseline: TextBaseline.alphabetic,
+                child: ShaderMask(
+                  shaderCallback: (bounds) =>
+                      AppColors.heroTextGradient.createShader(bounds),
+                  child: Text(
+                    'Educational Mastery.',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: headingFontSize,
+                      fontWeight: FontWeight.w800,
+                      fontStyle: FontStyle.italic,
+                      height: 1.15,
+>>>>>>> Stashed changes
                     ),
                   ),
                 ),

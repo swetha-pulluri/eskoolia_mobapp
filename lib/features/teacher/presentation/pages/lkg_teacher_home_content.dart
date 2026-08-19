@@ -16,17 +16,19 @@ import '../widgets/week_ahead_card.dart';
 /// LKG Teacher Home — shown instead of the generic [_TeacherHomeContent]
 /// (in `teacher_home_page.dart`) when the authenticated teacher's own
 /// `class_teacher_for.class_name` (from `GET /api/v1/teacher/me/`, already
-/// fetched by `teacherMeProvider`) is exactly `"LKG"`. This is a
-/// reorganization, not a reduction: every widget and module a regular
-/// teacher sees is still here — nothing hidden — only reordered so the
-/// class-teacher card (attendance + students, the two things an LKG
-/// homeroom teacher needs first) appears immediately after the greeting,
-/// ahead of the module grids, instead of below them.
+/// fetched by `teacherMeProvider`) is exactly `"LKG"`. Every widget and
+/// module a regular teacher sees is still here — nothing hidden.
 ///
-/// No web precedent exists for this screen (confirmed by inspection — the
-/// web Teacher Portal has one generic home page for every class), so this
-/// composition reuses the app's own existing teacher-portal widgets/design
-/// system rather than porting a web layout that doesn't exist.
+/// Section order matches web's own single fixed `TeacherCenter` order
+/// exactly (`(teacher-portal)/teacher/home/page.tsx`): Greeting → pending
+/// chips → Today's Schedule → Quick Access → "Your Assignments" (Class
+/// Teacher card + subject cards) → All Modules → Week Ahead/Smart To-Do/
+/// Quick Broadcast. Web has no separate LKG/class-teacher branch that
+/// reorders anything — `class_teacher_for` only controls whether the Class
+/// Teacher card renders at all, never where it sits — so this screen no
+/// longer foregrounds it ahead of Quick Access the way an earlier version
+/// did; that deviated from web's actual order. Confirmed by direct
+/// inspection, not assumed.
 class LkgTeacherHomeContent extends StatelessWidget {
   final TeacherMeEntity teacherMe;
   final bool Function(String id) isEnabled;
@@ -52,10 +54,6 @@ class LkgTeacherHomeContent extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           const TeacherPendingChipsRow(),
-          // Class-teacher card foregrounded — an LKG homeroom teacher's
-          // most-used actions (Mark Attendance, View Students) come first.
-          const TeacherAssignmentsSection(),
-          const SizedBox(height: 4),
           if (isEnabled('teacher-day-plan')) const TodayScheduleCard(),
           // Quick Access — ONE outer card wrapping the heading + grid, same
           // treatment as the generic Teacher Home for visual consistency
@@ -85,6 +83,7 @@ class LkgTeacherHomeContent extends StatelessWidget {
               ],
             ),
           ),
+          const TeacherAssignmentsSection(),
           // Same single-outer-card treatment as Quick Access above.
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

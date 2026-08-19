@@ -5,12 +5,10 @@ import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/portal_not_implemented_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
-import '../../features/auth/presentation/pages/school_select_page.dart';
+import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
-
 import '../../features/teacher/domain/entities/teacher_module_entity.dart';
-
 import '../../features/parent/presentation/pages/attendance_page.dart';
 import '../../features/parent/presentation/pages/children_page.dart';
 import '../../features/parent/presentation/pages/fees_page.dart';
@@ -19,7 +17,6 @@ import '../../features/parent/presentation/pages/notices_page.dart';
 import '../../features/parent/presentation/pages/profile_page.dart'
     show ParentProfilePage;
 import '../../features/parent/presentation/pages/parent_home_page.dart';
-
 import '../../features/teacher/presentation/pages/teacher_home_page.dart';
 import '../../features/teacher/presentation/pages/my_classes_page.dart';
 import '../../features/teacher/presentation/pages/teacher_student_profile_page.dart';
@@ -101,7 +98,7 @@ import '../../features/settings/presentation/pages/document_branding_page.dart';
 /// via `MaterialApp.router`'s `builder:` — know which module/tab is active
 /// for highlighting, without needing `GoRouterState.of(context)` (which
 /// isn't reachable from that far up the tree).
-final currentRoutePathProvider = StateProvider<String>((ref) => '/home');
+final currentRoutePathProvider = StateProvider<String>((ref) => '/splash');
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Built exactly once per app lifetime — do NOT `ref.watch(authNotifierProvider)`
@@ -115,7 +112,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     debugLogDiagnostics: true,
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
@@ -128,6 +125,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         }
       });
 
+      // The splash screen controls its own single, timed hand-off to
+      // `/login` (see `SplashPage`) — it must never be redirected away
+      // from early by auth-state changes, in either direction, or its
+      // animation would be cut short the moment `checkAuthStatus()`
+      // resolves underneath it.
+      if (state.matchedLocation == '/splash') return null;
+
       final currentAuthState = ref.read(authNotifierProvider);
       final currentUser = currentAuthState.maybeWhen(
         authenticated: (user) => user,
@@ -137,11 +141,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isLoggingIn = state.matchedLocation == '/login';
       // Pre-auth utility pages, reachable only via an explicit link — never
       // forced, and never require each other.
-      const preAuthPaths = {
-        '/school-select',
-        '/forgot-password',
-        '/reset-password',
-      };
+      const preAuthPaths = {'/forgot-password', '/reset-password'};
       final isOnPreAuthPage = preAuthPaths.contains(state.matchedLocation);
       debugPrint(
         '[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated',
@@ -164,9 +164,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // Not authenticated: `/login` (the shared, role-agnostic Main
       // eskoolia.com login — backend resolves the account's own school and
       // role after credentials are checked, no tenant needed up front) is
-      // the default, un-gated destination. School-select and forgot/reset
-      // password are separate, optional pages reachable only via an
-      // explicit link from the login page.
+      // the default, un-gated destination. Forgot/reset password are
+      // separate, optional pages reachable only via an explicit link from
+      // the login page.
       if (!isLoggingIn && !isOnPreAuthPage) {
         debugPrint('[AppRouter] redirect -> /login');
         return '/login';
@@ -176,12 +176,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      // Auth Routes
+      // Splash — always the very first screen on cold start; hands off to
+      // `/login` itself once its animation finishes (see `SplashPage`).
       GoRoute(
-        path: '/school-select',
-        name: 'school-select',
-        builder: (context, state) => const SchoolSelectPage(),
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashPage(),
       ),
+      // Auth Routes
       GoRoute(
         path: '/login',
         name: 'login',
@@ -781,9 +783,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 class _AuthRefreshNotifier extends ChangeNotifier {
   _AuthRefreshNotifier(Ref ref) {
     ref.listen<AuthState>(authNotifierProvider, (previous, next) {
-      notifyListeners();
-    });
-    ref.listen<String?>(selectedSchoolSubdomainProvider, (previous, next) {
       notifyListeners();
     });
   }

@@ -8,11 +8,12 @@ import '../providers/teacher_providers.dart';
 
 /// "Your Assignments" — `ClassTeacherCard` + one `SubjectCard` per
 /// `subjectAssignments` entry, ported from `home/page.tsx`'s inline
-/// components. "Mark Attendance" now routes to the real Teacher Attendance
-/// page (`/teacher/attendance`). "View Students" still shows a "Coming
-/// Soon" snackbar — My Classes navigation from this card is out of scope
-/// for the Attendance submodule (see the Teacher module catalog's
-/// `comingSoon` flag, unchanged for that entry).
+/// components. "Mark Attendance" routes to the real Teacher Attendance page
+/// (`/teacher/attendance`); "View Students" routes to `/teacher/classes`
+/// (the real, already-built `MyClassesPage`) — matches web's own
+/// `ClassTeacherCard` exactly (`home/page.tsx`'s "View Students" button also
+/// just does `router.push("/teacher/classes")`; there is no dedicated
+/// "homeroom-only" student list on web either).
 class TeacherAssignmentsSection extends ConsumerWidget {
   const TeacherAssignmentsSection({super.key});
 
@@ -45,12 +46,6 @@ class TeacherAssignmentsSection extends ConsumerWidget {
       orElse: () => const SizedBox.shrink(),
     );
   }
-}
-
-void _showComingSoon(BuildContext context, String feature) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('$feature — Coming Soon')),
-  );
 }
 
 class _ClassTeacherCard extends StatelessWidget {
@@ -114,7 +109,7 @@ class _ClassTeacherCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _showComingSoon(context, 'View Students'),
+                  onPressed: () => context.push('/teacher/classes'),
                   icon: const Icon(Icons.people_outline, size: 15),
                   label: const Text('View Students'),
                   style: OutlinedButton.styleFrom(

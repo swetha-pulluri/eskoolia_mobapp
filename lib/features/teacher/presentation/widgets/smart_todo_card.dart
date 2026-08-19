@@ -132,14 +132,24 @@ class _SmartTodoCardState extends ConsumerState<SmartTodoCard> {
     );
   }
 
-  void _addTask(String activeTab) {
+  Future<void> _addTask(String activeTab) async {
     final raw = _controller.text.trim();
     if (raw.isEmpty) return;
     final match = _hashtagPattern.firstMatch(raw);
     final category = match != null ? match.group(1)!.toLowerCase() : (activeTab == 'all' ? 'personal' : activeTab);
     final text = raw.replaceAll(_hashtagStripPattern, '').trim();
-    createTodo(ref, text: text, category: category);
     _controller.clear();
+    // Previously fire-and-forget: a failed create (network error, or a
+    // response-shape mismatch even after the row was actually written)
+    // threw as an unhandled Future rejection — no error shown, and the
+    // list never got a chance to refresh, so a real task could exist in
+    // the backend yet never appear here.
+    try {
+      await createTodo(ref, text: text, category: category);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not add task: $e')));
+    }
   }
 
   Widget _tabChip(String label, bool active, VoidCallback onTap) {
@@ -157,6 +167,29 @@ class _SmartTodoCardState extends ConsumerState<SmartTodoCard> {
     );
   }
 
+  // Previously fire-and-forget (same class of bug as the old "Add Task"
+  // issue): a failed request threw as an unhandled Future rejection, no
+  // error shown, and — since `toggleTodoCompleted`/`deleteTodoItem` didn't
+  // guarantee their `ref.invalidate` ran either — the list could be left
+  // showing a "deleted" task that was never actually removed from view.
+  Future<void> _toggleTodo(TodoItemEntity todo) async {
+    try {
+      await toggleTodoCompleted(ref, todo);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not update task: $e')));
+    }
+  }
+
+  Future<void> _deleteTodo(int id) async {
+    try {
+      await deleteTodoItem(ref, id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not delete task: $e')));
+    }
+  }
+
   Widget _todoRow(TodoItemEntity todo) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -164,7 +197,7 @@ class _SmartTodoCardState extends ConsumerState<SmartTodoCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
-            onTap: () => toggleTodoCompleted(ref, todo),
+            onTap: () => _toggleTodo(todo),
             child: Icon(
               todo.completed ? Icons.check_box : Icons.check_box_outline_blank,
               size: 18,
@@ -183,7 +216,7 @@ class _SmartTodoCardState extends ConsumerState<SmartTodoCard> {
             ),
           ),
           InkWell(
-            onTap: () => deleteTodoItem(ref, todo.id),
+            onTap: () => _deleteTodo(todo.id),
             child: const Icon(Icons.close, size: 14, color: AppColors.ink3),
           ),
         ],

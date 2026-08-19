@@ -6,27 +6,22 @@ import '../../../dashboard/domain/entities/module_entity.dart';
 /// Purpose-built Teacher 3D icon set in `assets/icons/teacher/` — covers
 /// every real Teacher module except Home (excluded from Quick Access/All
 /// Modules grids entirely) and Fees. `fees.png` was present in an earlier
-/// download but is no longer in the folder (only 6 files remain there:
-/// attendance, chat, homework, lessons, profile, timetable) — per "keep its
-/// current icon" when no replacement exists, Fees is left unmapped here so
-/// it falls back to [ModuleEntity.icon] (its Material glyph) instead of
-/// pointing at a file that no longer exists. Note: the file for Messages is
-/// named `chat.png`, not `messages.png` — used since it's the only file
-/// present for that module and clearly matches its concept. My Classes,
-/// Attendance, Homework, and Lessons instead use `assets/icons/teacher.png`,
-/// `assets/icons/attendance_3d.png`, `assets/icons/bag.png`, and
-/// `assets/icons/openbook.png` respectively — all from the top-level icons
-/// folder, not the `teacher/` subfolder — per explicit user direction,
-/// overriding the `teacher/`-subfolder files used for those modules
-/// previously.
+/// download but is no longer in the folder — per "keep its current icon"
+/// when no replacement exists, Fees is left unmapped here so it falls back
+/// to [ModuleEntity.icon] (its Material glyph) instead of pointing at a file
+/// that no longer exists. Note: the file for Messages is named `chat.png`,
+/// not `messages.png` — used since it's the only file present for that
+/// module and clearly matches its concept. Homework and Lessons instead use
+/// `assets/icons/bag.png` and `assets/icons/openbook.png` — top-level icons
+/// folder, not the `teacher/` subfolder — per explicit user direction.
 String? quickAccessIconAssetFor(String moduleId) {
   switch (moduleId) {
     case 'teacher-classes':
-      return 'assets/icons/teacher.png';
+      return 'assets/icons/teacher/class.png';
     case 'teacher-timetable':
       return 'assets/icons/teacher/timetable.png';
     case 'teacher-attendance':
-      return 'assets/icons/attendance_3d.png';
+      return 'assets/icons/teacher/attendance (2).png';
     case 'teacher-homework':
       return 'assets/icons/bag.png';
     case 'teacher-lessons':

@@ -1072,4 +1072,38 @@ Developer: Archana
 
 ### Remarks
 - No backend changes; no web frontend modifications.
+
+---
+
+## 19-08-2026
+Developer: Archana
+**Branch:** Main
+
+*Uncommitted as of this entry — not yet staged or pushed.*
+
+### Work Done — New Splash Screen (`lib/features/auth/presentation/pages/splash_page.dart`, new file)
+- Built a new animated splash screen using the existing `assets/images/eskoolia_logo.png` exactly as-is (no asset edits, nothing regenerated): mascot fades in, then the 8 letters of "eSkoolia" (e‑S‑k‑o‑o‑l‑i‑a) cascade in left-to-right, followed by a one-time light-sweep highlight, on a warm ivory-to-champagne gradient background with soft blurred "glass" light accents (no card/container around the logo). Wired into `app_router.dart` as the app's real `initialLocation`, ahead of the existing (unmodified) `/login` → auth-check → redirect flow.
+- **Per-letter reveal technique**: the source PNG has no alpha channel (confirmed via raw pixel inspection — flat `#FAFAFA` fill outside the artwork) and its 8 letters are drawn touching/overlapping (no blank column anywhere), so literal per-letter cropping isn't possible without recreating the artwork. Solved by column-density-scanning the wordmark to find its 7 lowest-ink dips (the thin connecting strokes between letters), which line up exactly with the 8 letters; each "letter" on screen is that measured slice of the real logo pixels via a shared `_LogoRegion` clip/positioning widget, never redrawn as text.
+- **Runtime transparency**: added chroma-keying (via the already-installed `image` package, run through `compute()`) so only the logo's own strokes paint against the new background, never its flat rectangular canvas — asset file itself never touched, alpha changed only for pixels already matching the known background color.
+- Bugs found and fixed during this build, most surfaced by live user testing on both Chrome and a physical phone rather than guesswork:
+  - **Duplicate/ghosted glasses**: the mascot's glasses double as the wordmark's two "o"s in this specific artwork, and stacking the mascot/wordmark boxes in a `Column` with a gap made that shared region render twice at two different vertical positions. Fixed by using one `Stack` with both boxes at their true absolute coordinates instead.
+  - **Logo never appearing on Chrome / intermittently on phone**: `compute()` has no real background isolate on Flutter Web (runs synchronously on the main thread instead), so the chroma-key pass could take longer than the fixed reveal timer and the app would navigate to `/login` before the logo ever finished loading. Fixed by (a) making navigation wait on the logo actually being ready, not a timer alone, (b) adding a 3-second timeout + error handling that falls back to the raw (non-transparent) logo rather than leaving it invisible forever, and (c) rewriting the chroma-key function to operate on the raw RGBA byte buffer directly instead of the `image` package's per-pixel `Pixel` object iterator, which was slow enough to routinely miss the timeout.
+  - **Visible "cut" seam/blinking right through the O's during the reveal**: root-caused to the mascot box and letter boxes independently *scaling* the shared glasses/"oo" region at different rates (the two layers' scale animations disagreeing at their shared boundary), not the boundary's position — removing scale/slide from the reveal entirely (fade-only) fixed it at the root, since fade never resizes or moves content.
+  - **Reveal not actually starting from the first letter**: the reveal animation's clock was starting at page-load, independent of how long the logo actually took to load/chroma-key — if that took even a second or two, the animation clock had already run past several letters by the time there was anything to paint. Restructured into one sequential `_runSplashSequence()` (load logo → *then* run the reveal → *then* run the sweep) so the cascade always starts fresh from the first visible frame.
+  - Retimed the letter cascade twice on user feedback, most recently to a clearly sequential ~480ms gap between letter starts against a ~600ms fade each (previously heavily overlapping), with the hard minimum-duration floor bumped to match.
+
+### Work Done — Admin Settings → Branding Color
+- Investigated first (per instruction) whether Branding Color was missing or broken; found it was already fully implemented in `school_info_color_field.dart` (School Info → Branding step) matching the web's `SchoolInfoPanel.tsx` pixel-for-pixel — same swatch dimensions, same `#6d4aff` fallback, same save-via-Save-&-Exit/Save-Changes flow.
+- Rebuilt the color-picker dialog itself to match a screenshot of the web's native OS color-picker (gradient saturation/value square, hue slider, swatch, editable R/G/B fields) instead of the generic `flutter_colorpicker` package widget, composing it from that same package's individually-exported pieces (`ColorPickerArea`, `ColorPickerSlider`, `ColorIndicator`).
+- Fixed a dialog overflow bug (found via a user screenshot) where the picker's content was taller than the screen, pushing Cancel/Select off-screen — bounded it to a scrollable, screen-relative max height.
+- Investigated a "saved color doesn't persist after reopening" report via temporary debug tracing (`debugPrint` at the button tap, the PATCH payload, and the PATCH response) — confirmed the actual save/PATCH/response round-trip was working correctly end to end (root cause was a stale build, not a code bug); removed the temporary diagnostics afterward.
+
+### Testing / Verification
+- Ran `flutter analyze` after every change throughout — clean each time (same pre-existing baseline info-level lints, zero new issues).
+- No emulator/device available in this environment for direct visual verification — all UI/animation fixes were verified through the user's own live device/Chrome testing and iterated on their real screenshots/reports rather than assumed correct.
+
+### Remarks
+- No backend changes; no web frontend modifications.
+- All work performed only inside `eskoolia_mobapp`.
+- Nothing committed or pushed.
 `

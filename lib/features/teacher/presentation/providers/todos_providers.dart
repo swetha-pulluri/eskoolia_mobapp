@@ -23,17 +23,36 @@ final todosProvider = FutureProvider.autoDispose<List<TodoItemEntity>>((ref) {
   return ref.watch(todosRepositoryProvider).getTodos(category: category == 'all' ? null : category);
 });
 
+// Every mutation below follows the same shape: `finally { ref.invalidate(...) }`,
+// not a plain sequential `await ...; ref.invalidate(...)`. If the request
+// throws (network hiccup, or — for create/update — the response body
+// failing to parse even though the row was actually written server-side),
+// a plain sequential call skipped the invalidate entirely: the backend
+// change could be real, but the list never refetched to show it. The
+// refetch must always run so a genuine change still shows up; the
+// exception still propagates to the caller afterward so a real failure
+// isn't silently hidden either.
+
 Future<void> createTodo(WidgetRef ref, {required String text, required String category}) async {
-  await ref.read(todosRepositoryProvider).createTodo(text: text, category: category);
-  ref.invalidate(todosProvider);
+  try {
+    await ref.read(todosRepositoryProvider).createTodo(text: text, category: category);
+  } finally {
+    ref.invalidate(todosProvider);
+  }
 }
 
 Future<void> toggleTodoCompleted(WidgetRef ref, TodoItemEntity todo) async {
-  await ref.read(todosRepositoryProvider).updateTodo(todo.id, completed: !todo.completed);
-  ref.invalidate(todosProvider);
+  try {
+    await ref.read(todosRepositoryProvider).updateTodo(todo.id, completed: !todo.completed);
+  } finally {
+    ref.invalidate(todosProvider);
+  }
 }
 
 Future<void> deleteTodoItem(WidgetRef ref, int id) async {
-  await ref.read(todosRepositoryProvider).deleteTodo(id);
-  ref.invalidate(todosProvider);
+  try {
+    await ref.read(todosRepositoryProvider).deleteTodo(id);
+  } finally {
+    ref.invalidate(todosProvider);
+  }
 }

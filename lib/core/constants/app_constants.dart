@@ -17,13 +17,6 @@ class AppConstants {
   static const String portalTypeKey = 'portal_type';
   static const String mustChangePasswordKey = 'must_change_password';
 
-  // Selected school (subdomain the user identified before login). Stored via
-  // `SharedPrefs`, not `SecureStorageService` — this is a device-level
-  // "which school portal am I pointed at" preference, not per-session auth
-  // data, so it must survive logout's `SecureStorageService.clearAll()`
-  // exactly like `lastUsername`/`rememberDevice` already do.
-  static const String selectedSchoolSubdomainKey = 'selected_school_subdomain';
-
   // Validation
   static const int minPasswordLength = 6;
   static const int maxPasswordLength = 128;
