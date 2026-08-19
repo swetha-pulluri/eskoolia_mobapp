@@ -34,8 +34,7 @@ class RecentsRow extends ConsumerWidget {
           child: PremiumCard(
             radius: 20,
             color: Colors.white,
-            borderColor: AppColors.border.withValues(alpha: 0.8),
-            borderWidth: 1,
+            borderWidth: 0,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

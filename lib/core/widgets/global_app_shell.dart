@@ -66,7 +66,10 @@ class GlobalAppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authNotifierProvider);
-    final isAuthenticated = authState.maybeWhen(authenticated: (_) => true, orElse: () => false);
+    final isAuthenticated = authState.maybeWhen(
+      authenticated: (_) => true,
+      orElse: () => false,
+    );
 
     // Pre-login (splash/login screen) has no shell in the reference
     // frontend either — `(dashboard)/layout.tsx` only wraps the
@@ -107,23 +110,19 @@ class GlobalAppShell extends ConsumerWidget {
             else
               const ModuleSubNav(),
             Expanded(child: child),
-<<<<<<< Updated upstream
+
             // Admin gets Home/All Modules/Widgets/Profile; Teacher gets its
             // own Home/All Modules/Profile bar (no Widgets tab — that
-            // preference panel is an Admin-only concept). Both reuse the
-            // same generic `_BottomNavButton`, just different tab lists.
-            if (isTeacher) const _TeacherBottomNav() else const _GlobalBottomNav(),
-=======
-            // Teacher is the only portal with no bottom nav — its own
-            // `/teacher/*` route tree and desktop-style header pills have no
-            // use for these tabs. Admin gets its own tabs; Parent gets its
+            // preference panel is an Admin-only concept); Parent gets its
             // own `ParentBottomNav` (`/parent/home`, `/parent/modules`,
-            // `/parent/profile`) instead of Admin's un-prefixed paths.
-            if (isParent)
+            // `/parent/profile`) instead of Admin's un-prefixed paths. Each
+            // portal renders exactly one bottom nav.
+            if (isTeacher)
+              const _TeacherBottomNav()
+            else if (isParent)
               const ParentBottomNav()
-            else if (!isTeacher)
+            else
               const _GlobalBottomNav(),
->>>>>>> Stashed changes
           ],
         ),
         if (flyoutTarget != null) ...[
@@ -141,7 +140,8 @@ class GlobalAppShell extends ConsumerWidget {
           Positioned.fill(
             child: Listener(
               behavior: HitTestBehavior.translucent,
-              onPointerDown: (_) => ref.read(moduleFlyoutProvider.notifier).closeNow(),
+              onPointerDown: (_) =>
+                  ref.read(moduleFlyoutProvider.notifier).closeNow(),
               child: const SizedBox.expand(),
             ),
           ),
@@ -150,10 +150,14 @@ class GlobalAppShell extends ConsumerWidget {
               final module = isTeacher
                   ? TeacherModules.findById(flyoutTarget.moduleId)
                   : isParent
-                      ? ParentNavModules.findById(flyoutTarget.moduleId)
-                      : Modules.findById(flyoutTarget.moduleId);
+                  ? ParentNavModules.findById(flyoutTarget.moduleId)
+                  : Modules.findById(flyoutTarget.moduleId);
               if (module == null) return const SizedBox.shrink();
-              return ModuleFlyoutPanel(module: module, top: flyoutTarget.top, left: flyoutTarget.left);
+              return ModuleFlyoutPanel(
+                module: module,
+                top: flyoutTarget.top,
+                left: flyoutTarget.left,
+              );
             },
           ),
         ],
@@ -196,7 +200,9 @@ class _GlobalTopBar extends ConsumerWidget {
           child: Container(
             height: 56,
             padding: EdgeInsets.symmetric(horizontal: isNarrow ? 10 : 16),
-            decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: _navBorder))),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: _navBorder)),
+            ),
             child: Row(
               children: [
                 if (!isMainTab) ...[
@@ -212,7 +218,11 @@ class _GlobalTopBar extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(6),
                     child: const Padding(
                       padding: EdgeInsets.all(4),
-                      child: Icon(Icons.chevron_left, size: 18, color: _navInk3),
+                      child: Icon(
+                        Icons.chevron_left,
+                        size: 18,
+                        color: _navInk3,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -233,16 +243,31 @@ class _GlobalTopBar extends ConsumerWidget {
                           errorBuilder: (_, _, _) => Container(
                             width: 32,
                             height: 32,
-                            decoration: BoxDecoration(color: _navPurple, borderRadius: BorderRadius.circular(9)),
+                            decoration: BoxDecoration(
+                              color: _navPurple,
+                              borderRadius: BorderRadius.circular(9),
+                            ),
                             alignment: Alignment.center,
-                            child: const Text('e', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                            child: const Text(
+                              'e',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       const Text(
                         'Eskoolia',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: _navInk1, letterSpacing: -0.3),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: _navInk1,
+                          letterSpacing: -0.3,
+                        ),
                       ),
                     ],
                   ),
@@ -276,7 +301,11 @@ class SearchTrigger extends ConsumerWidget {
     final showLabel = MediaQuery.sizeOf(context).width >= 900;
 
     void openPalette() {
-      final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+      final navContext = ref
+          .read(appRouterProvider)
+          .routerDelegate
+          .navigatorKey
+          .currentContext;
       if (navContext == null) return;
       showSearchCommandPalette(navContext);
     }
@@ -299,18 +328,36 @@ class SearchTrigger extends ConsumerWidget {
       child: Container(
         height: 34,
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(border: Border.all(color: _navBorder), borderRadius: BorderRadius.circular(8), color: const Color(0xFFF3F4FB)),
+        decoration: BoxDecoration(
+          border: Border.all(color: _navBorder),
+          borderRadius: BorderRadius.circular(8),
+          color: const Color(0xFFF3F4FB),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.search, size: 14, color: _navPurple),
             const SizedBox(width: 6),
-            const Text('Search…', style: TextStyle(fontSize: 12, color: _navInk3)),
+            const Text(
+              'Search…',
+              style: TextStyle(fontSize: 12, color: _navInk3),
+            ),
             const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _navBorder), borderRadius: BorderRadius.circular(4)),
-              child: const Text('⌘K', style: TextStyle(fontSize: 10, color: _navInk3, fontFamily: 'monospace')),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: _navBorder),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                '⌘K',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: _navInk3,
+                  fontFamily: 'monospace',
+                ),
+              ),
             ),
           ],
         ),
@@ -335,7 +382,11 @@ class NotificationBellButton extends ConsumerWidget {
 
     return InkWell(
       onTap: () {
-        final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+        final navContext = ref
+            .read(appRouterProvider)
+            .routerDelegate
+            .navigatorKey
+            .currentContext;
         if (navContext == null) return;
         showNotificationPanel(navContext, ref);
       },
@@ -347,19 +398,33 @@ class NotificationBellButton extends ConsumerWidget {
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.notifications_outlined, size: 18, color: _navPurple),
+            const Icon(
+              Icons.notifications_outlined,
+              size: 18,
+              color: _navPurple,
+            ),
             if (unreadCount > 0)
               Positioned(
                 top: 4,
                 right: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
                   constraints: const BoxConstraints(minWidth: 14),
-                  decoration: BoxDecoration(color: const Color(0xFFE11D48), borderRadius: BorderRadius.circular(999)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                   child: Text(
                     unreadCount > 99 ? '99+' : '$unreadCount',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -385,13 +450,21 @@ class AvatarMenu extends ConsumerWidget {
     return '?';
   }
 
-  Future<void> _openMenu(BuildContext avatarContext, WidgetRef ref, UserEntity user) async {
+  Future<void> _openMenu(
+    BuildContext avatarContext,
+    WidgetRef ref,
+    UserEntity user,
+  ) async {
     // `PopupMenuButton` (the usual way to do this) internally calls
     // `Navigator.of(context)` using *this* widget's own context, which has
     // no Navigator ancestor here (see class doc on `GlobalAppShell`) — so
     // build the menu manually with `showMenu()`, anchored via go_router's
     // root navigator context instead.
-    final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
+    final navContext = ref
+        .read(appRouterProvider)
+        .routerDelegate
+        .navigatorKey
+        .currentContext;
     if (navContext == null) return;
     final box = avatarContext.findRenderObject() as RenderBox?;
     if (box == null) return;
@@ -412,7 +485,10 @@ class AvatarMenu extends ConsumerWidget {
     final value = await showMenu<String>(
       context: navContext,
       position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: _navBorder)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: _navBorder),
+      ),
       items: [
         PopupMenuItem<String>(
           enabled: false,
@@ -422,9 +498,21 @@ class AvatarMenu extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w700, color: _navInk1, fontSize: 13), overflow: TextOverflow.ellipsis),
+                Text(
+                  user.fullName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: _navInk1,
+                    fontSize: 13,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 2),
-                Text(user.email, style: const TextStyle(color: _navInk3, fontSize: 11), overflow: TextOverflow.ellipsis),
+                Text(
+                  user.email,
+                  style: const TextStyle(color: _navInk3, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -432,7 +520,14 @@ class AvatarMenu extends ConsumerWidget {
         const PopupMenuDivider(),
         const PopupMenuItem<String>(
           value: 'logout',
-          child: Text('Logout', style: TextStyle(color: _navInk1, fontSize: 13, fontWeight: FontWeight.w500)),
+          child: Text(
+            'Logout',
+            style: TextStyle(
+              color: _navInk1,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
       ],
     );
@@ -445,7 +540,10 @@ class AvatarMenu extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authNotifierProvider);
-    final user = authState.maybeWhen(authenticated: (u) => u, orElse: () => null);
+    final user = authState.maybeWhen(
+      authenticated: (u) => u,
+      orElse: () => null,
+    );
     if (user == null) return const SizedBox.shrink();
 
     return InkWell(
@@ -459,7 +557,14 @@ class AvatarMenu extends ConsumerWidget {
             CircleAvatar(
               radius: 14,
               backgroundColor: _navPurple,
-              child: Text(_initials(user), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+              child: Text(
+                _initials(user),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
             const SizedBox(width: 2),
             const Icon(Icons.keyboard_arrow_down, size: 16, color: _navInk2),
@@ -477,13 +582,37 @@ class _BottomNavTab {
   final IconData activeIcon;
   final String label;
 
-  const _BottomNavTab({required this.path, required this.segment, required this.icon, required this.activeIcon, required this.label});
+  const _BottomNavTab({
+    required this.path,
+    required this.segment,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+  });
 }
 
 const _bottomNavTabs = [
-  _BottomNavTab(path: '/home', segment: 'home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
-  _BottomNavTab(path: '/modules', segment: 'modules', icon: Icons.apps_outlined, activeIcon: Icons.apps_rounded, label: 'All Modules'),
-  _BottomNavTab(path: '/profile', segment: 'profile', icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Profile'),
+  _BottomNavTab(
+    path: '/home',
+    segment: 'home',
+    icon: Icons.home_outlined,
+    activeIcon: Icons.home_rounded,
+    label: 'Home',
+  ),
+  _BottomNavTab(
+    path: '/modules',
+    segment: 'modules',
+    icon: Icons.apps_outlined,
+    activeIcon: Icons.apps_rounded,
+    label: 'All Modules',
+  ),
+  _BottomNavTab(
+    path: '/profile',
+    segment: 'profile',
+    icon: Icons.person_outline,
+    activeIcon: Icons.person_rounded,
+    label: 'Profile',
+  ),
 ];
 
 /// Persistent bottom tab bar — the Admin app's primary navigation surface
@@ -508,7 +637,10 @@ class _GlobalBottomNav extends ConsumerWidget {
       // the tab `InkWell`s to paint ink splashes without throwing.
       type: MaterialType.transparency,
       child: Container(
-        decoration: const BoxDecoration(color: _navBg, border: Border(top: BorderSide(color: _navBorder))),
+        decoration: const BoxDecoration(
+          color: _navBg,
+          border: Border(top: BorderSide(color: _navBorder)),
+        ),
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -533,9 +665,27 @@ class _GlobalBottomNav extends ConsumerWidget {
 }
 
 const _teacherBottomNavTabs = [
-  _BottomNavTab(path: '/teacher/home', segment: 'home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
-  _BottomNavTab(path: '/teacher/modules', segment: 'modules', icon: Icons.apps_outlined, activeIcon: Icons.apps_rounded, label: 'All Modules'),
-  _BottomNavTab(path: '/teacher/profile', segment: 'profile', icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: 'Profile'),
+  _BottomNavTab(
+    path: '/teacher/home',
+    segment: 'home',
+    icon: Icons.home_outlined,
+    activeIcon: Icons.home_rounded,
+    label: 'Home',
+  ),
+  _BottomNavTab(
+    path: '/teacher/modules',
+    segment: 'modules',
+    icon: Icons.apps_outlined,
+    activeIcon: Icons.apps_rounded,
+    label: 'All Modules',
+  ),
+  _BottomNavTab(
+    path: '/teacher/profile',
+    segment: 'profile',
+    icon: Icons.person_outline,
+    activeIcon: Icons.person_rounded,
+    label: 'Profile',
+  ),
 ];
 
 /// Teacher Portal's bottom tab bar — exactly Home / All Modules / Profile,
@@ -557,7 +707,10 @@ class _TeacherBottomNav extends ConsumerWidget {
     return Material(
       type: MaterialType.transparency,
       child: Container(
-        decoration: const BoxDecoration(color: _navBg, border: Border(top: BorderSide(color: _navBorder))),
+        decoration: const BoxDecoration(
+          color: _navBg,
+          border: Border(top: BorderSide(color: _navBorder)),
+        ),
         child: SafeArea(
           top: false,
           child: SizedBox(
@@ -586,7 +739,11 @@ class _BottomNavButton extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
-  const _BottomNavButton({required this.tab, required this.isActive, required this.onTap});
+  const _BottomNavButton({
+    required this.tab,
+    required this.isActive,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -600,7 +757,11 @@ class _BottomNavButton extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             tab.label,
-            style: TextStyle(fontSize: 10, fontWeight: isActive ? FontWeight.w700 : FontWeight.w500, color: color),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              color: color,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

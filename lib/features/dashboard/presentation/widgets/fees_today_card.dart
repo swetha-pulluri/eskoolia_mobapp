@@ -9,12 +9,15 @@ import '../../../../core/widgets/tap_scale.dart';
 import '../../domain/entities/fees_today_entity.dart';
 import '../providers/dashboard_provider.dart';
 
-const Color _feesIconBg = Color(0x26059669); // translucent green wash
-const Color _feesIconColor = Color(0xFF059669);
+// Exact web hex values (frontend/components/widgets/pulse/FeesToday.tsx) —
+// not the app's own approximate design tokens — since this card is a 1:1
+// port of that real component.
+const Color _iconBg = Color(0xFFD1FAE5);
+const Color _iconColor = Color(0xFF059669);
 const Color _positiveText = Color(0xFF059669);
-const Color _positiveBg = Color(0x2634D399);
+const Color _positiveBg = Color(0xFFD1FAE5);
 const Color _negativeText = Color(0xFFE0463A);
-const Color _negativeBg = Color(0x26E0463A);
+const Color _negativeBg = Color(0xFFFEE2E2);
 
 /// Mirrors `formatINR` in `FeesToday.tsx` exactly: `₹{n/100000}L` (2
 /// decimals, trailing zeros stripped) at/above ₹100,000, else plain Indian
@@ -22,9 +25,7 @@ const Color _negativeBg = Color(0x26E0463A);
 String formatInr(double amount) {
   if (amount >= 100000) {
     var lakhs = (amount / 100000).toStringAsFixed(2);
-    lakhs = lakhs
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
+    lakhs = lakhs.replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
     return '₹${lakhs}L';
   }
   return '₹${NumberFormat.decimalPattern('en_IN').format(amount.round())}';
@@ -41,19 +42,18 @@ class FeesTodayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref
-        .watch(feesTodayProvider)
-        .maybeWhen(data: (d) => d, orElse: () => const FeesTodayEntity.empty());
+    final data = ref.watch(feesTodayProvider).maybeWhen(
+          data: (d) => d,
+          orElse: () => const FeesTodayEntity.empty(),
+        );
     final hasDelta = data.vsAvgDay.isNotEmpty && data.vsAvgPercent != 0;
-    final positive = data.vsAvgPercent > 0;
+    final positive = data.vsAvgPercent >= 0;
 
     return TapScale(
       child: PremiumCard(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         radius: 16,
         color: Colors.white,
-        // Flat, barely-there edge — matches the Stitch reference's plain
-        // white cards (was a bold green brand-colored border).
         borderColor: AppColors.border.withValues(alpha: 0.8),
         borderWidth: 1,
         child: Material(
@@ -66,90 +66,49 @@ class FeesTodayCard extends ConsumerWidget {
               context.push('/fees/payments');
             },
             child: Padding(
-              padding: const EdgeInsets.all(13),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(color: _iconBg, borderRadius: BorderRadius.circular(6)),
+                        child: const Icon(Icons.currency_rupee, size: 11, color: _iconColor),
+                      ),
+                      const SizedBox(width: 5),
                       const Expanded(
                         child: Text(
                           "TODAY'S FEES",
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.ink2,
-                            letterSpacing: 0.8,
-                          ),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.ink3, letterSpacing: 0.6),
                         ),
                       ),
-                      Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: _feesIconBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Icon(
-                          Icons.currency_rupee,
-                          size: 14,
-                          color: _feesIconColor,
-                        ),
-                      ),
+                      const Icon(Icons.chevron_right, size: 13, color: AppColors.ink3),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    formatInr(data.collectedAmount),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.ink1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
+                  Text(formatInr(data.collectedAmount), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink1)),
+                  const SizedBox(height: 5),
                   Wrap(
-                    spacing: 8,
+                    spacing: 6,
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        '${data.transactionCount} transactions',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.ink2,
-                        ),
-                      ),
+                      Text('${data.transactionCount} transactions', style: const TextStyle(fontSize: 11.5, color: AppColors.ink2)),
                       if (hasDelta)
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: positive ? _positiveBg : _negativeBg,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: positive ? _positiveBg : _negativeBg, borderRadius: BorderRadius.circular(20)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                positive
-                                    ? Icons.trending_up
-                                    : Icons.trending_down,
-                                size: 11,
-                                color: positive ? _positiveText : _negativeText,
-                              ),
+                              Icon(positive ? Icons.trending_up : Icons.trending_down, size: 9, color: positive ? _positiveText : _negativeText),
                               const SizedBox(width: 3),
                               Text(
                                 '${positive ? '+' : ''}${data.vsAvgPercent}% vs avg ${data.vsAvgDay}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: positive
-                                      ? _positiveText
-                                      : _negativeText,
-                                ),
+                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: positive ? _positiveText : _negativeText),
                               ),
                             ],
                           ),
@@ -158,13 +117,7 @@ class FeesTodayCard extends ConsumerWidget {
                   ),
                   if (data.sparkline7d.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 30,
-                      child: CustomPaint(
-                        painter: _SparklinePainter(values: data.sparkline7d),
-                      ),
-                    ),
+                    SizedBox(width: double.infinity, height: 28, child: CustomPaint(painter: _SparklinePainter(values: data.sparkline7d))),
                   ],
                 ],
               ),
@@ -176,6 +129,8 @@ class FeesTodayCard extends ConsumerWidget {
   }
 }
 
+/// Matches `Sparkline` in FeesToday.tsx: gradient-filled area under the
+/// line, purple stroke, last point highlighted with a filled dot.
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
 
@@ -184,8 +139,8 @@ class _SparklinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
-    final maxVal = values.fold<double>(0, (m, v) => v > m ? v : m);
-    final minVal = values.fold<double>(maxVal, (m, v) => v < m ? v : m);
+    final maxVal = values.reduce((a, b) => a > b ? a : b);
+    final minVal = values.reduce((a, b) => a < b ? a : b);
     final range = (maxVal - minVal).abs() < 1e-9 ? 1.0 : (maxVal - minVal);
     final stepX = size.width / (values.length - 1);
 
@@ -210,10 +165,7 @@ class _SparklinePainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppColors.brandPurple.withValues(alpha: 0.15),
-            AppColors.brandPurple.withValues(alpha: 0),
-          ],
+          colors: [AppColors.brandPurple.withValues(alpha: 0.15), AppColors.brandPurple.withValues(alpha: 0)],
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
 
@@ -223,17 +175,13 @@ class _SparklinePainter extends CustomPainter {
         ..color = AppColors.brandPurple
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..strokeCap = StrokeCap.round,
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
     );
 
-    canvas.drawCircle(
-      pointAt(values.length - 1),
-      2.5,
-      Paint()..color = AppColors.brandPurple,
-    );
+    canvas.drawCircle(pointAt(values.length - 1), 2.5, Paint()..color = AppColors.brandPurple);
   }
 
   @override
-  bool shouldRepaint(covariant _SparklinePainter oldDelegate) =>
-      oldDelegate.values != values;
+  bool shouldRepaint(covariant _SparklinePainter oldDelegate) => oldDelegate.values != values;
 }

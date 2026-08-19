@@ -8,17 +8,18 @@ import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/school_select_page.dart';
 import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/auth_state.dart';
-<<<<<<< Updated upstream
+
 import '../../features/teacher/domain/entities/teacher_module_entity.dart';
-=======
+
 import '../../features/parent/presentation/pages/attendance_page.dart';
 import '../../features/parent/presentation/pages/children_page.dart';
 import '../../features/parent/presentation/pages/fees_page.dart';
 import '../../features/parent/presentation/pages/modules_page.dart';
 import '../../features/parent/presentation/pages/notices_page.dart';
-import '../../features/parent/presentation/pages/profile_page.dart' show ParentProfilePage;
+import '../../features/parent/presentation/pages/profile_page.dart'
+    show ParentProfilePage;
 import '../../features/parent/presentation/pages/parent_home_page.dart';
->>>>>>> Stashed changes
+
 import '../../features/teacher/presentation/pages/teacher_home_page.dart';
 import '../../features/teacher/presentation/pages/my_classes_page.dart';
 import '../../features/teacher/presentation/pages/teacher_student_profile_page.dart';
@@ -122,7 +123,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       // navigation, redirect or not.
       Future.microtask(() {
         if (ref.read(currentRoutePathProvider) != state.matchedLocation) {
-          ref.read(currentRoutePathProvider.notifier).state = state.matchedLocation;
+          ref.read(currentRoutePathProvider.notifier).state =
+              state.matchedLocation;
         }
       });
 
@@ -135,9 +137,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isLoggingIn = state.matchedLocation == '/login';
       // Pre-auth utility pages, reachable only via an explicit link — never
       // forced, and never require each other.
-      const preAuthPaths = {'/school-select', '/forgot-password', '/reset-password'};
+      const preAuthPaths = {
+        '/school-select',
+        '/forgot-password',
+        '/reset-password',
+      };
       final isOnPreAuthPage = preAuthPaths.contains(state.matchedLocation);
-      debugPrint('[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated');
+      debugPrint(
+        '[AppRouter] redirect check: matchedLocation=${state.matchedLocation}, authState=$currentAuthState, isAuthenticated=$isAuthenticated',
+      );
 
       // Authenticated users should never be stuck on a pre-auth page — bounce
       // to their role's own home (matches web's `app/login/page.tsx`
@@ -145,7 +153,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated) {
         if (isLoggingIn || isOnPreAuthPage) {
           final target = resolveHomeRouteForPortal(currentUser.portalType);
-          debugPrint('[AppRouter] redirect -> $target (portalType=${currentUser.portalType})');
+          debugPrint(
+            '[AppRouter] redirect -> $target (portalType=${currentUser.portalType})',
+          );
           return target;
         }
         return null;
@@ -220,7 +230,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/teacher/modules',
         name: 'teacher-modules',
         builder: (context, state) => ModulesPage(
-          modules: TeacherModules.all.where((m) => m.id != 'teacher-home').toList(),
+          modules: TeacherModules.all
+              .where((m) => m.id != 'teacher-home')
+              .toList(),
           trackRecents: false,
           useBareTiles: true,
           title: 'ALL MODULES',
@@ -298,7 +310,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/teacher/classes/students/:id',
         name: 'teacher-student-profile',
-        builder: (context, state) => TeacherStudentProfilePage(studentId: int.parse(state.pathParameters['id']!)),
+        builder: (context, state) => TeacherStudentProfilePage(
+          studentId: int.parse(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/parent/home',
@@ -352,7 +366,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/student/home',
         name: 'student-home',
-        builder: (context, state) => const PortalNotImplementedPage(portalLabel: 'Student Dashboard'),
+        builder: (context, state) =>
+            const PortalNotImplementedPage(portalLabel: 'Student Dashboard'),
       ),
 
       // Dashboard KPI Overview
@@ -392,17 +407,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'super-admin-schools',
         // `?add=1` (matching web's own query param) auto-opens the "Add a
         // new school" accordion — see the Dashboard's "Add school" button.
-        builder: (context, state) => SuperAdminSchoolsPage(autoOpenAdd: state.uri.queryParameters['add'] == '1'),
+        builder: (context, state) => SuperAdminSchoolsPage(
+          autoOpenAdd: state.uri.queryParameters['add'] == '1',
+        ),
       ),
       GoRoute(
         path: '/super-admin/schools/:tenantId',
         name: 'super-admin-school-detail',
-        builder: (context, state) => SchoolDetailPage(tenantId: state.pathParameters['tenantId']!),
+        builder: (context, state) =>
+            SchoolDetailPage(tenantId: state.pathParameters['tenantId']!),
       ),
       GoRoute(
         path: '/super-admin/schools/:tenantId/edit',
         name: 'super-admin-school-edit',
-        builder: (context, state) => EditSchoolPage(tenantId: state.pathParameters['tenantId']!),
+        builder: (context, state) =>
+            EditSchoolPage(tenantId: state.pathParameters['tenantId']!),
       ),
       GoRoute(
         path: '/super-admin/billing',
@@ -627,7 +646,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return StaffOnboardPage(
             editId: editParam != null ? int.tryParse(editParam) : null,
             resumeDraftId: draftParam != null ? int.tryParse(draftParam) : null,
-            initialDepartmentId: departmentParam != null ? int.tryParse(departmentParam) : null,
+            initialDepartmentId: departmentParam != null
+                ? int.tryParse(departmentParam)
+                : null,
             initialStep: stepParam != null ? int.tryParse(stepParam) : null,
           );
         },
@@ -668,10 +689,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/reports/:module/:report',
         name: 'reports-explorer',
         builder: (context, state) {
-          final key = '${state.pathParameters['module']}/${state.pathParameters['report']}';
+          final key =
+              '${state.pathParameters['module']}/${state.pathParameters['report']}';
           final definition = kReportDefinitions[key];
           if (definition == null) {
-            return Scaffold(body: Center(child: Text('Report "$key" not found.')));
+            return Scaffold(
+              body: Center(child: Text('Report "$key" not found.')),
+            );
           }
           return ReportExplorerPage(definition: definition);
         },
@@ -725,11 +749,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               'Page not found',

@@ -68,8 +68,9 @@ class AdminHomePage extends ConsumerWidget {
               // below the greeting card.
               const FadeSlideIn(delay: _dAttention, child: AttentionBanner()),
 
-              // Attendance, then Fees below it — each its own full-width
-              // horizontal card. On web these live in a left rail hidden
+              // Attendance, then Fees below it — each its own card, a 1:1
+              // port of the real web widgets (AttendanceSnapshot.tsx /
+              // FeesToday.tsx). On web these live in a left rail hidden
               // below 1024px viewport width, so there's no existing mobile
               // layout to copy; placed here (above Quick Access) as the
               // most natural mobile equivalent, same cards/data/behavior.

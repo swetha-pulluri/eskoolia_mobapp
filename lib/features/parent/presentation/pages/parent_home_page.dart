@@ -115,11 +115,9 @@ class _ParentHomeContent extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _ParentGreetingCard(me: me, selected: selected),
-          const SizedBox(height: 4),
           const ParentQuickAccessGrid(),
-          const SizedBox(height: 4),
           const ParentModuleGrid(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           if (isEnabled('parent-attendance')) ParentAttendanceWidget(childName: childName, detail: childDetail, loading: childDetailLoading),
           if (isEnabled('parent-results')) ParentResultsWidget(childName: childName, detail: childDetail, loading: childDetailLoading),
           if (isEnabled('parent-notices')) ParentNoticesWidget(notices: noticesAsync.valueOrNull ?? const [], loading: noticesAsync.isLoading),

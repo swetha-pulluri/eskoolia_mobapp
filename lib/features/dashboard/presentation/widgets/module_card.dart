@@ -49,8 +49,12 @@ class ModuleCardGrid extends StatelessWidget {
         },
         // No card/box/border — the 3D icon sits directly on the page's
         // white background, so only the icon-over-title(-over-subtitle)
-        // content itself takes up space here.
-        child: Stack(
+        // content itself takes up space here. A little horizontal padding
+        // keeps the name from crowding the next tile over now that the
+        // grid itself has very little (or no) gap between columns.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Stack(
           alignment: Alignment.topCenter,
           children: [
             Column(
@@ -82,7 +86,10 @@ class ModuleCardGrid extends StatelessWidget {
                 Text(
                   title ?? module.name,
                   style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: module.iconColor, height: 1.1),
-                  maxLines: 1,
+                  // Two lines instead of one — a single truncated line
+                  // ("Roles & Pe…") read as cramped; letting longer names
+                  // wrap gives them room to actually be legible.
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                 ),
@@ -120,6 +127,7 @@ class ModuleCardGrid extends StatelessWidget {
                 ),
               ),
           ],
+          ),
         ),
       ),
     );

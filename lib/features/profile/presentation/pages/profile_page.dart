@@ -5,10 +5,11 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 
 const _navBorder = Color(0xFFECECF2);
 const _navInk1 = Color(0xFF0F1222);
-const _navInk2 = Color(0xFF5A607A);
 const _navInk3 = Color(0xFF9197AE);
 const _navPurple = Color(0xFF6D4AFF);
 const _dangerRed = Color(0xFFE11D48);
+const _pageBg = Color(0xFFF6F6FB);
+const _iconBadgeBg = Color(0xFFF1EDFE);
 
 /// Bottom-nav "Profile" tab — the account-info + logout destination that
 /// used to live behind the header's avatar dropdown (now removed from the
@@ -71,40 +72,53 @@ class ProfilePage extends ConsumerWidget {
     if (user == null) return const SizedBox.shrink();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _pageBg,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             Container(
-              padding: const EdgeInsets.all(18),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F8FB),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _navBorder),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFF2EFFE), Color(0xFFDCD3FB)],
+                ),
+                borderRadius: BorderRadius.circular(24),
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: _navPurple,
-                    child: Text(_initials(user), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+                  // White "halo" ring behind the avatar, matching the
+                  // reference — a plain CircleAvatar sat directly on the
+                  // gradient before.
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: _navPurple,
+                      child: Text(_initials(user), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(user.fullName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _navInk1)),
-                  const SizedBox(height: 3),
-                  Text(user.email, style: const TextStyle(fontSize: 12.5, color: _navInk3)),
+                  const SizedBox(height: 14),
+                  Text(user.email, style: const TextStyle(fontSize: 15, color: _navInk1, fontWeight: FontWeight.w500)),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(color: const Color(0xFFEEEAFF), borderRadius: BorderRadius.circular(999)),
-                    child: Text(_roleLabel(user), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _navPurple)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: _navPurple.withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(_roleLabel(user), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _navPurple)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            _infoRow(Icons.badge_outlined, 'Username', user.username),
+            _infoRow(Icons.person_outline, 'Username', user.username),
             if (user.schoolName != null) _infoRow(Icons.school_outlined, 'School', user.schoolName!),
             _infoRow(Icons.verified_user_outlined, 'Portal', user.portalType),
             const SizedBox(height: 20),
@@ -113,10 +127,11 @@ class ProfilePage extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _confirmLogout(context, ref),
                 style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
                   foregroundColor: _dangerRed,
-                  side: const BorderSide(color: _dangerRed),
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  side: const BorderSide(color: Color(0xFFF4C7CE)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.logout, size: 16),
                 label: const Text('Logout', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
@@ -132,19 +147,32 @@ class ProfilePage extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(border: Border.all(color: _navBorder), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _navBorder),
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: _navInk3),
-          const SizedBox(width: 10),
-          Text(label, style: const TextStyle(fontSize: 12.5, color: _navInk2)),
-          const Spacer(),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: _navInk1),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: _iconBadgeBg, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: _navPurple),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 12, color: _navInk3)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _navInk1),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

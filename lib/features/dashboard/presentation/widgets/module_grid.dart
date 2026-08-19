@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-<<<<<<< Updated upstream
+
 import '../../../teacher/presentation/widgets/teacher_quick_access_tile.dart';
 import '../../domain/entities/module_entity.dart';
-=======
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/premium_card.dart';
->>>>>>> Stashed changes
 import '../providers/dashboard_provider.dart';
 import 'module_card.dart';
 import 'section_label.dart';
@@ -46,12 +45,9 @@ class ModuleGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<ModuleEntity> visibleModules = modules != null ? modules! : ref.watch(visibleModulesProvider);
 
-<<<<<<< Updated upstream
-    // No enclosing card — per explicit user direction, "All Modules" sits
-    // directly on the page's white background, same as Admin's own
-    // `/modules` page always has. Title-left/count-right via the standard
-    // `SectionLabel`, same as every other section.
-    return Column(
+    // Title-left/count-right via the standard `SectionLabel`, same as every
+    // other section.
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionLabel(
@@ -66,7 +62,7 @@ class ModuleGrid extends ConsumerWidget {
         SizedBox(height: useBareTiles ? 10 : 6),
 
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: useBareTiles ? 16 : 0),
           // Teacher's bare tiles use the same content-driven `Wrap` grid
           // Home's Quick Access/All Modules cards already use — a fixed
           // `childAspectRatio` cell (as Admin's bordered `ModuleCardGrid`
@@ -92,10 +88,15 @@ class ModuleGrid extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.05,
+                    // Still 4 columns (not 3 — a wider column leaves each
+                    // icon surrounded by more blank cell space than this
+                    // grid's own spacing value suggests), but a small gap
+                    // and a taller cell now, so a two-line module name has
+                    // real room instead of crowding the tile next to it.
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 0.85,
                   ),
                   itemCount: visibleModules.length,
                   itemBuilder: (context, index) {
@@ -120,7 +121,16 @@ class ModuleGrid extends ConsumerWidget {
                     return ModuleCardGrid(module: module, onTap: handleTap);
                   },
                 ),
-=======
+        ),
+      ],
+    );
+
+    // Teacher's bare tiles keep sitting directly on the page background (no
+    // card) — Admin's bordered grid gets its own card, matching every other
+    // Home section (Greeting/Today's Pulse/Quick Access all wrap their
+    // content the same way) instead of floating loose on the page.
+    if (useBareTiles) return content;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: PremiumCard(
@@ -128,52 +138,9 @@ class ModuleGrid extends ConsumerWidget {
         color: Colors.white,
         borderColor: AppColors.border.withValues(alpha: 0.8),
         borderWidth: 1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionLabel(title: 'All Modules', count: visibleModules.length),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  // `crossAxisSpacing` was already at 0 (the minimum) — the
-                  // visible gap between columns was actually coming from each
-                  // (fixed-width) column being much wider than its centered
-                  // icon, not from the grid's own spacing value. 4 columns
-                  // instead of 3 narrows each column so the icons sit visibly
-                  // closer together.
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 0,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: visibleModules.length,
-                itemBuilder: (context, index) {
-                  final module = visibleModules[index];
-
-                  return ModuleCardGrid(
-                    module: module,
-                    onTap: () {
-                      if (module.comingSoon) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${module.name} - Coming Soon'),
-                          ),
-                        );
-                      } else {
-                        recordModuleVisit(ref, module.path);
-                        context.go(module.path);
-                      }
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
->>>>>>> Stashed changes
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: content,
         ),
       ),
     );

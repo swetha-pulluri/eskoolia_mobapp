@@ -7,9 +7,6 @@ import '../../domain/entities/parent_me_entity.dart';
 import '../providers/parent_providers.dart';
 import '../widgets/sibling_tabs.dart';
 
-const Color _brandPurple = Color(0xFF6D4AFF);
-const Color _purpleDeep = Color(0xFF4F35CC);
-const Color _purpleSoft = Color(0xFFEEEAFF);
 const Color _dangerRed = Color(0xFFE11D48);
 
 /// My Profile — real port of web's `(parent-portal)/parent/profile/page.tsx`:
@@ -156,38 +153,22 @@ class _ProfileContent extends ConsumerWidget {
         else if (hasError)
           _card(const Center(child: Text("Could not load this child's profile.", style: TextStyle(fontSize: 12.5, color: AppColors.ink3))))
         else if (detail != null) ...[
-          _summaryCard(detail),
-          const SizedBox(height: 14),
+          _heroHeader(detail),
+          const SizedBox(height: 16),
           _section(
             icon: Icons.person_outline,
             title: 'Personal Info',
             fields: [
+              _Field('Gender', (detail.customGender?.isNotEmpty ?? false) ? detail.customGender : detail.gender),
+              _Field('Date of Birth', detail.dateOfBirth),
               _Field('First Name', detail.firstName),
               _Field('Middle Name', detail.middleName),
               _Field('Last Name', detail.lastName),
-              _Field('Date of Birth', detail.dateOfBirth),
-              _Field('Gender', (detail.customGender?.isNotEmpty ?? false) ? detail.customGender : detail.gender),
-              _Field('Blood Group', detail.bloodGroup),
+              _Field('Blood Group', detail.bloodGroup, wide: true),
             ],
           ),
           const SizedBox(height: 12),
-          _section(
-            icon: Icons.location_on_outlined,
-            title: 'Contact & Address',
-            fields: [
-              _Field('Phone', detail.contact.phone),
-              _Field('Email', detail.contact.email),
-              _Field(
-                'Emergency Contact',
-                (detail.contact.emergencyContactName?.isNotEmpty ?? false) && (detail.contact.emergencyContactPhone?.isNotEmpty ?? false)
-                    ? '${detail.contact.emergencyContactName} (${detail.contact.emergencyContactPhone})'
-                    : detail.contact.emergencyContactName,
-              ),
-              _Field('Address', [detail.address.addressLine, detail.address.landmark].where((s) => (s ?? '').isNotEmpty).join(', ')),
-              _Field('City / District', [detail.address.city, detail.address.district].where((s) => (s ?? '').isNotEmpty).join(', ')),
-              _Field('State / PIN', [detail.address.state, detail.address.pincode].where((s) => (s ?? '').isNotEmpty).join(' - ')),
-            ],
-          ),
+          _contactAddressCard(detail),
           const SizedBox(height: 12),
           _section(
             icon: Icons.public_outlined,
@@ -195,7 +176,7 @@ class _ProfileContent extends ConsumerWidget {
             fields: [
               _Field('Mother Tongue', (detail.background.otherMotherTongue?.isNotEmpty ?? false) ? detail.background.otherMotherTongue : detail.background.motherTongue),
               _Field('Religion', detail.background.religion),
-              _Field('Nationality', (detail.background.otherNationality?.isNotEmpty ?? false) ? detail.background.otherNationality : detail.background.nationality),
+              _Field('Nationality', (detail.background.otherNationality?.isNotEmpty ?? false) ? detail.background.otherNationality : detail.background.nationality, wide: true),
             ],
           ),
           const SizedBox(height: 12),
@@ -204,11 +185,16 @@ class _ProfileContent extends ConsumerWidget {
             title: 'Admission Details',
             fields: [
               _Field('Admission Type', detail.admission.admissionType),
-              _Field('Previous School', detail.admission.previousSchoolName),
               _Field('RTE Certificate No.', detail.admission.rteCertificateNo),
+              _Field('Previous School', detail.admission.previousSchoolName, wide: true),
               _Field('Stream', detail.admission.stream),
-              _Field('Transport', detail.admission.transportModes.isNotEmpty ? detail.admission.transportModes.join(', ') : null),
-              _Field('Transport (other)', detail.admission.transportCustom),
+              _Field(
+                'Transport',
+                [
+                  if (detail.admission.transportModes.isNotEmpty) detail.admission.transportModes.join(', '),
+                  if ((detail.admission.transportCustom ?? '').isNotEmpty) detail.admission.transportCustom,
+                ].join(' · '),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -270,45 +256,105 @@ class _ProfileContent extends ConsumerWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.16)),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.brandPurple.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6))],
+      ),
       child: child,
     );
   }
 
-  Widget _summaryCard(ChildDetailEntity detail) {
+  /// Photo-centered hero — big circular avatar (real [ChildDetailEntity.photoUrl]
+  /// when the school has one on file, else a purple-soft initials disc),
+  /// name, and an admission-number pill underneath. Card background is the
+  /// same light-purple gradient as Admin's own bottom-nav `ProfilePage` hero
+  /// card (`Color(0xFFF2EFFE)` → `Color(0xFFDCD3FB)`), including its white
+  /// "halo" ring behind the avatar, so this page's hero matches Admin's
+  /// look exactly instead of a plain white card. Rebuilds from
+  /// [childDetailProvider] every time the selected child (or the sibling
+  /// switcher's selection) changes, so a newly admitted child's profile
+  /// shows up here the moment their onboarding data is fetched — no
+  /// separate wiring needed.
+  Widget _heroHeader(ChildDetailEntity detail) {
     final initials = detail.name.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).take(2).map((s) => s[0]).join().toUpperCase();
-    return _card(
-      Row(
+    final classLine = [
+      [detail.className, detail.sectionName].where((s) => s.isNotEmpty).join(' '),
+      if ((detail.rollNo ?? '').isNotEmpty) 'Roll ${detail.rollNo}',
+    ].where((s) => s.isNotEmpty).join(' · ');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFF2EFFE), Color(0xFFDCD3FB)]),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
         children: [
+          // White "halo" ring behind the avatar so it stays crisp against
+          // the purple gradient, matching Admin's own profile hero.
           Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: _purpleSoft),
-            child: Text(initials, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _purpleDeep)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(detail.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink1), overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    detail.admissionNo ?? '',
-                    [detail.className, detail.sectionName].where((s) => s.isNotEmpty).join(' '),
-                    if ((detail.rollNo ?? '').isNotEmpty) 'Roll ${detail.rollNo}',
-                  ].where((s) => s.isNotEmpty).join(' · '),
-                  style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+            child: ClipOval(
+              child: (detail.photoUrl?.isNotEmpty ?? false)
+                  ? Image.network(
+                      detail.photoUrl!,
+                      width: 88,
+                      height: 88,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => _avatarFallback(initials),
+                    )
+                  : _avatarFallback(initials),
             ),
           ),
+          const SizedBox(height: 14),
+          Text(detail.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink1), textAlign: TextAlign.center),
+          if (classLine.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(classLine, style: const TextStyle(fontSize: 12.5, color: AppColors.ink3), textAlign: TextAlign.center),
+          ],
+          if ((detail.admissionNo ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999), border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.4))),
+              child: Text(detail.admissionNo!, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.brandPurple)),
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _avatarFallback(String initials) {
+    return Container(
+      width: 88,
+      height: 88,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.purpleSoft, border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.35), width: 2)),
+      child: Text(initials, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.purpleDeep)),
+    );
+  }
+
+  /// Small purple "badge" behind each card's section icon, and the heading
+  /// text itself colored in brand purple — the accent that makes each card
+  /// read as its own distinct, on-brand block instead of plain black-on-white.
+  Widget _sectionTitleRow(IconData icon, String title) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: AppColors.purpleSoft, borderRadius: BorderRadius.circular(9)),
+          child: Icon(icon, size: 15, color: AppColors.brandPurple),
+        ),
+        const SizedBox(width: 10),
+        Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.purpleDeep)),
+      ],
     );
   }
 
@@ -317,17 +363,69 @@ class _ProfileContent extends ConsumerWidget {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: _brandPurple),
-              const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-            ],
-          ),
+          _sectionTitleRow(icon, title),
           const SizedBox(height: 14),
           _fieldGrid(fields),
         ],
       ),
+    );
+  }
+
+  /// Contact & Address — the one section styled as a stacked icon-led list
+  /// (phone/mail/emergency-contact rows, then a divider and one combined
+  /// address block) instead of the label-grid pattern every other section
+  /// uses, matching the reference design's own distinct treatment of this
+  /// section. All of the address's sub-fields (landmark, city, district,
+  /// state, PIN) are folded into one flowing address line rather than
+  /// dropped, so no data is lost versus the old 2-column grid.
+  Widget _contactAddressCard(ChildDetailEntity detail) {
+    final emergency = (detail.contact.emergencyContactName?.isNotEmpty ?? false) && (detail.contact.emergencyContactPhone?.isNotEmpty ?? false)
+        ? '${detail.contact.emergencyContactName} (${detail.contact.emergencyContactPhone})'
+        : (detail.contact.emergencyContactName ?? detail.contact.emergencyContactPhone);
+    final address = [
+      [detail.address.addressLine, detail.address.landmark].where((s) => (s ?? '').isNotEmpty).join(', '),
+      [detail.address.city, detail.address.district].where((s) => (s ?? '').isNotEmpty).join(', '),
+      [detail.address.state, detail.address.pincode].where((s) => (s ?? '').isNotEmpty).join(' - '),
+    ].where((s) => s.isNotEmpty).join(', ');
+
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitleRow(Icons.contact_page_outlined, 'Contact & Address'),
+          const SizedBox(height: 16),
+          _contactRow(Icons.call_outlined, 'Phone', detail.contact.phone),
+          const SizedBox(height: 14),
+          _contactRow(Icons.mail_outline, 'Email', detail.contact.email),
+          const SizedBox(height: 14),
+          _contactRow(Icons.error_outline, 'Emergency Contact', emergency),
+          if (address.isNotEmpty) ...[
+            const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(height: 1, color: AppColors.border)),
+            _contactRow(Icons.location_on_outlined, 'Address', address),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _contactRow(IconData icon, String label, String? value) {
+    final v = value?.trim();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.brandPurple),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label.toUpperCase(), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.ink3)),
+              const SizedBox(height: 3),
+              Text(v == null || v.isEmpty ? '—' : v, style: const TextStyle(fontSize: 13.5, color: AppColors.ink1, height: 1.3)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -336,13 +434,7 @@ class _ProfileContent extends ConsumerWidget {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.people_outline, size: 16, color: _brandPurple),
-              SizedBox(width: 8),
-              Text('Guardians on Record', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-            ],
-          ),
+          _sectionTitleRow(Icons.people_outline, 'Guardians on Record'),
           const SizedBox(height: 14),
           if (guardians.isEmpty)
             const Text('No guardians on file.', style: TextStyle(fontSize: 12.5, color: AppColors.ink3))
@@ -363,6 +455,9 @@ class _ProfileContent extends ConsumerWidget {
   /// replaced with a responsive 2-per-row wrap, same pattern
   /// `TeacherProfilePage`/`ChildrenPage` already use for their own field
   /// grids, rather than squeezing 3 fixed columns into a narrow width.
+  /// [_Field.wide] fields (long values like a school name) take the full
+  /// row instead of half, matching the reference design's own mix of
+  /// half-width and full-width rows per section.
   Widget _fieldGrid(List<_Field> fields) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -371,7 +466,7 @@ class _ProfileContent extends ConsumerWidget {
         return Wrap(
           spacing: spacing,
           runSpacing: 14,
-          children: [for (final f in fields) SizedBox(width: colWidth, child: _fieldTile(f))],
+          children: [for (final f in fields) SizedBox(width: f.wide ? constraints.maxWidth : colWidth, child: _fieldTile(f))],
         );
       },
     );
@@ -393,5 +488,6 @@ class _ProfileContent extends ConsumerWidget {
 class _Field {
   final String label;
   final String? value;
-  const _Field(this.label, this.value);
+  final bool wide;
+  const _Field(this.label, this.value, {this.wide = false});
 }

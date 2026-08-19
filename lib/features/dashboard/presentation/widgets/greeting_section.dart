@@ -7,22 +7,22 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/dashboard_provider.dart';
 
 /// Home screen greeting card — a compact mobile card holding just the
-/// greeting, current date, and the Academic Year/School pills. A white
-/// card with a subtle purple-tinted border/edge (not a solid colored
-/// fill) so it stays visually distinct from the page background without
-/// resorting to a bold color wash. The "N items need your attention"
-/// callout lives in its own section (see `attention_banner.dart`) below
-/// this card, and "Today's Pulse"/Quick Access/Recently Visited/All
-/// Modules remain their own sections further down `AdminHomePage` — each
-/// concern on the home screen is its own card. Entrance animation
-/// (fade/slide) is applied by the caller via `FadeSlideIn`, not this
-/// widget itself.
+/// greeting, current date, and the Academic Year/School pills. A plain
+/// white card with a neutral border (not a solid colored fill or a
+/// brand-purple edge) so it stays visually distinct from the page
+/// background without resorting to a bold color wash. The "N items need
+/// your attention" callout lives in its own section (see
+/// `attention_banner.dart`) below this card, and "Today's Pulse"/Quick
+/// Access/Recently Visited/All Modules remain their own sections further
+/// down `AdminHomePage` — each concern on the home screen is its own card.
+/// Entrance animation (fade/slide) is applied by the caller via
+/// `FadeSlideIn`, not this widget itself.
 class GreetingSection extends ConsumerWidget {
-  /// Both default to Admin's original purple-tinted look — every existing
-  /// Admin call site (`dashboard_page.dart`, no args) is unaffected. Teacher
-  /// Home passes plain/neutral values instead, to match the plain-white
-  /// card style the rest of its sections (Attendance/Today's Schedule/Quick
-  /// Access) already use.
+  /// Both default to a plain/neutral look; every existing call site
+  /// (`dashboard_page.dart`, no args) is unaffected. [nameColor] still
+  /// defaults to brand purple to highlight the user's name in the
+  /// greeting text; [borderColor] defaults to a neutral border shared with
+  /// the rest of the home screen's cards.
   final Color? borderColor;
   final Color? nameColor;
 
@@ -45,14 +45,10 @@ class GreetingSection extends ConsumerWidget {
       child: PremiumCard(
         radius: 20,
         color: Colors.white,
-<<<<<<< Updated upstream
-        borderColor: borderColor ?? AppColors.brandPurple.withValues(alpha: 0.55),
-=======
-        // Flat, barely-there edge — matches the Stitch reference's plain
-        // white cards (no bold brand-colored border).
-        borderColor: AppColors.border.withValues(alpha: 0.8),
+
+        borderColor: borderColor ?? AppColors.border.withValues(alpha: 0.8),
         borderWidth: 1,
->>>>>>> Stashed changes
+
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -87,11 +83,7 @@ class GreetingSection extends ConsumerWidget {
                           text: 'Good ${app_date_utils.DateUtils.getTimeWord()}',
                         ),
                         if (displayName.isNotEmpty)
-<<<<<<< Updated upstream
                           TextSpan(text: ', $displayName', style: TextStyle(color: nameColor ?? AppColors.brandPurple)),
-=======
-                          TextSpan(text: ', $displayName!', style: const TextStyle(color: AppColors.brandPurple)),
->>>>>>> Stashed changes
                       ],
                     ),
                   ),
