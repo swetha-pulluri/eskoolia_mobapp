@@ -367,6 +367,19 @@ Completed Work:
 
 ---
 
+## Date: 2026-08-19 (Wednesday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Redesigned the Login page fields and logo to match the web login: white input fields with brand-purple icons/text (replacing the dark-purple fill), larger un-boxed logo, and footer swapped to the real web copy ("Secured by eSkoolia" + encryption line) instead of the old placeholder text
+- Fixed the header Notes badge's background poll to fail silently on a session-expiry race — added a `silent` flag through `NotesRepository.getNotes` → datasource so an expected 401 during logout doesn't log a bogus error
+- Wrapped the Parent portal Profile page header in a card and recolored the child-count pill to brand purple
+- Centered the Logout button on the Profile page instead of stretching it full-width
+
+---
+
 ## Project Structure
 
 ```

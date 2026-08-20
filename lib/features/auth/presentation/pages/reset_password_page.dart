@@ -3,22 +3,23 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../providers/auth_providers.dart';
 import '../providers/password_reset_state.dart';
+import '../widgets/auth_field.dart';
 import '../widgets/recovery_button.dart';
-import '../widgets/recovery_input_field.dart';
 import '../widgets/recovery_shell.dart';
 
 enum _ResetStep { code, password }
 
+const _white70 = Color(0xB3FFFFFF);
 const _strengthLabels = ['', 'Weak', 'Fair', 'Strong', 'Secure'];
 const _strengthColors = [
   Colors.transparent,
   Color(0xFFDC2626),
   Color(0xFFF59E0B),
   Color(0xFF22C55E),
-  AppColors.surfaceTint,
+  Colors.white,
 ];
 
 int _passwordStrength(String pw) {
@@ -32,10 +33,11 @@ int _passwordStrength(String pw) {
 }
 
 /// Forgot Access Key — Steps 2 & 3: verify the code, then set a new
-/// access key. Exact replica of web's `frontend/app/reset-password/page.tsx`
-/// (mobile rendering), including its step progress bar, password-strength
-/// meter, resend cooldown, and auto-redirect-to-login on success. [email]
-/// comes from [ForgotPasswordPage] via a `?email=` query param.
+/// access key. Same real step progress bar, password-strength meter,
+/// resend cooldown, and auto-redirect-to-login on success as before —
+/// only the visual theme changed, to match [RecoveryShell]'s now-shared
+/// purple-gradient look with the login screen. [email] comes from
+/// [ForgotPasswordPage] via a `?email=` query param.
 class ResetPasswordPage extends ConsumerStatefulWidget {
   final String email;
 
@@ -175,14 +177,14 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               const SizedBox(height: 8),
               RichText(
                 text: TextSpan(
-                  style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.5),
+                  style: const TextStyle(color: _white70, fontSize: 14, height: 1.5),
                   children: [
                     TextSpan(
                       text: _step == _ResetStep.code ? 'Recovery code sent to ' : 'Resetting access for ',
                     ),
                     TextSpan(
                       text: widget.email,
-                      style: const TextStyle(color: AppColors.surfaceTint, fontWeight: FontWeight.w700),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -204,37 +206,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
   }
 
   Widget _buildHeading() {
-    final spanText = _step == _ResetStep.code ? 'Verify' : 'New';
-    final emText = _step == _ResetStep.code ? 'Code' : 'Password';
-    return RichText(
-      text: TextSpan(
-        style: const TextStyle(
-          color: AppColors.atriumIndigo,
-          fontSize: 34,
-          fontWeight: FontWeight.w800,
-          height: 1.1,
-        ).copyWith(fontFamily: 'Plus Jakarta Sans'),
-        children: [
-          TextSpan(text: '$spanText\n'),
-          WidgetSpan(
-            alignment: PlaceholderAlignment.baseline,
-            baseline: TextBaseline.alphabetic,
-            child: ShaderMask(
-              shaderCallback: (bounds) => AppColors.recoveryHeadingGradient.createShader(bounds),
-              child: Text(
-                emText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  fontStyle: FontStyle.italic,
-                  height: 1.1,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    final text = _step == _ResetStep.code ? 'Verify Code' : 'New Password';
+    return Text(
+      text,
+      style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1.1),
     );
   }
 
@@ -244,7 +219,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           child: Container(
             height: 4,
             decoration: BoxDecoration(
-              color: active ? AppColors.surfaceTint : Colors.black.withValues(alpha: 0.12),
+              color: active ? Colors.white : Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(99),
             ),
           ),
@@ -256,23 +231,23 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
-        color: AppColors.surfaceTint.withValues(alpha: 0.06),
-        border: Border.all(color: AppColors.surfaceTint.withValues(alpha: 0.2)),
+        color: Colors.white.withValues(alpha: 0.1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Column(
         children: [
-          Icon(Icons.check_circle, color: AppColors.surfaceTint, size: 48),
+          Icon(Icons.check_circle, color: Colors.white, size: 48),
           SizedBox(height: 14),
           Text(
             'Password reset!',
-            style: TextStyle(color: AppColors.atriumIndigo, fontWeight: FontWeight.w800, fontSize: 18),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18),
           ),
           SizedBox(height: 10),
           Text(
             'Your access key has been updated. Redirecting to login…',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 14, height: 1.5),
+            style: TextStyle(color: _white70, fontSize: 14, height: 1.5),
           ),
         ],
       ),
@@ -281,21 +256,22 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   List<Widget> _buildCodeStep(PasswordResetState resetState, bool isLoading) {
     return [
-      RecoveryInputField(
-        label: '6-Digit Verification Code',
-        placeholder: '_ _ _ _ _ _',
-        icon: Icons.pin,
+      const AuthFieldLabel('6-DIGIT VERIFICATION CODE'),
+      const SizedBox(height: 8),
+      AuthField(
         controller: _codeController,
+        icon: Icons.pin,
+        hint: '_ _ _ _ _ _',
         autofocus: true,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: 6),
+        textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: 6, color: AppColors.purpleDeep),
       ),
       if (resetState is PasswordResetError) ...[
         const SizedBox(height: 8),
         Text(
           resetState.message,
-          style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Color(0xFFFFC9CF), fontSize: 13, fontWeight: FontWeight.w600),
         ),
       ],
       const SizedBox(height: 20),
@@ -318,8 +294,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                     ? 'Resend available in ${_cooldownSeconds}s'
                     : "Didn't receive a code? Resend",
                 style: TextStyle(
-                  color: _cooldownSeconds > 0 ? AppColors.outline : AppColors.surfaceTint,
+                  color: _cooldownSeconds > 0 ? _white70 : Colors.white,
                   fontSize: 13,
+                  fontWeight: FontWeight.w600,
                   decoration: _cooldownSeconds > 0 ? null : TextDecoration.underline,
                 ),
               ),
@@ -329,7 +306,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               Text(
                 _resendMessage!,
                 style: TextStyle(
-                  color: _resendSucceeded ? AppColors.surfaceTint : AppColors.error,
+                  color: _resendSucceeded ? Colors.white : const Color(0xFFFFC9CF),
                   fontSize: 12,
                 ),
               ),
@@ -345,25 +322,25 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     return [
       const Row(
         children: [
-          Icon(Icons.check_circle, color: AppColors.surfaceTint, size: 18),
+          Icon(Icons.check_circle, color: Colors.white, size: 18),
           SizedBox(width: 8),
           Flexible(
             child: Text(
               'Identity verified — set your new password',
-              style: TextStyle(color: AppColors.surfaceTint, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
         ],
       ),
       const SizedBox(height: 16),
-      RecoveryInputField(
-        label: 'New Password',
-        placeholder: 'Create a strong password',
-        icon: Icons.lock,
+      const AuthFieldLabel('NEW PASSWORD'),
+      const SizedBox(height: 8),
+      AuthField(
         controller: _passwordController,
+        icon: Icons.lock,
+        hint: 'Create a strong password',
         autofocus: true,
         obscureText: true,
-        showPasswordToggle: true,
       ),
       if (_passwordController.text.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -376,7 +353,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                 height: 6,
                 margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
                 decoration: BoxDecoration(
-                  color: active ? _strengthColors[strength] : AppColors.outlineVariant,
+                  color: active ? _strengthColors[strength] : Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -394,7 +371,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
             const Flexible(
               child: Text(
                 'Min 8 chars, mixed case, numbers & symbols',
-                style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w700),
+                style: TextStyle(color: _white70, fontSize: 10, fontWeight: FontWeight.w700),
                 textAlign: TextAlign.right,
               ),
             ),
@@ -402,19 +379,19 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
         ),
       ],
       const SizedBox(height: 16),
-      RecoveryInputField(
-        label: 'Confirm Password',
-        placeholder: 'Re-enter your new password',
-        icon: Icons.lock_reset,
+      const AuthFieldLabel('CONFIRM PASSWORD'),
+      const SizedBox(height: 8),
+      AuthField(
         controller: _confirmController,
+        icon: Icons.lock_reset,
+        hint: 'Re-enter your new password',
         obscureText: true,
-        showPasswordToggle: true,
       ),
       if (resetState is PasswordResetError) ...[
         const SizedBox(height: 8),
         Text(
           resetState.message,
-          style: const TextStyle(color: AppColors.error, fontSize: 13, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Color(0xFFFFC9CF), fontSize: 13, fontWeight: FontWeight.w600),
         ),
       ],
       const SizedBox(height: 20),

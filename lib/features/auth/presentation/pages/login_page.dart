@@ -4,14 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/auth_field.dart';
 import '../../../../config/router/portal_routes.dart';
 
 const _cardFill = Color(0x14FFFFFF); // white @ 8%
 const _cardBorder = Color(0x26FFFFFF); // white @ 15%
-const _fieldFill = Color(0xFF3A2B8F); // solid deep purple, not white
-const _fieldBorder = Color(0x40FFFFFF); // white @ 25%
 const _white70 = Color(0xB3FFFFFF);
-const _white54 = Color(0x8AFFFFFF);
 
 /// Login Page — Eskoolia's real brand purple (not a separate "Atrium"
 /// theme), matching the app's actual mobile design reference: a single
@@ -134,26 +132,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Center(
+                          // One plain rounded white box, sized to hug the
+                          // logo (not a large padded panel) — the logo
+                          // file's own baked-in white background blends
+                          // into it since both are the same solid white.
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             decoration: BoxDecoration(
-                              // The logo file is a wordmark with its own
-                              // white background baked in (not a
-                              // transparent icon) — a white card here lets
-                              // that blend in seamlessly instead of
-                              // tinting/cropping the real artwork.
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 6)),
-                              ],
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Image.asset(
                               AppConstants.eskooliaLogo,
-                              height: 46,
+                              height: 116,
                               fit: BoxFit.contain,
                               errorBuilder: (_, _, _) => const Text(
                                 'Eskoolia',
+<<<<<<< Updated upstream
                                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.brandPurple),
       body: SafeArea(
         child: MouseRegion(
@@ -204,6 +199,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       : _buildDesktopLayout(),
                                 ),
 >>>>>>> Stashed changes
+=======
+                                style: TextStyle(fontSize: 46, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+>>>>>>> Stashed changes
                               ),
                             ),
                           ),
@@ -222,9 +220,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 26),
 
-                        _fieldLabel('USERNAME / EMAIL'),
+                        const AuthFieldLabel('USERNAME / EMAIL'),
                         const SizedBox(height: 8),
-                        _AuthField(
+                        AuthField(
                           controller: _identifierController,
                           icon: Icons.person_outline,
                           hint: 'Enter your username',
@@ -233,9 +231,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 18),
 
-                        _fieldLabel('PASSWORD'),
+                        const AuthFieldLabel('PASSWORD'),
                         const SizedBox(height: 8),
-                        _AuthField(
+                        AuthField(
                           controller: _passwordController,
                           icon: Icons.lock_outline,
                           hint: '••••••••',
@@ -245,7 +243,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                               size: 19,
-                              color: _white70,
+                              color: AppColors.purpleDeep,
                             ),
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
@@ -319,16 +317,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         const SizedBox(height: 28),
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                         const Text(
                           "Don't have an account?",
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13, color: _white70),
+=======
+                        // Matches the real web login footer exactly
+                        // (frontend/app/login/page.tsx) — was "Don't have
+                        // an account? / Contact your administrator".
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.verified_user_outlined, size: 13, color: Colors.white),
+                            const SizedBox(width: 5),
+                            Text('Secured by eSkoolia', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                          ],
+>>>>>>> Stashed changes
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'Contact your administrator',
+                          'Institutional-grade 256-bit AES encryption active.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                          style: TextStyle(fontSize: 11.5, color: _white70),
                         ),
                       ],
 =======
@@ -712,82 +723,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  Widget _fieldLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: _white70, letterSpacing: 1.0),
-    );
-  }
-}
-
-class _AuthField extends StatelessWidget {
-  final TextEditingController controller;
-  final IconData icon;
-  final String hint;
-  final bool obscureText;
-  final bool autofocus;
-  final Widget? trailing;
-  final String? Function(String?)? validator;
-
-  const _AuthField({
-    required this.controller,
-    required this.icon,
-    required this.hint,
-    this.obscureText = false,
-    this.autofocus = false,
-    this.trailing,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Solid purple box (not a white-tinted one) behind the field.
-    return Container(
-      decoration: BoxDecoration(
-        color: _fieldFill,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _fieldBorder),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Icon(icon, size: 19, color: _white70),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              obscureText: obscureText,
-              autofocus: autofocus,
-              validator: validator,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-              cursorColor: Colors.white,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(color: _white54, fontSize: 15),
-                // The app's global `InputDecorationTheme` (app_theme.dart)
-                // sets `filled: true` with its own light fillColor and
-                // separate enabled/focused/error border states — overriding
-                // only `border` above left those other states (and the
-                // fill) showing through as a nested white-ish box. Every
-                // state needs to be overridden explicitly to fully suppress
-                // it here.
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                errorStyle: const TextStyle(color: Color(0xFFFFC9CF), fontSize: 11),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
-          ?trailing,
-        ],
-      ),
-    );
-  }
 }
 
 /// Multi-tenant "logging into a specific school" flow — real functionality

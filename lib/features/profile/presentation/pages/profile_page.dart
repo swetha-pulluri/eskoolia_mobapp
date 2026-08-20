@@ -122,15 +122,14 @@ class ProfilePage extends ConsumerWidget {
             if (user.schoolName != null) _infoRow(Icons.school_outlined, 'School', user.schoolName!),
             _infoRow(Icons.verified_user_outlined, 'Portal', user.portalType),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
+            Center(
               child: OutlinedButton.icon(
                 onPressed: () => _confirmLogout(context, ref),
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: _dangerRed,
                   side: const BorderSide(color: Color(0xFFF4C7CE)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.logout, size: 16),

@@ -25,7 +25,13 @@ class NotesRemoteDataSource {
     throw NotesApiException(e.message ?? 'Something went wrong. Please try again.');
   }
 
-  Future<List<NoteEntity>> getNotes({String? route, bool? pinned, bool? archived}) async {
+  // `silent` covers the header note-badge's background poll (`route` set,
+  // called from `notesForCurrentRouteProvider` every navigation) — when the
+  // session expires mid-use, this can fire the instant before `GlobalAppShell`
+  // unmounts it, hitting a 401 that's already silently swallowed by the
+  // badge's own `.maybeWhen(orElse: () => 0)`. Not used for the "All Notes"
+  // sheet's own explicit fetch, where a failure should still surface normally.
+  Future<List<NoteEntity>> getNotes({String? route, bool? pinned, bool? archived, bool silent = false}) async {
     try {
       final response = await _dioClient.get(
         ApiConstants.notes,
@@ -34,11 +40,12 @@ class NotesRemoteDataSource {
           'pinned': ?pinned,
           'archived': ?archived,
         },
+        silent: silent,
       );
       final list = response.data as List;
       return list.map((e) => NoteEntity.fromJson(e as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
-      AppLogger.error('Get notes error', e);
+      if (!silent) AppLogger.error('Get notes error', e);
       _throwApiException(e);
     }
   }

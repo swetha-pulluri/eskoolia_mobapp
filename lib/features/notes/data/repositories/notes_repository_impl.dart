@@ -8,8 +8,8 @@ class NotesRepositoryImpl implements NotesRepository {
   NotesRepositoryImpl(this._dataSource);
 
   @override
-  Future<List<NoteEntity>> getNotes({String? route, bool? pinned, bool? archived}) =>
-      _dataSource.getNotes(route: route, pinned: pinned, archived: archived);
+  Future<List<NoteEntity>> getNotes({String? route, bool? pinned, bool? archived, bool silent = false}) =>
+      _dataSource.getNotes(route: route, pinned: pinned, archived: archived, silent: silent);
 
   @override
   Future<NoteEntity> createNote({required String route, required String color}) =>

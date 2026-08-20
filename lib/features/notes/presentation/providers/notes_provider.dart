@@ -15,10 +15,14 @@ final notesRepositoryProvider = Provider<NotesRepository>((ref) {
 });
 
 /// Notes for whatever screen the user is currently on — auto-refetches on
-/// navigation since it watches [currentRoutePathProvider].
+/// navigation since it watches [currentRoutePathProvider]. `silent: true`
+/// since this is a background badge poll (`NoteTriggerButton` already
+/// swallows any failure via `.maybeWhen(orElse: () => 0)`) that can still be
+/// in flight the instant a session expires and `GlobalAppShell` unmounts it —
+/// a 401 here is an expected race, not a bug to log loudly.
 final notesForCurrentRouteProvider = FutureProvider.autoDispose<List<NoteEntity>>((ref) {
   final path = ref.watch(currentRoutePathProvider);
-  return ref.watch(notesRepositoryProvider).getNotes(route: path, archived: false);
+  return ref.watch(notesRepositoryProvider).getNotes(route: path, archived: false, silent: true);
 });
 
 /// All of the current user's notes (any route), for the "All Notes" sheet.

@@ -118,28 +118,30 @@ class _ProfileContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('My Profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-                  SizedBox(height: 4),
-                  Text('The details recorded during admission for each of your children.', style: TextStyle(fontSize: 12.5, color: AppColors.ink2, height: 1.4)),
-                ],
+        _card(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('My Profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.purpleDeep)),
+                    SizedBox(height: 4),
+                    Text('The details recorded during admission for each of your children.', style: TextStyle(fontSize: 12.5, color: AppColors.ink2, height: 1.4)),
+                  ],
+                ),
               ),
-            ),
-            if (me.children.isNotEmpty) ...[
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border), color: AppColors.bg2),
-                child: Text('${me.children.length} ${me.children.length == 1 ? 'child' : 'children'}', style: const TextStyle(fontSize: 11.5, color: AppColors.ink2, fontWeight: FontWeight.w500)),
-              ),
+              if (me.children.isNotEmpty) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.35)), color: AppColors.purpleSoft),
+                  child: Text('${me.children.length} ${me.children.length == 1 ? 'child' : 'children'}', style: const TextStyle(fontSize: 11.5, color: AppColors.brandPurple, fontWeight: FontWeight.w600)),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
         if (me.children.length > 1) ...[
           const SizedBox(height: 14),

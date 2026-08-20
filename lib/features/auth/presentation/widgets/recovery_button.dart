@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/constants/app_colors.dart';
 
-/// Exact replica of frontend/app/globals.css's `.primary-flow-button` /
-/// `.editorial-form button` — gradient (--surface-tint → --atrium-indigo),
-/// uppercase bold label flush left, icon flush right (`justify-content:
-/// space-between`), unlike [AtriumButton]'s centered label+icon.
+/// Primary action button for the Forgot/Reset Password screens — the same
+/// white pill + brand-blue text as the login screen's "SIGN IN" button,
+/// not the old gradient-filled "Atrium" recovery button.
 class RecoveryButton extends StatelessWidget {
   final String label;
   final String loadingLabel;
@@ -26,48 +25,38 @@ class RecoveryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDisabled = isLoading || !enabled;
-    return Opacity(
-      opacity: isDisabled ? 0.7 : 1,
-      child: Material(
-        color: Colors.transparent,
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: AppColors.recoveryButtonGradient,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: InkWell(
-            onTap: isDisabled ? null : onPressed,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 60),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return SizedBox(
+      height: 52,
+      child: ElevatedButton(
+        onPressed: isDisabled ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.purpleDeep,
+          disabledBackgroundColor: Colors.white.withValues(alpha: 0.85),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          elevation: 0,
+        ),
+        child: isLoading
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Flexible(
-                    child: Text(
-                      isLoading ? loadingLabel : label.toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.4,
-                      ).copyWith(fontFamily: 'Plus Jakarta Sans'),
-                    ),
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2.2, color: AppColors.purpleDeep),
                   ),
-                  const SizedBox(width: 12),
-                  isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.white)),
-                        )
-                      : Icon(icon, color: AppColors.white, size: 22),
+                  const SizedBox(width: 10),
+                  Text(loadingLabel, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800)),
+                ],
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label.toUpperCase(), style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                  const SizedBox(width: 8),
+                  Icon(icon, size: 18),
                 ],
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
