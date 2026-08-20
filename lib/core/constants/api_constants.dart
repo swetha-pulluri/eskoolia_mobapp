@@ -191,6 +191,14 @@ class ApiConstants {
   static const String studentGroupSortwellPreview = '${studentGroups}sortwell-preview/';
   static const String studentGroupSortwell = '${studentGroups}sortwell/';
 
+  // InspireHub (Competitions & AI Reviews) — Reference: apps/competitions/urls.py.
+  // Competitions/results themselves live primarily on-device (InspireHubStore);
+  // these are used for best-effort backend sync — see CompetitionsRepository.
+  static const String competitionsBasePath = '$apiBasePath/competitions';
+  static const String competitions = '$competitionsBasePath/competitions/';
+  static const String competitionResultsBulk = '$competitionsBasePath/results/bulk/';
+  static const String competitionAiReview = '$competitionsBasePath/ai/review/';
+
   // Student Promotion — Reference: apps/students/views.py::PromotionBatchViewSet
   static const String promotionBatches = '$studentsBasePath/promotion-batches/';
   static const String promotionBatchCreateOrGet =

@@ -316,8 +316,11 @@ class ClubCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(group.name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF1A2744)), overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
+                    // No maxLines/ellipsis — full club name (e.g. "Stagecraft
+                    // and Performance") wraps onto a second line instead of
+                    // being cut short.
+                    Text(group.name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF1A2744), height: 1.25)),
+                    const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
