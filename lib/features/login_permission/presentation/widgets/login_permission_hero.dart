@@ -44,12 +44,9 @@ class LoginPermissionHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.cardBackground,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           // Breadcrumb
           Text(
             'ROLES & PERMISSIONS · CREDENTIAL MANAGER',
@@ -129,8 +126,7 @@ class LoginPermissionHero extends StatelessWidget {
               height: 1.5,
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }

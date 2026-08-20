@@ -1345,7 +1345,7 @@ class _ClassAccordionState extends ConsumerState<_ClassAccordion> {
           SizedBox(width: 11),
           SizedBox(width: 46, child: Text('ROLL', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: Color(0xFFC4BEDD)))),
           SizedBox(width: 11),
-          SizedBox(width: 260, child: Text('OPTIONAL SUBJECTS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: Color(0xFFC4BEDD)))),
+          SizedBox(width: 170, child: Text('OPTIONAL SUBJECTS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: Color(0xFFC4BEDD)))),
           SizedBox(width: 130),
         ],
       ),
@@ -1386,7 +1386,7 @@ class _ClassAccordionState extends ConsumerState<_ClassAccordion> {
           SizedBox(width: 46, child: Text(st.rollNo, style: GoogleFonts.jetBrainsMono(fontSize: 10.5, color: const Color(0xFF48436A)))),
           const SizedBox(width: 11),
           SizedBox(
-            width: 260,
+            width: 170,
             child: Wrap(spacing: 4, runSpacing: 4, children: [
               SubBadge(tag: 'MAN', value: '+$mandCount', tagColor: const Color(0xFF1E9B6B), dim: true),
               if (st.lang2.isNotEmpty) SubBadge(tag: 'L2', value: st.lang2, tagColor: const Color(0xFF2C56A1)),

@@ -212,9 +212,9 @@ class HouseCard extends StatelessWidget {
                   decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(9)),
                   child: Text(group.emoji, style: const TextStyle(fontSize: 17)),
                 ),
-                Text(group.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A2744))),
+                Text(group.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1A2744)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(motto, style: const TextStyle(fontSize: 11, color: Color(0xFF8FA3C8), fontStyle: FontStyle.italic, height: 1.4)),
+                Text(motto, style: const TextStyle(fontSize: 11, color: Color(0xFF8FA3C8), fontStyle: FontStyle.italic, height: 1.4), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 10),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -222,13 +222,15 @@ class HouseCard extends StatelessWidget {
                   children: [
                     Text('${group.studentsCount}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: color)),
                     const SizedBox(width: 5),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('students', style: TextStyle(fontSize: 11, color: Color(0xFF8FA3C8))),
-                        Text('of ${group.capacity}', style: const TextStyle(fontSize: 10, color: Color(0xFF8FA3C8))),
-                      ],
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('students', style: TextStyle(fontSize: 11, color: Color(0xFF8FA3C8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text('of ${group.capacity}', style: const TextStyle(fontSize: 10, color: Color(0xFF8FA3C8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -332,8 +334,8 @@ class ClubCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (desc.slogan.isNotEmpty) Text(desc.slogan, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1A2744))),
-                if (desc.body.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(desc.body, style: const TextStyle(fontSize: 11.5, color: Color(0xFF8FA3C8), height: 1.5))),
+                if (desc.slogan.isNotEmpty) Text(desc.slogan, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1A2744)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (desc.body.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(desc.body, style: const TextStyle(fontSize: 11.5, color: Color(0xFF8FA3C8), height: 1.5), maxLines: 3, overflow: TextOverflow.ellipsis)),
               ],
             )
           else
@@ -341,12 +343,19 @@ class ClubCard extends StatelessWidget {
           const SizedBox(height: 2),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFF0F2F8), border: Border.all(color: const Color(0xFFE2E6F0)), borderRadius: BorderRadius.circular(20)),
-                child: Text('${group.studentsCount} / ${group.capacity}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4A5A7A))),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(color: const Color(0xFFF0F2F8), border: Border.all(color: const Color(0xFFE2E6F0)), borderRadius: BorderRadius.circular(20)),
+                  child: Text(
+                    '${group.studentsCount} / ${group.capacity}',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF4A5A7A)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 6),
               _iconBtn(Icons.edit_outlined, onEdit),
               const SizedBox(width: 5),
               _iconBtn(Icons.delete_outline, onDelete, danger: true),

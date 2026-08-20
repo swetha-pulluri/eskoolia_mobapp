@@ -289,7 +289,7 @@ class LoginPermissionUsersTable extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppColors.inkPrimary,
-                      height: 1.3,
+                      height: 1.0,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -298,11 +298,12 @@ class LoginPermissionUsersTable extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.inkTertiary,
+                      height: 1.1,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (user.mustChange) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,

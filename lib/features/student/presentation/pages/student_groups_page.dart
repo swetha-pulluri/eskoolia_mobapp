@@ -584,7 +584,7 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
         const SizedBox(height: 20),
         ResponsiveGrid(
           baseCols: 5,
-          breakpoints: {900: 2, 640: 1},
+          breakpoints: {900: 2},
           gap: 12,
           children: [
             GroupStatCard(eyebrow: 'Students', value: '${_stats?.totalStudents ?? '-'}', label: 'Total Students', barColor: const Color(0xFF6C5CE7)),
@@ -597,7 +597,7 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
         const SizedBox(height: 20),
         _sectionHead('School Houses', const Color(0xFF00B894), '${_houses.length} House${_houses.length != 1 ? 's' : ''}'),
         const SizedBox(height: 12),
-        ResponsiveGrid(baseCols: 4, breakpoints: {1200: 2, 640: 1}, gap: 11, children: [
+        ResponsiveGrid(baseCols: 4, breakpoints: {1200: 2}, gap: 11, children: [
           for (final h in _houses)
             HouseCard(
               group: h,
@@ -608,7 +608,7 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
         const SizedBox(height: 20),
         _sectionHead('School Clubs', const Color(0xFF6C5CE7), '${_clubs.length} Club${_clubs.length != 1 ? 's' : ''}'),
         const SizedBox(height: 12),
-        ResponsiveGrid(baseCols: 4, breakpoints: {1200: 2, 640: 1}, gap: 11, children: [
+        ResponsiveGrid(baseCols: 4, breakpoints: {1200: 2}, gap: 11, children: [
           for (final c in _clubs)
             ClubCard(
               group: c,
@@ -1225,22 +1225,39 @@ class _GroupAccordionState extends State<_GroupAccordion> {
                         Text(g.name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF1A2744)), overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 3),
                         if (isClub)
-                          Row(mainAxisSize: MainAxisSize.min, children: [
-                            Text('$memberCount', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
-                            const Text(' members', style: TextStyle(fontSize: 11, color: Color(0xFF8FA3C8))),
-                            Text('  · capacity ${g.capacity}', style: const TextStyle(fontSize: 11, color: Color(0xFFB5C4D8))),
-                          ])
+                          Text.rich(
+                            TextSpan(children: [
+                              TextSpan(text: '$memberCount', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                              const TextSpan(text: ' members', style: TextStyle(fontSize: 11, color: Color(0xFF8FA3C8))),
+                              TextSpan(text: '  · capacity ${g.capacity}', style: const TextStyle(fontSize: 11, color: Color(0xFFB5C4D8))),
+                            ]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
                         else
                           Row(children: [
+                            // Fixed at a smaller width (was 100) so it plus the
+                            // spacing below can never alone exceed the space
+                            // this row gets on narrow phones.
                             SizedBox(
-                              width: 100,
+                              width: 50,
                               height: 5,
                               child: ClipRRect(borderRadius: BorderRadius.circular(3), child: LinearProgressIndicator(value: pct / 100, backgroundColor: const Color(0xFFF0F2F8), valueColor: AlwaysStoppedAnimation(color))),
                             ),
-                            const SizedBox(width: 8),
-                            Text('$pct%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: pct >= 90 ? const Color(0xFF00B894) : pct >= 60 ? const Color(0xFFE67E22) : const Color(0xFFE74C3C))),
-                            const SizedBox(width: 8),
-                            Flexible(child: Text('${g.studentsCount} students', style: const TextStyle(fontSize: 11, color: Color(0xFF8FA3C8)), overflow: TextOverflow.ellipsis)),
+                            const SizedBox(width: 6),
+                            // Single Flexible + Text.rich (not separate Text
+                            // widgets) so the whole tail ellipsizes instead of
+                            // overflowing when width runs out.
+                            Flexible(
+                              child: Text.rich(
+                                TextSpan(children: [
+                                  TextSpan(text: '$pct%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: pct >= 90 ? const Color(0xFF00B894) : pct >= 60 ? const Color(0xFFE67E22) : const Color(0xFFE74C3C))),
+                                  TextSpan(text: '  ${g.studentsCount} students', style: const TextStyle(fontSize: 11, color: Color(0xFF8FA3C8))),
+                                ]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ]),
                       ],
                     ),

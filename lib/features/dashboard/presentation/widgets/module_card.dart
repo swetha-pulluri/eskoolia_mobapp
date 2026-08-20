@@ -10,7 +10,9 @@ import '../../domain/entities/module_entity.dart';
 /// background of any kind: the 3D icon artwork sits directly on the
 /// page's white background, large and unobstructed, with the module name
 /// (colored to match the module's own accent) directly below it — matching
-/// the Stitch reference's plain app-launcher look.
+/// the Stitch reference's plain app-launcher look. ("All Modules" gets one
+/// single outer card wrapping the whole section instead — see
+/// [ModuleGrid] — not a card per tile.)
 class ModuleCardGrid extends StatelessWidget {
   final ModuleEntity module;
   final VoidCallback? onTap;

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/kpi_data.dart';
 import '../providers/dashboard_provider.dart';
+import '../widgets/dashboard_module_header.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/quick_action_button.dart';
 
@@ -63,6 +64,7 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
+              const SliverToBoxAdapter(child: DashboardModuleHeader()),
               _buildHeader(),
               _buildKPISection(),
               _buildQuickActionsSection(),
@@ -84,70 +86,9 @@ class _SchoolOverviewPageState extends ConsumerState<SchoolOverviewPage> {
         color: AppColors.cardBackground,
         child: Column(
           children: [
-            // Breadcrumb
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    // This page is reached via context.go('/dashboard') from
-                    // the Home module tile — go() replaces the whole route
-                    // stack, so there's nothing beneath this page to pop
-                    // back to. Navigator.of(context).pop() in that situation
-                    // is invalid (nothing to pop) and was the actual cause
-                    // of the "Duplicate GlobalKey" crash reported here —
-                    // go_router's redirect/page-building logic gets invoked
-                    // in a bad state trying to recover from the failed pop.
-                    // Navigating explicitly to /home is what "Home" in a
-                    // breadcrumb means anyway, and sidesteps relying on
-                    // Navigator history that this route doesn't have.
-                    onTap: () => context.go('/home'),
-                    child: const Text(
-                      'Home',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: Color(0xFF9197AE), // ink-3
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 11,
-                    color: const Color(0xFF9197AE).withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Dashboard',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: Color(0xFF9197AE), // ink-3
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 11,
-                    color: const Color(0xFF9197AE).withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'School Overview',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: Color(0xFF5A607A), // ink-2
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
             // Title + Description
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -107,32 +107,36 @@ class LoginPermissionPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.dashboardBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.cardBackground,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'Login Credentials',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.inkPrimary,
-          ),
-        ),
-      ),
-      body: Stack(
+      body: SafeArea(
+        child: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              // Hero Section
+              // Hero Section — its own bordered card, separate from the
+              // pinned portal tabs below (previously a full-bleed strip
+              // topped by a redundant "Login Credentials" app bar title).
               SliverToBoxAdapter(
-                child: LoginPermissionHero(activeTab: state.activeTab),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBackground,
+                      border: Border.all(color: AppColors.cardBorder),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.onBackground.withValues(alpha: 0.04),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: LoginPermissionHero(activeTab: state.activeTab),
+                  ),
+                ),
               ),
-
-              // Divider
-              SliverToBoxAdapter(
-                child: Divider(height: 1, color: AppColors.cardBorder),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
               // Portal Tabs — pinned so they stay visible while scrolling,
               // matching the frontend's `sticky top-0` tab bar.
@@ -185,6 +189,7 @@ class LoginPermissionPage extends ConsumerWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

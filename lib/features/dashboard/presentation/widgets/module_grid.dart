@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/premium_card.dart';
 import '../../../teacher/presentation/widgets/teacher_quick_access_tile.dart';
 import '../../domain/entities/module_entity.dart';
 import '../providers/dashboard_provider.dart';
@@ -41,11 +43,7 @@ class ModuleGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final List<ModuleEntity> visibleModules = modules != null ? modules! : ref.watch(visibleModulesProvider);
 
-    // No enclosing card — per explicit user direction, "All Modules" sits
-    // directly on the page's white background, same as Admin's own
-    // `/modules` page always has. Title-left/count-right via the standard
-    // `SectionLabel`, same as every other section.
-    return Column(
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionLabel(
@@ -54,19 +52,18 @@ class ModuleGrid extends ConsumerWidget {
         ),
         // Slightly more than Admin's own gap here — Teacher's bare tiles
         // (no card/border under the icon+label) read as more "bare" than
-        // Admin's bordered `ModuleCardGrid`, so they need a touch more
-        // breathing room before the grid starts to avoid feeling cramped
-        // right under the heading. Admin's own `/modules` page is untouched.
+        // Admin's own section, so they need a touch more breathing room
+        // before the grid starts to avoid feeling cramped right under the
+        // heading. Admin's own `/modules` page is untouched.
         SizedBox(height: useBareTiles ? 10 : 6),
 
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: useBareTiles ? 16 : 0),
+          padding: EdgeInsets.symmetric(horizontal: useBareTiles ? 16 : 12),
           // Teacher's bare tiles use the same content-driven `Wrap` grid
           // Home's Quick Access/All Modules cards already use — a fixed
-          // `childAspectRatio` cell (as Admin's bordered `ModuleCardGrid`
-          // below still uses) left large empty gaps under the heading and
-          // between rows here on a wide phone, the exact bug already fixed
-          // there. Admin's own card path is untouched.
+          // `childAspectRatio` cell left large empty gaps under the heading
+          // and between rows here on a wide phone, the exact bug already
+          // fixed there. Admin's own card path is untouched.
           child: useBareTiles
               ? TeacherModuleWrapGrid(
                   modules: visibleModules,
@@ -121,6 +118,24 @@ class ModuleGrid extends ConsumerWidget {
                 ),
         ),
       ],
+    );
+
+    // Teacher's bare-tile rendering keeps sitting directly on the page
+    // background (its own separate design, untouched here) — only Admin's
+    // "All Modules" section gets one single outer card wrapping the whole
+    // section (heading + grid together), same card language as Quick
+    // Access, not a card per module tile.
+    if (useBareTiles) return content;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      child: PremiumCard(
+        radius: 20,
+        color: Colors.white,
+        borderColor: AppColors.border.withValues(alpha: 0.8),
+        borderWidth: 1,
+        child: content,
+      ),
     );
   }
 }

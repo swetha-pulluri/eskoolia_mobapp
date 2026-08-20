@@ -149,12 +149,13 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildHeader(),
               if (onRolesTab) ...[
-                _buildControls(state),
+                _buildHeaderControlsCard(state),
                 _buildRolesSection(state),
-              ] else
+              ] else ...[
+                _buildHeader(),
                 _buildAssignPermissionsSection(),
+              ],
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
@@ -190,41 +191,80 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
       child: Container(
         color: AppColors.cardBackground,
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title with accent
-            RichText(
-              text: const TextSpan(
+        child: _buildHeaderTitle(),
+      ),
+    );
+  }
+
+  Widget _buildHeaderTitle() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title with accent
+        RichText(
+          text: const TextSpan(
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0F1222), // ink-1
+              height: 1.15,
+            ),
+            children: [
+              TextSpan(text: 'Role '),
+              TextSpan(
+                text: 'Permission',
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F1222), // ink-1
-                  height: 1.15,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w300,
+                  color: Color(0xFF6D4AFF), // purple
                 ),
-                children: [
-                  TextSpan(text: 'Role '),
-                  TextSpan(
-                    text: 'Permission',
-                    style: TextStyle(
-                      fontStyle: FontStyle.italic,
-                      fontWeight: FontWeight.w300,
-                      color: Color(0xFF6D4AFF), // purple
-                    ),
-                  ),
-                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            // Description
-            const Text(
-              'Define roles and control which pages each role can access',
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF9197AE), // ink-3
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Description
+        const Text(
+          'Define roles and control which pages each role can access',
+          style: TextStyle(
+            fontSize: 12,
+            color: Color(0xFF9197AE), // ink-3
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Roles tab: title + description and the search/filter/add controls live
+  // together in one bordered card (matching the ALL ROLES card style below),
+  // instead of the title sitting in its own full-bleed strip with the
+  // controls floating unbordered beneath it.
+  Widget _buildHeaderControlsCard(RolesScreenState state) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            border: Border.all(color: AppColors.cardBorder),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.onBackground.withValues(alpha: 0.04),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
               ),
-            ),
-          ],
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeaderTitle(),
+              const SizedBox(height: 10),
+              _buildControlsContent(state),
+            ],
+          ),
         ),
       ),
     );
@@ -241,30 +281,28 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
   // CONTROLS (Search, Filter, Add Button)
   // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildControls(RolesScreenState state) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        child: Column(
+  Widget _buildControlsContent(RolesScreenState state) {
+    return Column(
+      children: [
+        // First row: Active filter + Search
+        Row(
           children: [
-            // First row: Active filter + Search
-            Row(
-              children: [
-                // Show inactive toggle
-                _buildActiveFilterButton(state),
-                const SizedBox(width: 8),
+            // Show inactive toggle
+            _buildActiveFilterButton(state),
+            const SizedBox(width: 8),
 
-                // Search box
-                Expanded(child: _buildSearchBox(state)),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Second row: Add button (full width)
-            SizedBox(width: double.infinity, child: _buildAddRoleButton()),
+            // Search box
+            Expanded(child: _buildSearchBox(state)),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+
+        // Second row: Add button, right-aligned and narrower (not full width)
+        Align(
+          alignment: Alignment.centerRight,
+          child: SizedBox(width: 130, child: _buildAddRoleButton()),
+        ),
+      ],
     );
   }
 
@@ -457,7 +495,7 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: 2.8,
+            mainAxisExtent: 58,
           ),
           itemCount: 8,
           itemBuilder: (context, index) => const RoleCardSkeleton(),
@@ -550,7 +588,7 @@ class _RolesPermissionsPageState extends ConsumerState<RolesPermissionsPage> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
-            childAspectRatio: 2.8,
+            mainAxisExtent: 58,
           ),
           itemCount: itemCount,
           itemBuilder: (context, index) {
