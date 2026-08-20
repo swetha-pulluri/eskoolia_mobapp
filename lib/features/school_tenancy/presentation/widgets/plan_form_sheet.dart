@@ -259,7 +259,7 @@ class _PlanFormSheetState extends ConsumerState<PlanFormSheet> {
                     const SizedBox(height: 3),
                     Text('Lower numbers appear first.', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5)),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _sectionHead('2', 'Pricing'),
                     const SizedBox(height: 12),
                     Text('PRICE (₹) · EXCLUDING GST', style: _label),
@@ -277,7 +277,7 @@ class _PlanFormSheetState extends ConsumerState<PlanFormSheet> {
                       style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11, height: 1.4),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -316,7 +316,7 @@ class _PlanFormSheetState extends ConsumerState<PlanFormSheet> {
                       );
                     }),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _sectionHead('4', 'Preview'),
                     const SizedBox(height: 12),
                     _buildPreview(gstAmount, grandTotal),

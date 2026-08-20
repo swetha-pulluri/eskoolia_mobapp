@@ -1419,7 +1419,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
 
   Widget _section(String num, String title, List<Widget> fields, {String? note}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: AppColors.borderPrimary, width: 1),
@@ -1479,7 +1479,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
               ],
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           ...fields,
         ],
       ),
@@ -1493,7 +1493,7 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
     required Widget child,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

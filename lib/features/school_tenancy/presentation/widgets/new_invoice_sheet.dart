@@ -663,7 +663,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                       _duplicateBanner(),
                     ],
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     // 2. INVOICE DETAILS
                     _sectionHead('2', 'Invoice details'),
                     const SizedBox(height: 12),
@@ -722,7 +722,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     const SizedBox(height: 6),
                     _readonlyField('INR'),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     // 3. LINE ITEMS — "Add line" only in create mode; rows
                     // are locked in edit mode (`NewInvoiceDrawer.tsx:757-851`).
                     Row(
@@ -740,7 +740,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     _lineItemsHeader(),
                     ..._lines.asMap().entries.map((entry) => _buildLineEditor(entry.key, entry.value, readOnly: _isEditMode)),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     // 4. NOTES & TERMS
                     _sectionHead('4', 'Notes & terms'),
                     const SizedBox(height: 12),
@@ -763,7 +763,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                       decoration: _fieldDecoration(),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     // TAX SUMMARY — matches `NewInvoiceDrawer.tsx:736-755`.
                     Text('TAX SUMMARY', style: _label),
                     const SizedBox(height: 8),

@@ -80,19 +80,35 @@ class FeesAuditTrailCard extends StatelessWidget {
             child: Text(item.initials, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
           ),
           const SizedBox(width: 14),
+          // `item.date` used to be its own fixed-width column at the end of
+          // this `Row`, alongside the `Expanded` text column — that left the
+          // text column only the sliver of width remaining after the avatar
+          // AND the date string, so a title like "Fee Assigned" or a longer
+          // description wrapped almost one word per line. Moving the date
+          // inline with the event title (in its own `Row`, `Expanded` title
+          // + fixed date) gives the title/description the full row width
+          // instead, same fix already applied to the KPI cards' label/badge
+          // row.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(item.event, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF0F1222))),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(item.event, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF0F1222))),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(item.date, style: const TextStyle(fontSize: 12.5, color: Color(0xFF9197AE))),
+                  ],
+                ),
                 const SizedBox(height: 3),
                 Text(item.desc, style: const TextStyle(fontSize: 13, color: Color(0xFF9197AE), height: 1.45)),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(item.date, style: const TextStyle(fontSize: 12.5, color: Color(0xFF9197AE))),
         ],
       ),
     );

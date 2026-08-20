@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/file_download_helper.dart';
 import '../../../../core/utils/inr_formatter.dart';
 import '../../../../core/widgets/kpi_card.dart';
+import '../widgets/compact_kpi_card.dart';
 import '../../../../core/widgets/status_chip_widget.dart';
 import '../../domain/entities/invoice_entity.dart';
 import '../providers/school_tenancy_provider.dart';
@@ -243,358 +244,397 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // PAGE HEADER
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Web's actual title is "Tenants & Billing", not
-                      // "Billing & Revenue" (`billing/page.tsx:650-652`).
-                      Wrap(
-                        spacing: 6,
-                        children: [
-                          Text('Tenants &', style: AppTextStyles.pageTitle),
-                          Text('Billing', style: AppTextStyles.pageTitleAccent),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Matches web's subtitle exactly (`billing/page.tsx:653-661`).
-                      Text.rich(
-                        TextSpan(
-                          style: AppTextStyles.pageSubtitle,
+          // Pull-to-refresh + `AlwaysScrollableScrollPhysics` — matches
+          // Admin Home's own scroll behavior exactly.
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(invoicesProvider);
+              ref.invalidate(billingMrrProvider);
+              ref.invalidate(plansProvider);
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // PAGE HEADER — its own card, same white/bordered style as
+                  // every section below it, instead of floating text directly
+                  // on the page background.
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Web's actual title is "Tenants & Billing", not
+                        // "Billing & Revenue" (`billing/page.tsx:650-652`).
+                        Wrap(
+                          spacing: 6,
                           children: [
-                            const TextSpan(
-                              text:
-                                  'GST-compliant invoicing across all schools. ',
-                            ),
-                            if (sellerGstin.isNotEmpty)
-                              TextSpan(
-                                children: [
-                                  const TextSpan(text: '· Seller GSTIN '),
-                                  TextSpan(
-                                    text: sellerGstin,
-                                    style: const TextStyle(
-                                      fontFamily: 'monospace',
-                                      color: AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  const TextSpan(text: ' '),
-                                ],
-                              ),
-                            if (sellerState.isNotEmpty)
-                              TextSpan(text: '· $sellerState. '),
-                            const TextSpan(
-                              text:
-                                  'Place of supply auto-detected from buyer state code · IGST for inter-state, CGST + SGST for intra-state.',
+                            Text('Tenants &', style: AppTextStyles.pageTitle),
+                            Text(
+                              'Billing',
+                              style: AppTextStyles.pageTitleAccent,
                             ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          // Web's Billing header has exactly two buttons —
-                          // "Export GSTR-1" and "New invoice" — no Refresh
-                          // button at all (`billing/page.tsx:663-680`).
-                          OutlinedButton.icon(
-                            onPressed: _exportBusy ? null : _exportGstr1,
-                            icon: _exportBusy
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                        const SizedBox(height: 8),
+                        // Matches web's subtitle exactly (`billing/page.tsx:653-661`).
+                        Text.rich(
+                          TextSpan(
+                            style: AppTextStyles.pageSubtitle,
+                            children: [
+                              const TextSpan(
+                                text:
+                                    'GST-compliant invoicing across all schools. ',
+                              ),
+                              if (sellerGstin.isNotEmpty)
+                                TextSpan(
+                                  children: [
+                                    const TextSpan(text: '· Seller GSTIN '),
+                                    TextSpan(
+                                      text: sellerGstin,
+                                      style: const TextStyle(
+                                        fontFamily: 'monospace',
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
-                                  )
-                                : const Icon(Icons.download, size: 14),
-                            label: const Text('Export GSTR-1'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textPrimary,
-                              side: const BorderSide(
-                                color: AppColors.borderPrimary,
+                                    const TextSpan(text: ' '),
+                                  ],
+                                ),
+                              if (sellerState.isNotEmpty)
+                                TextSpan(text: '· $sellerState. '),
+                              const TextSpan(
+                                text:
+                                    'Place of supply auto-detected from buyer state code · IGST for inter-state, CGST + SGST for intra-state.',
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              textStyle: AppTextStyles.buttonSecondary,
-                            ),
+                            ],
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _openNewInvoiceSheet,
-                            icon: const Icon(Icons.add, size: 14),
-                            label: const Text('New invoice'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryPurple,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // Web's Billing header has exactly two buttons —
+                            // "Export GSTR-1" and "New invoice" — no Refresh
+                            // button at all (`billing/page.tsx:663-680`).
+                            OutlinedButton.icon(
+                              onPressed: _exportBusy ? null : _exportGstr1,
+                              icon: _exportBusy
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.download, size: 14),
+                              label: const Text('Export GSTR-1'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              textStyle: AppTextStyles.buttonPrimary,
                             ),
-                          ),
-                        ],
+                            ElevatedButton.icon(
+                              onPressed: _openNewInvoiceSheet,
+                              icon: const Icon(Icons.add, size: 14),
+                              label: const Text('New invoice'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryPurple,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // KPI CARDS
+                  // `KpiCardGrid` (width-constrained, height-intrinsic tiles)
+                  // instead of a fixed-`childAspectRatio` `GridView` — a forced
+                  // ratio gives every card the same height regardless of its
+                  // actual label/value/footnote content, overflowing on narrow
+                  // phones (confirmed: 78.9px cells vs. content needing more).
+                  CompactKpiCardGrid(
+                    spacing: 12,
+                    crossAxisCount: 2,
+                    cards: [
+                      CompactKpiCard(
+                        label: 'MRR',
+                        value: mrr == null ? '—' : _formatINR(mrr.currentMrr),
+                        // Web plots `mrr?.mrr_series` here — the backend never
+                        // returns that field, so web's own sparkline renders
+                        // empty (`Spark` returns a blank svg when data is
+                        // missing, `billing/page.tsx:104-107`). No series data
+                        // exists to plot, so this is omitted rather than
+                        // fabricated.
+                        sparklineData: null,
+                        sparklineColor: const Color(0xFF0369A1),
+                        // Matches web: trend only shows when `trend_percent` is
+                        // non-zero (`billing/page.tsx:689-694`).
+                        trend: (mrr != null && mrr.trendPercent != 0)
+                            ? '${mrr.trendPercent > 0 ? '+' : ''}${mrr.trendPercent}%'
+                            : null,
+                        trendColor: AppColors.successGreen,
+                        footnote: 'Recurring · pre-GST',
+                      ),
+                      CompactKpiCard(
+                        label: 'GST Collected ($monthLabel)',
+                        value: mrr == null ? '—' : _formatINR(mrr.gstCollected),
+                        sparklineData: null,
+                        sparklineColor: const Color(0xFFA65D08),
+                        // Web's `gst_trend_percent` isn't returned by the
+                        // backend, so web itself never shows a trend badge here.
+                        trend: null,
+                        trendColor: AppColors.warningAmber,
+                        // Matches web: footnote is the IGST/CGST+SGST split
+                        // whenever `mrr` is loaded, falling back to
+                        // 'Tax collected this cycle' only while loading
+                        // (`billing/page.tsx:708-714`).
+                        footnote: mrr == null
+                            ? 'Tax collected this cycle'
+                            : 'IGST ${_formatINR(mrr.gstIgst)} · CGST+SGST ${_formatINR(mrr.gstCgstSgst)}',
+                      ),
+                      CompactKpiCard(
+                        label: 'Outstanding',
+                        value: mrr == null
+                            ? '—'
+                            : _formatINR(mrr.outstandingAmount),
+                        sparklineData: null,
+                        sparklineColor: const Color(0xFFE0463A),
+                        // Web's `outstanding_count`/`outstanding_avg_overdue_days`
+                        // also aren't returned by the backend, so web shows no
+                        // trend and the generic footnote here too.
+                        trend: null,
+                        trendColor: AppColors.dangerRed,
+                        footnote: 'Open receivables',
+                      ),
+                      CompactKpiCard(
+                        label: 'Invoices YTD',
+                        // Web's `invoices_ytd`/`invoices_paid` also aren't
+                        // returned by the backend, so web always shows '0' here
+                        // with no trend badge (`billing/page.tsx:738-739`).
+                        value: mrr == null ? '—' : '0',
+                        sparklineData: null,
+                        sparklineColor: const Color(0xFF6D28D9),
+                        trend: null,
+                        trendColor: AppColors.successGreen,
+                        footnote: fyLabel,
                       ),
                     ],
                   ),
-                ),
 
-                // KPI CARDS
-                // `KpiCardGrid` (width-constrained, height-intrinsic tiles)
-                // instead of a fixed-`childAspectRatio` `GridView` — a forced
-                // ratio gives every card the same height regardless of its
-                // actual label/value/footnote content, overflowing on narrow
-                // phones (confirmed: 78.9px cells vs. content needing more).
-                KpiCardGrid(
-                  spacing: 14,
-                  crossAxisCount: 2,
-                  cards: [
-                    KpiCard(
-                      label: 'MRR',
-                      value: mrr == null ? '—' : _formatINR(mrr.currentMrr),
-                      // Web plots `mrr?.mrr_series` here — the backend never
-                      // returns that field, so web's own sparkline renders
-                      // empty (`Spark` returns a blank svg when data is
-                      // missing, `billing/page.tsx:104-107`). No series data
-                      // exists to plot, so this is omitted rather than
-                      // fabricated.
-                      sparklineData: null,
-                      sparklineColor: const Color(0xFF0369A1),
-                      // Matches web: trend only shows when `trend_percent` is
-                      // non-zero (`billing/page.tsx:689-694`).
-                      trend: (mrr != null && mrr.trendPercent != 0)
-                          ? '${mrr.trendPercent > 0 ? '+' : ''}${mrr.trendPercent}%'
-                          : null,
-                      trendColor: AppColors.successGreen,
-                      footnote: 'Recurring · pre-GST',
-                    ),
-                    KpiCard(
-                      label: 'GST Collected ($monthLabel)',
-                      value: mrr == null ? '—' : _formatINR(mrr.gstCollected),
-                      sparklineData: null,
-                      sparklineColor: const Color(0xFFA65D08),
-                      // Web's `gst_trend_percent` isn't returned by the
-                      // backend, so web itself never shows a trend badge here.
-                      trend: null,
-                      trendColor: AppColors.warningAmber,
-                      // Matches web: footnote is the IGST/CGST+SGST split
-                      // whenever `mrr` is loaded, falling back to
-                      // 'Tax collected this cycle' only while loading
-                      // (`billing/page.tsx:708-714`).
-                      footnote: mrr == null
-                          ? 'Tax collected this cycle'
-                          : 'IGST ${_formatINR(mrr.gstIgst)} · CGST+SGST ${_formatINR(mrr.gstCgstSgst)}',
-                    ),
-                    KpiCard(
-                      label: 'Outstanding',
-                      value: mrr == null
-                          ? '—'
-                          : _formatINR(mrr.outstandingAmount),
-                      sparklineData: null,
-                      sparklineColor: const Color(0xFFE0463A),
-                      // Web's `outstanding_count`/`outstanding_avg_overdue_days`
-                      // also aren't returned by the backend, so web shows no
-                      // trend and the generic footnote here too.
-                      trend: null,
-                      trendColor: AppColors.dangerRed,
-                      footnote: 'Open receivables',
-                    ),
-                    KpiCard(
-                      label: 'Invoices YTD',
-                      // Web's `invoices_ytd`/`invoices_paid` also aren't
-                      // returned by the backend, so web always shows '0' here
-                      // with no trend badge (`billing/page.tsx:738-739`).
-                      value: mrr == null ? '—' : '0',
-                      sparklineData: null,
-                      sparklineColor: const Color(0xFF6D28D9),
-                      trend: null,
-                      trendColor: AppColors.successGreen,
-                      footnote: fyLabel,
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 16),
 
-                const SizedBox(height: 24),
-
-                // PLANS — wrapped in a bordered card matching web's
-                // `<section className="rounded-2xl border ...">`
-                // (`billing/page.tsx:748`).
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.bgPrimary,
-                    border: Border.all(color: AppColors.borderPrimary),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.purpleTint,
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.receipt_long,
-                              size: 16,
-                              color: AppColors.primaryPurple,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Subscription plans',
-                                  style: AppTextStyles.sectionTitle,
-                                ),
-                                if (plans != null)
-                                  Text(
-                                    'India-priced · GST ${plans.gstPercent.toStringAsFixed(0)}% under SAC ${plans.sacCode} (${plans.sacDescription})',
-                                    style: AppTextStyles.sectionSubtitle,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Web's "Add plan" is a filled purple button, not a
-                          // plain text button (`billing/page.tsx:762-768`).
-                          ElevatedButton.icon(
-                            onPressed: () => _openPlanFormSheet(),
-                            icon: const Icon(Icons.add, size: 13),
-                            label: const Text('Add plan'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryPurple,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
+                  // PLANS — wrapped in a bordered card matching web's
+                  // `<section className="rounded-2xl border ...">`
+                  // (`billing/page.tsx:748`).
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.purpleTint,
                                 borderRadius: BorderRadius.circular(9),
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 9,
-                              ),
-                              textStyle: AppTextStyles.buttonPrimary.copyWith(
-                                fontSize: 11.5,
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.receipt_long,
+                                size: 16,
+                                color: AppColors.primaryPurple,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Subscription plans',
+                                    style: AppTextStyles.sectionTitle,
+                                  ),
+                                  if (plans != null)
+                                    Text(
+                                      'India-priced · GST ${plans.gstPercent.toStringAsFixed(0)}% under SAC ${plans.sacCode} (${plans.sacDescription})',
+                                      style: AppTextStyles.sectionSubtitle,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Web's "Add plan" is a filled purple button, not a
+                            // plain text button (`billing/page.tsx:762-768`).
+                            ElevatedButton.icon(
+                              onPressed: () => _openPlanFormSheet(),
+                              icon: const Icon(Icons.add, size: 13),
+                              label: const Text('Add plan'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryPurple,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 9,
+                                ),
+                                textStyle: AppTextStyles.buttonPrimary.copyWith(
+                                  fontSize: 11.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
 
-                      if (plansAsync.isLoading)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (plans == null || plans.plans.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
+                        if (plansAsync.isLoading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (plans == null || plans.plans.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: Text(
+                                'No plans configured.',
+                                style: AppTextStyles.sectionSubtitle,
+                              ),
+                            ),
+                          )
+                        else
+                          // `KpiCardGrid` (width-constrained, height-intrinsic
+                          // tiles) instead of a fixed-`childAspectRatio`
+                          // `GridView` — a forced ratio gives every card the
+                          // same height regardless of its actual content
+                          // (name/price/description/buttons), which is what
+                          // made the 18px card padding read as "excessive":
+                          // the content area was being squeezed shorter than
+                          // it needed while the padding stayed fixed. Reusing
+                          // the same widget already used for KPI rows (Schools/
+                          // Dashboard/Audit Log tabs) keeps card sizing
+                          // consistent across the module too.
+                          //
+                          // `crossAxisCount` is now responsive (1 column
+                          // below 380px, otherwise 2) instead of always 2 —
+                          // a fixed 2-column split squeezed each plan card to
+                          // ~135px on a narrow phone, forcing the name/price/
+                          // description to wrap onto extra lines and
+                          // inflating card height; a single full-width
+                          // column on narrow screens lets that same text sit
+                          // on fewer lines instead.
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              return KpiCardGrid(
+                                spacing: 14,
+                                crossAxisCount: constraints.maxWidth < 380 ? 1 : 2,
+                                cards: plans.plans
+                                    .map((p) => _buildPlanCard(p))
+                                    .toList(),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // TAX INVOICE — always visible inline, showing the currently
+                  // `selected` invoice (`billing/page.tsx:800-806`), not a modal.
+                  // Wrapped in KeyedSubtree so `_selectInvoice`'s
+                  // Scrollable.ensureVisible can actually find this section —
+                  // previously the key was declared but never attached to
+                  // anything, so `_taxInvoiceKey.currentContext` was always
+                  // null and the scroll silently did nothing.
+                  KeyedSubtree(
+                    key: _taxInvoiceKey,
+                    child: selected == null
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 40,
+                              horizontal: 20,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgPrimary,
+                              border: Border.all(
+                                color: AppColors.borderPrimary,
+                                style: BorderStyle.solid,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Text(
-                              'No plans configured.',
+                              'No invoice selected. Tap a row in "Recent invoices" to preview it here.',
+                              textAlign: TextAlign.center,
                               style: AppTextStyles.sectionSubtitle,
                             ),
+                          )
+                        : _buildTaxInvoiceCard(
+                            selected,
+                            sellerGstin,
+                            sellerState,
                           ),
-                        )
-                      else
-                        // `KpiCardGrid` (width-constrained, height-intrinsic
-                        // tiles) instead of a fixed-`childAspectRatio`
-                        // `GridView` — a forced ratio gives every card the
-                        // same height regardless of its actual content
-                        // (name/price/description/buttons), which is what
-                        // made the 18px card padding read as "excessive":
-                        // the content area was being squeezed shorter than
-                        // it needed while the padding stayed fixed. Reusing
-                        // the same widget already used for KPI rows (Schools/
-                        // Dashboard/Audit Log tabs) keeps card sizing
-                        // consistent across the module too.
-                        KpiCardGrid(
-                          spacing: 14,
-                          crossAxisCount: 2,
-                          cards: plans.plans
-                              .map((p) => _buildPlanCard(p))
-                              .toList(),
-                        ),
-                    ],
                   ),
-                ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
-                // TAX INVOICE — always visible inline, showing the currently
-                // `selected` invoice (`billing/page.tsx:800-806`), not a modal.
-                // Wrapped in KeyedSubtree so `_selectInvoice`'s
-                // Scrollable.ensureVisible can actually find this section —
-                // previously the key was declared but never attached to
-                // anything, so `_taxInvoiceKey.currentContext` was always
-                // null and the scroll silently did nothing.
-                KeyedSubtree(
-                  key: _taxInvoiceKey,
-                  child: selected == null
-                      ? Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 40,
-                            horizontal: 20,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.bgPrimary,
-                            border: Border.all(
-                              color: AppColors.borderPrimary,
-                              style: BorderStyle.solid,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            'No invoice selected. Tap a row in "Recent invoices" to preview it here.',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.sectionSubtitle,
-                          ),
-                        )
-                      : _buildTaxInvoiceCard(
-                          selected,
-                          sellerGstin,
-                          sellerState,
-                        ),
-                ),
+                  // RECENT INVOICES — a real table, matching web's 7-column
+                  // layout (`billing/page.tsx:808-910`), wrapped in the same
+                  // icon+title+subtitle+button header treatment as Plans.
+                  _buildRecentInvoicesTable(invoices, fyLabel),
 
-                const SizedBox(height: 24),
-
-                // RECENT INVOICES — a real table, matching web's 7-column
-                // layout (`billing/page.tsx:808-910`), wrapped in the same
-                // icon+title+subtitle+button header treatment as Plans.
-                _buildRecentInvoicesTable(invoices, fyLabel),
-
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           ),
         ),
@@ -778,15 +818,27 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
     }
   }
 
-  Future<void> _downloadInvoicePdf(InvoiceEntity invoice, {required String sellerGstin, required String sellerState}) async {
+  Future<void> _downloadInvoicePdf(
+    InvoiceEntity invoice, {
+    required String sellerGstin,
+    required String sellerState,
+  }) async {
     try {
-      final path = await downloadInvoicePdf(invoice, sellerGstin: sellerGstin, sellerState: sellerState);
+      final path = await downloadInvoicePdf(
+        invoice,
+        sellerGstin: sellerGstin,
+        sellerState: sellerState,
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to $path')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Saved to $path')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Download failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download failed: $e')));
       }
     }
   }
@@ -1033,13 +1085,21 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                   Expanded(
                     child: Text(
                       'DESCRIPTION',
-                      style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                      style: AppTextStyles.sectionSubtitle.copyWith(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'SAC',
-                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                    style: AppTextStyles.sectionSubtitle.copyWith(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ],
               ),
@@ -1049,13 +1109,21 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                   Expanded(
                     child: Text(
                       'QTY × RATE',
-                      style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                      style: AppTextStyles.sectionSubtitle.copyWith(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'AMOUNT',
-                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                    style: AppTextStyles.sectionSubtitle.copyWith(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
                   ),
                 ],
               ),
@@ -1357,7 +1425,11 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                 context,
                 Icons.download_outlined,
                 'Download PDF',
-                () => _downloadInvoicePdf(invoice, sellerGstin: sellerGstin, sellerState: sellerState),
+                () => _downloadInvoicePdf(
+                  invoice,
+                  sellerGstin: sellerGstin,
+                  sellerState: sellerState,
+                ),
               ),
               // Real call to POST /billing/invoices/{id}/reminder/.
               _actionRow(
@@ -1683,7 +1755,11 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                             // equivalent to the main Invoice Actions panel's
                             // call once `sellerGstin`/`sellerState` (sourced
                             // from `mrr`) are unset for this invoice.
-                            onTap: () => _downloadInvoicePdf(invoice, sellerGstin: '', sellerState: ''),
+                            onTap: () => _downloadInvoicePdf(
+                              invoice,
+                              sellerGstin: '',
+                              sellerState: '',
+                            ),
                           ),
                           const SizedBox(width: 6),
                           _rowActionIcon(
@@ -1933,9 +2009,10 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
         ),
         borderRadius: BorderRadius.circular(14),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Matches web's `PlanCard` hierarchy (`billing/page.tsx:207-221`):
           // the plan name is a small uppercase label (not a large title) and
@@ -1983,7 +2060,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -2008,7 +2085,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             plan.description,
             style: AppTextStyles.sectionSubtitle.copyWith(
@@ -2020,7 +2097,7 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
           // fixed-aspect-ratio grid cell, but these cards now size to their
           // own content inside `KpiCardGrid`'s `Wrap` (intrinsic height,
           // unbounded), so a fixed gap replaces it.
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
@@ -2041,7 +2118,10 @@ class _SuperAdminBillingPageState extends ConsumerState<SuperAdminBillingPage> {
                     // Compact, explicit padding (was vertical-only, leaving
                     // the button wider than it needed to be next to the
                     // now-also-compact Delete icon).
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                   ),
                   child: const Text('Edit'),
                 ),

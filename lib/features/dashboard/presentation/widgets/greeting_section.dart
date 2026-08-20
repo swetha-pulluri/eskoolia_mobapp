@@ -56,28 +56,21 @@ class GreetingSection extends ConsumerWidget {
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // "— WELCOME BACK" eyebrow, matching the Stitch reference.
+            // Greeting Row — `crossAxisAlignment.start` (not the Row
+            // default of center) so the emoji stays pinned to the first
+            // line when a long name wraps the text to a second line
+            // instead of drifting to the vertical middle of both lines.
+            // No `maxLines`/`overflow` on the text itself — a long real
+            // name (e.g. "Sowmya Reddy") was getting cut off with an
+            // ellipsis on narrower Android phones; wrapping to a second
+            // line instead always shows the full name.
             Row(
-              children: [
-                Container(width: 14, height: 2, color: AppColors.brandPurple),
-                const SizedBox(width: 6),
-                Text(
-                  'WELCOME BACK',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.brandPurple.withValues(alpha: 0.85), letterSpacing: 1.1),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Greeting Row
-            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _AnimatedGreetingEmoji(emoji: app_date_utils.DateUtils.getTimeEmoji()),
                 const SizedBox(width: 8),
                 Expanded(
                   child: RichText(
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     text: TextSpan(
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.ink1),
                       children: [
@@ -159,7 +152,18 @@ class _AnimatedGreetingEmoji extends StatelessWidget {
           child: Transform.scale(scale: value, child: child),
         );
       },
-      child: Text(emoji, style: const TextStyle(fontSize: 20)),
+      // `fontFamilyFallback` forces these specific platform color-emoji
+      // fonts ahead of whatever custom font this `Text` would otherwise
+      // inherit from the ambient theme — without it, ☀️/🌤️ were rendering
+      // as plain monochrome glyphs instead of full-color emoji, since the
+      // inherited font is checked for glyph coverage before any fallback.
+      child: Text(
+        emoji,
+        style: const TextStyle(
+          fontSize: 20,
+          fontFamilyFallback: ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji'],
+        ),
+      ),
     );
   }
 }
@@ -183,57 +187,63 @@ class _InfoChip extends StatelessWidget {
     // stands out.
     final valueColor = isError ? AppColors.error : AppColors.purpleDeep;
 
-    // Capsule pill — small gray label beside the bold value (both
-    // vertically centered), not stacked — matching the Stitch reference's
-    // Academic Year/School pills exactly.
+    // Label stacked above the value (not side by side) — a long real value
+    // (e.g. a school name like "Sunrise Public School") was getting cut off
+    // with an ellipsis when it had to share a row with the label, since
+    // splitting the pill's width between the two left too little room for
+    // the value. Stacking gives the value the pill's full width to wrap
+    // into instead, so it always shows completely on any phone width.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.bg0,
         border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.ink3,
-                letterSpacing: 0.1,
-                fontSize: 11,
-                height: 1.15,
-              ),
-              maxLines: 2,
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: AppColors.ink3,
+              letterSpacing: 0.1,
+              fontSize: 11,
+              height: 1.15,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 6),
-          if (isLoading) ...[
-            const SizedBox(
-              width: 10,
-              height: 10,
-              child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.purpleDeep),
-            ),
-            const SizedBox(width: 6),
-          ],
-          if (isError) ...[
-            Icon(Icons.error_outline, size: 12, color: AppColors.error),
-            const SizedBox(width: 4),
-          ],
-          Expanded(
-            flex: 5,
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: valueColor,
-                fontWeight: FontWeight.w800,
-                fontStyle: (isLoading || isError) ? FontStyle.italic : FontStyle.normal,
+          const SizedBox(height: 3),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (isLoading) ...[
+                const SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.purpleDeep),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (isError) ...[
+                Icon(Icons.error_outline, size: 12, color: AppColors.error),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: valueColor,
+                    fontWeight: FontWeight.w800,
+                    fontStyle: (isLoading || isError) ? FontStyle.italic : FontStyle.normal,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
           ),
         ],
       ),

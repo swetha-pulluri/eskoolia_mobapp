@@ -170,31 +170,40 @@ class _AdmissionsMarketingPageState extends State<AdmissionsMarketingPage> {
   }
 
   Widget _header() {
-    return Row(children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(color: const Color(0xFFFDF2F8), borderRadius: BorderRadius.circular(10)),
-        alignment: Alignment.center,
-        child: const Icon(Icons.send_outlined, size: 18, color: Color(0xFFA21CAF)),
-      ),
-      const SizedBox(width: 10),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Admissions Marketing', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF111111))),
-            Text('Campaigns, templates, and event management', style: TextStyle(fontSize: 11.5, color: Color(0xFF6B7280))),
-          ],
+    // Own card — same white/gray-bordered style already used by
+    // `_sectionCard()` (Campaigns/Templates/Events below) — instead of
+    // floating text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE5E7EB)), borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: const Color(0xFFFDF2F8), borderRadius: BorderRadius.circular(10)),
+          alignment: Alignment.center,
+          child: const Icon(Icons.send_outlined, size: 18, color: Color(0xFFA21CAF)),
         ),
-      ),
-      ElevatedButton.icon(
-        onPressed: _openNewCampaign,
-        icon: const Icon(Icons.add, size: 14),
-        label: const Text('New Campaign'),
-        style: ElevatedButton.styleFrom(backgroundColor: kMarketingBlue, foregroundColor: Colors.white, textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
-      ),
-    ]);
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Admissions Marketing', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF111111))),
+              Text('Campaigns, templates, and event management', style: TextStyle(fontSize: 11.5, color: Color(0xFF6B7280))),
+            ],
+          ),
+        ),
+        ElevatedButton.icon(
+          onPressed: _openNewCampaign,
+          icon: const Icon(Icons.add, size: 14),
+          label: const Text('New Campaign'),
+          style: ElevatedButton.styleFrom(backgroundColor: kMarketingBlue, foregroundColor: Colors.white, textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
   }
 
   Widget _sectionCard({required Widget child}) {

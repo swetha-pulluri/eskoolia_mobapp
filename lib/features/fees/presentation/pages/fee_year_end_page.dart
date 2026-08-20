@@ -276,42 +276,50 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.start,
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('ACADEMIC YEAR CLOSE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fyPurple)),
-            SizedBox(height: 5),
-            Text('Year-End', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: fyInk1, height: 1.1)),
-            SizedBox(height: 6),
-            Text('Resolve carry-forward dues, generate reports, and roll fee structures into the next academic year.', style: TextStyle(fontSize: 14, color: fyInk3)),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Container(
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(color: Color(0x406D4AFF), blurRadius: 10, offset: Offset(0, 2))]),
-            child: ElevatedButton(
-              onPressed: () => _showToast('Year-end review saved.'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: fyPurple,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+    // Its own card — same white/gray-bordered style already used by the
+    // Carry Forward, Year-End Reports, and Archive & Rollover cards below it
+    // — instead of floating text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: fyBorder), borderRadius: BorderRadius.circular(12)),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text('ACADEMIC YEAR CLOSE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fyPurple)),
+              SizedBox(height: 5),
+              Text('Year-End', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: fyInk1, height: 1.1)),
+              SizedBox(height: 6),
+              Text('Resolve carry-forward dues, generate reports, and roll fee structures into the next academic year.', style: TextStyle(fontSize: 14, color: fyInk3)),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Container(
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), boxShadow: const [BoxShadow(color: Color(0x406D4AFF), blurRadius: 10, offset: Offset(0, 2))]),
+              child: ElevatedButton(
+                onPressed: () => _showToast('Year-end review saved.'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: fyPurple,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  textStyle: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
+                child: const Text('Save Year-End Review'),
               ),
-              child: const Text('Save Year-End Review'),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

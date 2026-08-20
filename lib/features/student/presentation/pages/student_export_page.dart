@@ -343,10 +343,25 @@ class _StudentExportPageState extends ConsumerState<StudentExportPage> {
               // left-aligned — unlike the Report Explorer's title-left/
               // breadcrumb-right row layout, this page's own web source
               // uses a plain stacked header instead.
-              const Text('Student Export', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-              const SizedBox(height: 4),
-              const Text('Dashboard/Student Information/Student Export', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
-              const SizedBox(height: 16),
+              //
+              // Own card — same white/gray-bordered style already used by
+              // the "All Student Export" card below — instead of floating
+              // text directly on the page background.
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.bgPrimary, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(14)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Student Export', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    const Text('Dashboard/Student Information/Student Export', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                  ],
+                ),
+              ),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(14),

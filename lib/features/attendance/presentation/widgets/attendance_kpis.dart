@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/constants/app_colors.dart';
 import '../../domain/entities/attendance_entities.dart';
 
 /// Attendance KPIs — converted from web
@@ -117,13 +118,13 @@ class AttendanceKpis extends StatelessWidget {
     Color absentTrendColor;
     if (absentDelta < 0) {
       absentTrend = '↓ ${absentDelta.abs()} vs yesterday';
-      absentTrendColor = const Color(0xFF16A34A);
+      absentTrendColor = AppColors.success;
     } else if (absentDelta > 0) {
       absentTrend = '↑ $absentDelta vs yesterday';
-      absentTrendColor = const Color(0xFFE11D48);
+      absentTrendColor = AppColors.error;
     } else {
       absentTrend = 'Same as yesterday';
-      absentTrendColor = const Color(0xFF9CA0AE);
+      absentTrendColor = AppColors.ink3;
     }
 
     String absentReasonSub;
@@ -152,18 +153,18 @@ class AttendanceKpis extends StatelessWidget {
           value: d.totalStudents == 0 ? '0/0' : '${d.presentToday}/${d.totalStudents}',
           sub: '${d.presentPct}% attendance ${_onText.toLowerCase()}',
           badgeText: 'PR',
-          badgeBg: const Color(0xFFECFDF5),
-          badgeColor: const Color(0xFF16A34A),
+          badgeBg: AppColors.success.withValues(alpha: 0.12),
+          badgeColor: AppColors.success,
           trend: presentTrend,
-          trendColor: const Color(0xFF16A34A),
+          trendColor: AppColors.success,
         ),
         _KpiCard(
           label: 'Absent $_onText',
           value: '${d.absentToday}',
           sub: absentReasonSub,
           badgeText: 'AB',
-          badgeBg: const Color(0xFFFFF1F2),
-          badgeColor: const Color(0xFFE11D48),
+          badgeBg: AppColors.error.withValues(alpha: 0.12),
+          badgeColor: AppColors.error,
           trend: absentTrend,
           trendColor: absentTrendColor,
         ),
@@ -172,16 +173,16 @@ class AttendanceKpis extends StatelessWidget {
           value: '${d.lateToday}',
           sub: lateSub,
           badgeText: 'LT',
-          badgeBg: const Color(0xFFFFFBEB),
-          badgeColor: const Color(0xFFD97706),
+          badgeBg: AppColors.warning.withValues(alpha: 0.14),
+          badgeColor: AppColors.warning,
         ),
         _KpiCard(
           label: 'RTE Compliance Risk',
           value: '${d.rteAtRisk}',
           sub: 'Shows students below 75% cumulative attendance. Calculated as present days / working days.',
           badgeText: 'RT',
-          badgeBg: const Color(0xFFF5F3FF),
-          badgeColor: const Color(0xFF7C3AED),
+          badgeBg: AppColors.brandPurple.withValues(alpha: 0.12),
+          badgeColor: AppColors.brandPurple,
         ),
       ]),
     );
@@ -206,7 +207,7 @@ class _KpiCard extends StatelessWidget {
     required this.badgeBg,
     required this.badgeColor,
     this.trend,
-    this.trendColor = const Color(0xFF16A34A),
+    this.trendColor = AppColors.success,
   });
 
   @override
@@ -219,10 +220,16 @@ class _KpiCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // `maxLines: 2` (not 1) — a label like "RTE Compliance Risk"
+              // was getting cut off with an ellipsis on a narrow half-width
+              // card; wrapping to a second line instead always shows it in
+              // full on any screen size.
               Expanded(
-                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B), letterSpacing: 0.6)),
+                child: Text(label, maxLines: 2, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B), letterSpacing: 0.6)),
               ),
+              const SizedBox(width: 8),
               Container(
                 width: 28,
                 height: 28,
@@ -233,25 +240,17 @@ class _KpiCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(child: Text(value, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1))),
-              // `Flexible` — trend strings like "Same as yesterday" or
-              // "↓ 8 vs yesterday" are long enough to overflow this Row on
-              // a narrow 2-column card even with the value Text `Expanded`.
-              if (trend != null)
-                Flexible(
-                  child: Text(
-                    trend!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: trendColor),
-                  ),
-                ),
-            ],
-          ),
+          Text(value, style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: Color(0xFF111827), height: 1)),
+          // Trend now on its own full-width line below the value (not
+          // squeezed beside it) — a string like "Same as yesterday" was
+          // getting truncated to "Same as …" sharing a row with the value
+          // on a narrow half-width card; its own row gives it the whole
+          // card width to display in full.
+          if (trend != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(trend!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: trendColor)),
+            ),
           if (sub != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(sub!, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)))),
         ],
       ),

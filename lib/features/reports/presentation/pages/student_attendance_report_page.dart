@@ -121,13 +121,27 @@ class _StudentAttendanceReportPageState extends ConsumerState<StudentAttendanceR
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(spacing: 6, children: [
-                Text('Student Attendance', style: AppTextStyles.pageTitle.copyWith(fontSize: 22)),
-                Text('Report', style: AppTextStyles.pageTitleAccent.copyWith(fontSize: 24)),
-              ]),
-              const SizedBox(height: 6),
-              const Text('Attendance records across classes and sections.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.6)),
-              const SizedBox(height: 16),
+              // Own card — same white/gray-bordered style already used by
+              // the filter bar and results table below — instead of
+              // floating text directly on the page background.
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AppColors.bgPrimary, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(14)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Wrap(spacing: 6, children: [
+                      Text('Student Attendance', style: AppTextStyles.pageTitle.copyWith(fontSize: 22)),
+                      Text('Report', style: AppTextStyles.pageTitleAccent.copyWith(fontSize: 24)),
+                    ]),
+                    const SizedBox(height: 6),
+                    const Text('Attendance records across classes and sections.', style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.6)),
+                  ],
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: AppColors.bgPrimary, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(14)),

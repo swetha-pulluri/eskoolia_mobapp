@@ -101,24 +101,32 @@ class SchoolInfoPage extends ConsumerWidget {
   }
 
   Widget _header() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('School ', style: AppTextStyles.pageTitle),
-            Text('Info', style: AppTextStyles.pageTitleAccent),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'Auto-filled from School Tenancy — edit identity, contact, address, compliance and branding '
-          'details used across the ERP. Jump straight to any section, or save and move on without '
-          'stepping through the rest.',
-          style: AppTextStyles.pageSubtitle,
-        ),
-      ],
+    // Own card — same white/gray-bordered style already used by every
+    // other section on this page (the school-name pill, the wizard body
+    // via `SettingsCard`) — instead of floating text directly on the page
+    // background.
+    return SettingsCard(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('School ', style: AppTextStyles.pageTitle),
+              Text('Info', style: AppTextStyles.pageTitleAccent),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Auto-filled from School Tenancy — edit identity, contact, address, compliance and branding '
+            'details used across the ERP. Jump straight to any section, or save and move on without '
+            'stepping through the rest.',
+            style: AppTextStyles.pageSubtitle,
+          ),
+        ],
+      ),
     );
   }
 

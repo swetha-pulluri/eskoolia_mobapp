@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -56,7 +56,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               );
               // Explicit navigation — do not rely solely on the router's
               // redirect-on-rebuild side effect (see app_router.dart).
-              // Role→route mapping lives once in portal_routes.dart, used
+              // Roleâ†’route mapping lives once in portal_routes.dart, used
               // by both this and the router's own redirect callback.
               context.go(target);
             }
@@ -147,7 +147,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               fit: BoxFit.contain,
                               errorBuilder: (_, _, _) => const Text(
                                 'Eskoolia',
-                                style: TextStyle(fontSize: 46, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+                                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.brandPurple),
                               ),
                             ),
                           ),
@@ -289,4 +289,3 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 }
-

@@ -56,7 +56,7 @@ class FeesKpiCards extends StatelessWidget {
             Container(width: 4, color: kpi.border),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 20, 22, 20),
+                padding: const EdgeInsets.fromLTRB(16, 16, 18, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
@@ -65,12 +65,25 @@ class FeesKpiCards extends StatelessWidget {
                       kpi.label,
                       style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.9, color: Color(0xFF9197AE)),
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      kpi.value,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: Color(0xFF0F1222)),
+                    const SizedBox(height: 10),
+                    // `FittedBox` + `maxLines: 1` instead of letting the
+                    // amount wrap — an unbroken number like "1,79,000" has
+                    // no space to wrap at, so a plain `Text` was
+                    // force-breaking mid-digit ("1,79,00" / "0" on its own
+                    // line) once the card got too narrow for 26px text.
+                    // Scaling the whole line down to fit keeps it on one
+                    // line always, which also shrinks the card's height
+                    // back down instead of spending an extra wrapped line.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        kpi.value,
+                        maxLines: 1,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: Color(0xFF0F1222)),
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(kpi.sub, style: const TextStyle(fontSize: 13, color: Color(0xFF9197AE))),
                   ],
                 ),

@@ -460,17 +460,22 @@ class _FeesCollectionPageState extends ConsumerState<FeesCollectionPage> with Wi
   }
 
   Widget _buildHeader() {
+    // Its own card (`FcCard`, same widget every section below already uses)
+    // — instead of floating text directly on the page background.
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('PAYMENT DESK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fcPurple)),
-          const SizedBox(height: 5),
-          const Text('Collection', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: fcInk1, height: 1.1)),
-          const SizedBox(height: 6),
-          const Text('Search a student, record payment across one or more assignments, and issue a receipt.', style: TextStyle(fontSize: 14, color: fcInk3)),
-        ],
+      child: FcCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('PAYMENT DESK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fcPurple)),
+            const SizedBox(height: 5),
+            const Text('Collection', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, color: fcInk1, height: 1.1)),
+            const SizedBox(height: 6),
+            const Text('Search a student, record payment across one or more assignments, and issue a receipt.', style: TextStyle(fontSize: 14, color: fcInk3)),
+          ],
+        ),
       ),
     );
   }

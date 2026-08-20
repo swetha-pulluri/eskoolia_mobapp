@@ -141,56 +141,69 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 16,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'FEES COMMAND CENTER',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6D4AFF)),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Home',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF0F1222), height: 1.1),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Daily fee operations, live payment updates, and priority queue for the finance desk.',
-              style: TextStyle(fontSize: 14, color: Color(0xFF9197AE), height: 1.5),
-            ),
-          ],
-        ),
-        Container(
-          height: 40,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: const [BoxShadow(color: Color(0x476D4AFF), blurRadius: 8, offset: Offset(0, 2))],
+    // Its own card — same white/gray-bordered style already used by every
+    // other section on this page (KPI cards, Task Queue, Live Payment Feed,
+    // Audit Trail) and by Admin's own equivalent header — instead of
+    // floating text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFECECF2)),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'FEES COMMAND CENTER',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6D4AFF)),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Home',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF0F1222), height: 1.1),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Daily fee operations, live payment updates, and priority queue for the finance desk.',
+                style: TextStyle(fontSize: 14, color: Color(0xFF9197AE), height: 1.5),
+              ),
+            ],
           ),
-          child: Material(
-            color: const Color(0xFF6D4AFF),
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              onTap: onRefresh,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Center(
-                  child: Text(
-                    'Refresh Payment Feed',
-                    style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.white),
+              boxShadow: const [BoxShadow(color: Color(0x476D4AFF), blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: Material(
+              color: const Color(0xFF6D4AFF),
+              borderRadius: BorderRadius.circular(8),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: onRefresh,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Center(
+                    child: Text(
+                      'Refresh Payment Feed',
+                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

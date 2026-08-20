@@ -1119,4 +1119,51 @@ Developer: Archana
 - No backend changes; no web frontend modifications.
 - All work performed only inside `eskoolia_mobapp`.
 - Nothing committed or pushed.
-`
+
+---
+
+## 20-08-2026
+Developer: Archana
+**Branch:** Main
+
+### Work Done — Teacher Portal
+- Removed the horizontally-scrolling module-pill navigation strip from `TeacherTopBar` (`teacher_top_bar.dart`) per explicit request — top-level module browsing still lives on the bottom nav's "All Modules" tab, so nothing was lost, just no longer duplicated in the top bar.
+
+### Work Done — Fees module (Admin + Teacher): "everything in a card" sweep
+- Wrapped the previously bare, uncarded page header (title/eyebrow/subtitle/buttons) in a white/bordered card matching each page's own existing card style, across: `fees_home_page.dart`, `fee_configuration_page.dart`, `fee_assignment_page.dart`, `fee_collection_page.dart`, `fee_dues_reminders_page.dart`, `fee_year_end_page.dart`, and Teacher's own `teacher_fees_home_page.dart` (a separate header from Admin's, since Teacher shows "Refresh Payment Feed" instead of "Simulate Incoming Payment").
+- Fixed a real KPI-card bug (`fees_kpi_cards.dart`): a large amount like "1,79,000" was force-wrapping mid-digit once the card got too narrow — wrapped the value in a `FittedBox` (single line, scales down instead of breaking).
+- Fixed Audit Trail's per-row layout (`fees_audit_trail_card.dart`): the date sat in its own fixed-width column, squeezing the title/description down to a sliver and truncating titles like "Fee Assigned" into "Fee As"/"signed" — moved the date inline with the title instead.
+- Fixed a real overflow bug on Fee Assignment's "All/Unassigned/Assigned" tab-pill row (`fee_assignment_page.dart`) — was a plain `Row` with no wrap/scroll, unlike every other row on that page; wrapped it in a horizontal `SingleChildScrollView`.
+
+### Work Done — School Tenancy module (Admin, `/super-admin/...`)
+- "Everything in a card" sweep across all 5 tabs (`dashboard_tab.dart`, `schools_tab.dart`, `billing_tab.dart`, `policies_tab.dart`, `audit_tab.dart`) — same bare-header-not-in-a-card pattern as Fees, fixed the same way; also carded Policies' internal Security/Data Isolation/Billing/System category-tab bar, which used to stretch edge-to-edge with just a bottom border.
+- Added pull-to-refresh + `AlwaysScrollableScrollPhysics` to all 5 tabs to match Admin Home's own scroll behavior exactly (each page refreshes its own data provider(s)).
+- Reduced unnecessary vertical scrolling/spacing across the module (inter-section gaps, per-row padding in the Dashboard's breakdown lists, `add_school_page.dart`'s 10-section wizard, and the invoice/plan bottom sheets) — deliberately left the shared `core/widgets/kpi_card.dart` (`KpiCard`/`KpiCardGrid`, also used by HR/Admissions/Student/Attendance/Dashboard) untouched since this request was scoped to School Tenancy only.
+- Built a School-Tenancy-local `CompactKpiCard`/`CompactKpiCardGrid` (`widgets/compact_kpi_card.dart`) instead of editing the shared `KpiCard` — smaller padding/sparkline/value font, label wraps to 2 lines instead of truncating ("TOTAL SCHOO…" → full "TOTAL SCHOOLS") — swapped into Dashboard/Schools/Billing/Audit's KPI grids only.
+- Compacted each individual school card on the Schools tab (`_buildSchoolCard`): tighter padding/gaps, smaller avatar.
+- Fixed Billing's Subscription Plan cards: the grid was a rigid 2 columns regardless of screen width, squeezing each card to ~135px on a narrow phone and forcing extra text-wrap (the actual cause of their "large height") — made the column count responsive (1 column below 380px) and tightened the card's own internal padding/gaps.
+- Delegated a broader "card every uncarded Admin page header" sweep to a background agent, which found and fixed 13 more files beyond Fees/School Tenancy: Settings (`school_info_page.dart`, `leave_policy_page.dart`, `holiday_calendar_page.dart`), Reports (`student_attendance_report_page.dart`, `staff_attendance_report_page.dart`), School Tenancy's `edit_school_page.dart`, Administration's `student_categories_screen.dart`, Admissions' `admissions_analytics_page.dart`/`admissions_marketing_page.dart`, HR's `hr_setup_page.dart`/`staff_attendance_page.dart`/`staff_directory_page.dart`, and Student's `student_export_page.dart` — each matched to that same page's own existing card style, never a shared/invented one.
+
+### Work Done — Admin Home "Today's Pulse" attendance card timing out
+- Diagnosed a `DioException [receiveTimeout]` on `GET /api/v1/attendance/dashboard/today/` (30s) — root-caused to backend response time, not a Flutter bug; the existing "Failed to load attendance data" + Retry UI (`attendance_pulse_card.dart`) was already correct/matching the reference web app's own error handling.
+- Per explicit choice, raised the receive timeout for just this one call to 60s (`dashboard_remote_datasource.dart`), leaving the app-wide 30s default untouched for every other endpoint — a band-aid, not a fix for the underlying slow backend response.
+
+### Work Done — Pulled latest remote changes (Swetha's commit)
+- Ran `git status` first per explicit instruction; found the working tree was not clean: 2 files (`global_app_shell.dart`, `login_page.dart`) stuck as "unmerged" in the index from an old, already-content-resolved stash-pop conflict (no literal conflict markers remained, but git's index still had 3 unresolved stages recorded), plus 3 staged-but-uncommitted files and ~32 files with unstaged edits (this session's own work).
+- Ran a read-only `git fetch` first to confirm Swetha's incoming commit (`ae5f2021`, "update student module", 11 files) didn't overlap with any of the day's in-progress files before touching anything.
+- With explicit user approval, marked the 2 unmerged files resolved (`git add`, no commit) and pulled — clean fast-forward, nothing committed/pushed/stashed/reset, all uncommitted work preserved.
+- Ran a full-project `flutter analyze` afterward: 74 pre-existing info-level lints (naming style, `avoid_print`, deprecated Radio API, web-only imports), zero errors, none related to the pulled commit or this session's edits.
+
+### Work Done — Splash screen "sometimes shows a flat box instead of letter-by-letter" (`splash_page.dart`)
+- First pass: raised the chroma-key `compute()` timeout from 3s to 8s, since it was racing the splash's own 3-second floor and occasionally abandoning a chroma-key pass that would have succeeded moments later.
+- Root-cause pass: identified `img.encodePng()` (re-compressing the ~6.3MB pixel buffer via zlib DEFLATE, just to hand it back to the main isolate) as the actual dominant and most *variable* cost — rewrote the pipeline to return raw RGBA pixels instead (no re-encode) and decode them straight into a `ui.Image` via `ui.decodeImageFromPixels`, rendering through `RawImage` instead of `Image.memory` on both the success and raw-fallback paths.
+- User reports the flat "box" fallback still appearing after a full rebuild — **not yet resolved as of this entry**. Currently gathering diagnostics (asked for the `[SplashPage]` debug-console line to confirm whether it's still a timeout/exception, since none of that rewrite's correctness could be verified without device/console access in this environment) and considering reverting to the proven `Image.memory` path with a faster/uncompressed PNG encode instead, rather than a second unverified rewrite. **Follow-up needed.**
+
+### Testing / Verification
+- Ran `flutter analyze` after every change throughout today — clean each time except pre-existing, unrelated baseline lints (confirmed not introduced by these edits).
+- No emulator/device available in this environment — every UI fix was verified against the user's own live screenshots/reports; the splash screen fix specifically is still unconfirmed working end-to-end.
+
+### Remarks
+- No backend changes; no web frontend modifications. All work performed only inside `eskoolia_mobapp`.
+- Nothing committed or pushed today, aside from the read-only `git fetch`/fast-forward `git pull` of Swetha's already-pushed commit (no new commits created locally).
+- Splash screen "box" issue carries over to the next session as an open item.

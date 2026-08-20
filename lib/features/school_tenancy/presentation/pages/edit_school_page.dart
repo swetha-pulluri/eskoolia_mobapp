@@ -216,31 +216,49 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
                           style: TextButton.styleFrom(foregroundColor: AppColors.textTertiary, padding: EdgeInsets.zero),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'SCHOOL TENANCY · EDIT',
-                          style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1),
+                        // Own card — same white/gray-bordered style already
+                        // used by every `_section` below — instead of
+                        // floating text directly on the page background.
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.bgPrimary,
+                            border: Border.all(color: AppColors.borderPrimary),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'SCHOOL TENANCY · EDIT',
+                                style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1),
+                              ),
+                              const SizedBox(height: 4),
+                              Text('Edit School', style: AppTextStyles.pageTitle.copyWith(fontSize: 22)),
+                              const SizedBox(height: 4),
+                              Text(widget.tenantId, style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11.5)),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: _saving ? null : _back,
+                                    child: const Text('Cancel'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _saving ? null : _save,
+                                    icon: const Icon(Icons.save_outlined, size: 14),
+                                    label: Text(_saving ? 'Saving…' : 'Save changes'),
+                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryPurple, foregroundColor: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text('Edit School', style: AppTextStyles.pageTitle.copyWith(fontSize: 22)),
-                        const SizedBox(height: 4),
-                        Text(widget.tenantId, style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11.5)),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            OutlinedButton(
-                              onPressed: _saving ? null : _back,
-                              child: const Text('Cancel'),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _saving ? null : _save,
-                              icon: const Icon(Icons.save_outlined, size: 14),
-                              label: Text(_saving ? 'Saving…' : 'Save changes'),
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryPurple, foregroundColor: Colors.white),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
 
                         _section('01', 'Basic identity', [
                           _field('School name', required: true, child: _textField(_nameController, 'e.g. Delhi Public School')),

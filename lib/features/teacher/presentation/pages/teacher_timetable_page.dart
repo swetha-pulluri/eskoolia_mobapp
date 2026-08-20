@@ -48,26 +48,39 @@ class TeacherTimetablePage extends ConsumerWidget {
   }
 
   Widget _pageHeader(String weekOf) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'TEACHER PORTAL · TIMETABLE',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
-        ),
-        const SizedBox(height: 6),
-        RichText(
-          text: const TextSpan(
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink1),
-            children: [
-              TextSpan(text: 'My '),
-              TextSpan(text: 'Timetable', style: TextStyle(fontStyle: FontStyle.italic, color: AppColors.brandPurple)),
-            ],
+    // Now its own card — same white/bordered/shadowed style already used
+    // by the KPI row and the grid/list below it — instead of floating
+    // text directly on the page background, per explicit request.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: AppColors.ink1.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TEACHER PORTAL · TIMETABLE',
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text('Week of $weekOf · Mon–Sat', style: const TextStyle(fontSize: 12, color: AppColors.ink2)),
-      ],
+          const SizedBox(height: 6),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink1),
+              children: [
+                TextSpan(text: 'My '),
+                TextSpan(text: 'Timetable', style: TextStyle(fontStyle: FontStyle.italic, color: AppColors.brandPurple)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text('Week of $weekOf · Mon–Sat', style: const TextStyle(fontSize: 12, color: AppColors.ink2)),
+        ],
+      ),
     );
   }
 

@@ -66,10 +66,20 @@ const Color _glassGold = Color(0xFFE8C777);
 /// pattern already used for photo compression elsewhere in this app), since
 /// per-pixel work over a 1254×1254 image is real work — done here as a tight
 /// loop over the raw RGBA byte buffer (not the `image` package's per-pixel
-/// `Pixel` object iterator, which allocates/dispatches per pixel and was
-/// slow enough to occasionally miss the splash's own timeout, silently
-/// falling back to the non-transparent logo and its letter-cascade-breaking
-/// flat background).
+/// `Pixel` object iterator, which allocates/dispatches per pixel).
+///
+/// `encodePng(..., level: 0, filter: PngFilter.none)` — the package's own
+/// default (`level: 6`, Paeth filtering) runs real zlib DEFLATE compression
+/// plus per-scanline filtering over the full ~6.3MB buffer, both for
+/// nothing: this PNG is never written to disk or sent anywhere, it's handed
+/// straight back to the main isolate and immediately decoded again by
+/// `Image.memory` below. `level: 0`/`PngFilter.none` skip that compression
+/// and filtering work entirely — the output is larger, which doesn't matter
+/// for a value that only ever exists in memory for a few milliseconds — and
+/// this was the actual, most *variable* cost in the whole function (it
+/// swings a lot with device load, unlike the cheap per-pixel arithmetic
+/// above), so this is the real fix for the splash intermittently missing
+/// its own timeout and falling back to the flat, non-transparent logo.
 Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
   final decoded = img.decodeImage(sourceBytes);
   if (decoded == null) return sourceBytes;
@@ -92,7 +102,7 @@ Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
     numChannels: 4,
     order: img.ChannelOrder.rgba,
   );
-  return Uint8List.fromList(img.encodePng(result));
+  return img.encodePng(result, level: 0, filter: img.PngFilter.none);
 }
 
 /// App entry splash screen — the very first thing shown on cold start,
@@ -146,10 +156,11 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // ~4.6s for the mascot + letter cascade — slower and more clearly
-    // sequential than before, so each letter visibly finishes settling
-    // in before the next one noticeably begins.
-    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 4600));
+    // ~2.2s for the mascot + letter cascade — compressed (from 4.6s) to fit
+    // the new 3-second total splash duration, while keeping the same
+    // relative choreography (all the Interval fractions below scale
+    // automatically with this duration).
+    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
     // Fade only — deliberately no scale or slide here. The mascot's glasses
     // are the same pixels as the wordmark's two "o"s, so the mascot box and
     // the letter boxes share a boundary right through that shape. Any
@@ -182,7 +193,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _revealController, curve: const Interval(0.0, 0.4, curve: Curves.easeOutCubic)),
     );
 
-    _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _sweep = CurvedAnimation(parent: _sweepController, curve: Curves.easeInOut);
 
     // Navigation waits on BOTH the hard floor timer AND the full splash
@@ -194,7 +205,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // controller could already be well past several letters' reveal windows
     // by the time there's anything to paint, so the first visible frame
     // would already show most letters "done" instead of a clean cascade.
-    final floor = Future<void>.delayed(const Duration(milliseconds: 6200));
+    // 3s total, per explicit request (down from ~6.2s).
+    final floor = Future<void>.delayed(const Duration(milliseconds: 3000));
     final sequenceDone = _runSplashSequence();
     Future.wait([floor, sequenceDone]).then((_) {
       if (!mounted || _navigated) return;
@@ -225,9 +237,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
         // the raw (non-keyed) asset bytes rather than leaving the logo
         // invisible — still shows the logo, just with its flat background,
         // if the chroma-key pass can't complete.
+        //
+        // The real fix for the intermittent "sometimes a box, sometimes
+        // letter-by-letter" behavior lives in `_chromaKeyLogoBytes` itself
+        // (using `level: 0`/no filtering when re-encoding, instead of the
+        // package's default zlib-compressed encode, which was the dominant
+        // and most variable cost) — this 8s ceiling is just a generous
+        // backstop for a genuinely hung/very-slow device, not the primary fix.
         final Future<Uint8List?> computeFuture = compute(_chromaKeyLogoBytes, bytes);
         transparent = await computeFuture.timeout(
-          const Duration(seconds: 3),
+          const Duration(seconds: 8),
           onTimeout: () {
             debugPrint('[SplashPage] chroma-key timed out, showing raw logo instead');
             return null;

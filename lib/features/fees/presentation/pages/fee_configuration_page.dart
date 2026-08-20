@@ -8,6 +8,7 @@ import '../widgets/fee_config_help_modal.dart';
 import '../widgets/fee_groups_tab.dart';
 import '../widgets/fee_schedules_tab.dart';
 import '../widgets/fee_types_tab.dart';
+import '../widgets/fee_config_styles.dart';
 import '../widgets/fees_layout.dart';
 import '../widgets/late_fee_rules_tab.dart';
 
@@ -116,43 +117,48 @@ class _FeeConfigurationPageState extends ConsumerState<FeeConfigurationPage> {
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 16,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('CONFIGURABLE FEE ENGINE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6D4AFF))),
-            SizedBox(height: 6),
-            Text('Fee Configuration', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF0F1222), height: 1.1)),
-            SizedBox(height: 8),
-            Text(
-              'Create groups, fee types, schedules, concessions, and late fee rules without hardcoded school assumptions.',
-              style: TextStyle(fontSize: 14, color: Color(0xFF9197AE), height: 1.5),
-            ),
-          ],
-        ),
-        SizedBox(
-          height: 40,
-          child: Material(
-            color: const Color(0xFF6D4AFF),
-            borderRadius: BorderRadius.circular(9),
-            child: InkWell(
+    // Its own card — same white/gray-bordered style already used by every
+    // tab below it (via `FeeConfigCard`) and by the Fees Home header —
+    // instead of floating text directly on the page background.
+    return FeeConfigCard(
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text('CONFIGURABLE FEE ENGINE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6D4AFF))),
+              SizedBox(height: 6),
+              Text('Fee Configuration', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: Color(0xFF0F1222), height: 1.1)),
+              SizedBox(height: 8),
+              Text(
+                'Create groups, fee types, schedules, concessions, and late fee rules without hardcoded school assumptions.',
+                style: TextStyle(fontSize: 14, color: Color(0xFF9197AE), height: 1.5),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 40,
+            child: Material(
+              color: const Color(0xFF6D4AFF),
               borderRadius: BorderRadius.circular(9),
-              onTap: () => _showToast('Configuration saved successfully.'),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Center(
-                  child: Text('Save Configuration', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.white)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(9),
+                onTap: () => _showToast('Configuration saved successfully.'),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Center(
+                    child: Text('Save Configuration', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Colors.white)),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

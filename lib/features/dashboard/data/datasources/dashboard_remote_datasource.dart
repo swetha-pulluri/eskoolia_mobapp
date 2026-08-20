@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../data/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
@@ -33,7 +34,15 @@ class DashboardRemoteDataSource {
   // Web frontend uses localStorage only. No backend API call needed.
 
   Future<AttendancePulseEntity> getAttendancePulse() async {
-    final response = await _dioClient.get(ApiConstants.attendanceDashboardToday);
+    // This endpoint has been observed timing out past the app-wide 30s
+    // receive timeout on a slow backend response (a server-side performance
+    // issue, not a client bug) — a longer timeout just for this call gives
+    // a genuinely-slow-but-eventually-successful response a chance to land,
+    // without loosening the 30s timeout every other endpoint still relies on.
+    final response = await _dioClient.get(
+      ApiConstants.attendanceDashboardToday,
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    );
     return AttendancePulseEntity.fromJson(response.data as Map<String, dynamic>);
   }
 

@@ -390,57 +390,65 @@ class _TeacherAttendancePageState extends ConsumerState<TeacherAttendancePage> {
   }
 
   Widget _header(List<TeacherClassOptionEntity> allClasses, TeacherClassOptionEntity selectedClass, String selectedDate) {
+    // Now its own card — same white/bordered style already used by the
+    // class/roster card below it — instead of floating text directly on
+    // the page background, per explicit request.
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: const TextSpan(
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                    children: [
-                      TextSpan(text: 'Student '),
-                      TextSpan(text: 'Attendance', style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: Color(0xFF6C3CE1))),
-                    ],
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE6E6EC)), borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                      children: [
+                        TextSpan(text: 'Student '),
+                        TextSpan(text: 'Attendance', style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: Color(0xFF6C3CE1))),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                const Text('Track and manage daily student attendance', style: TextStyle(fontSize: 13, color: Color(0xFF6B6B80))),
-              ],
-            ),
-          ),
-          if (allClasses.length > 1)
-            Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE6E6EC)), borderRadius: BorderRadius.circular(8)),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: selectedClass.key,
-                  isDense: true,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
-                  items: allClasses
-                      .map((c) => DropdownMenuItem(
-                            value: c.key,
-                            child: Text('${c.className} – Section ${c.sectionName}${c.isClassTeacher ? '' : ' (View only)'}'),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    final found = allClasses.where((c) => c.key == value).toList();
-                    if (found.isEmpty) return;
-                    ref.read(teacherAttendanceSelectedClassProvider.notifier).state = found.first;
-                    ref.read(teacherAttendanceSelectedIdsProvider.notifier).state = {};
-                    ref.read(teacherAttendanceRosterProvider.notifier).clear();
-                    _loadFor(found.first, selectedDate);
-                  },
-                ),
+                  const SizedBox(height: 2),
+                  const Text('Track and manage daily student attendance', style: TextStyle(fontSize: 13, color: Color(0xFF6B6B80))),
+                ],
               ),
             ),
-        ],
+            if (allClasses.length > 1)
+              Container(
+                height: 36,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE6E6EC)), borderRadius: BorderRadius.circular(8)),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedClass.key,
+                    isDense: true,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1A1A2E)),
+                    items: allClasses
+                        .map((c) => DropdownMenuItem(
+                              value: c.key,
+                              child: Text('${c.className} – Section ${c.sectionName}${c.isClassTeacher ? '' : ' (View only)'}'),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      final found = allClasses.where((c) => c.key == value).toList();
+                      if (found.isEmpty) return;
+                      ref.read(teacherAttendanceSelectedClassProvider.notifier).state = found.first;
+                      ref.read(teacherAttendanceSelectedIdsProvider.notifier).state = {};
+                      ref.read(teacherAttendanceRosterProvider.notifier).clear();
+                      _loadFor(found.first, selectedDate);
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

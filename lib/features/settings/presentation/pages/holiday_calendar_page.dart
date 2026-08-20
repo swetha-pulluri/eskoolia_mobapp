@@ -61,43 +61,52 @@ class HolidayCalendarPage extends ConsumerWidget {
     // calendar" pill sits on its own line below instead of squeezing the
     // (fairly long) subtitle into a narrower side-column — same fix as
     // Leave Policy's header.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text('Staff Holiday ', style: AppTextStyles.pageTitle),
-            Text('Calendar', style: AppTextStyles.pageTitleAccent),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'Shares one calendar with Academics > Foundation — a holiday added in either place shows '
-          'up in both, blocks exam scheduling, appears on the parent portal, and auto-marks '
-          'attendance on that date. Exclude school-wide holidays not applicable to staff, or add '
-          'staff-only holidays below.',
-          style: AppTextStyles.pageSubtitle,
-        ),
-        if (!state.loading && state.staffCalendar.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(999)),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.auto_awesome, size: 12, color: AppColors.purpleAccent),
-                const SizedBox(width: 6),
-                Text(
-                  '${state.staffCalendar.length} in staff calendar',
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.purpleAccent),
-                ),
-              ],
-            ),
+    //
+    // Own card — same white/gray-bordered style already used by every
+    // other section on this page (the school-wide/staff-only/preview
+    // `SettingsCard`s below) — instead of floating text directly on the
+    // page background.
+    return SettingsCard(
+      margin: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('Staff Holiday ', style: AppTextStyles.pageTitle),
+              Text('Calendar', style: AppTextStyles.pageTitleAccent),
+            ],
           ),
+          const SizedBox(height: 10),
+          Text(
+            'Shares one calendar with Academics > Foundation — a holiday added in either place shows '
+            'up in both, blocks exam scheduling, appears on the parent portal, and auto-marks '
+            'attendance on that date. Exclude school-wide holidays not applicable to staff, or add '
+            'staff-only holidays below.',
+            style: AppTextStyles.pageSubtitle,
+          ),
+          if (!state.loading && state.staffCalendar.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(color: AppColors.purpleTint, borderRadius: BorderRadius.circular(999)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.auto_awesome, size: 12, color: AppColors.purpleAccent),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${state.staffCalendar.length} in staff calendar',
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.purpleAccent),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 

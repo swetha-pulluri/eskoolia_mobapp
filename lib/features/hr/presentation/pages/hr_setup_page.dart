@@ -147,48 +147,60 @@ class _HrSetupPageState extends ConsumerState<HrSetupPage> {
     // top-level Wrap (bounded by the page's Column, same as the pager/
     // step-wizard fixes elsewhere in this file) lets the button group drop
     // to its own line instead of overflowing.
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.start,
-      spacing: 16,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('HR CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
-            const SizedBox(height: 2),
-            RichText(
-              text: const TextSpan(
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: HrColors.ink),
-                children: [TextSpan(text: 'Staff '), TextSpan(text: 'setup', style: TextStyle(color: HrColors.brand, fontWeight: FontWeight.w400))],
+    // Own card — same white/gray-bordered style already used by every
+    // `HrKpiCard` below — instead of floating text directly on the page
+    // background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: HrColors.line),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
+        spacing: 16,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('HR CONFIGURATION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Color(0xFF94A3B8))),
+              const SizedBox(height: 2),
+              RichText(
+                text: const TextSpan(
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: HrColors.ink),
+                  children: [TextSpan(text: 'Staff '), TextSpan(text: 'setup', style: TextStyle(color: HrColors.brand, fontWeight: FontWeight.w400))],
+                ),
               ),
+              const SizedBox(height: 4),
+              const Text('Define your organisation structure — departments and designations.', style: TextStyle(fontSize: 13, color: HrColors.muted)),
+            ],
+          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(
+              onPressed: () => showHrToast(context, 'Import from CSV — available in full build', type: 'info'),
+              icon: const Icon(Icons.upload_outlined, size: 15),
+              label: const Text('Import'),
+              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF475569), side: const BorderSide(color: Color(0xFFE2E8F0))),
             ),
-            const SizedBox(height: 4),
-            const Text('Define your organisation structure — departments and designations.', style: TextStyle(fontSize: 13, color: HrColors.muted)),
-          ],
-        ),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OutlinedButton.icon(
-            onPressed: () => showHrToast(context, 'Import from CSV — available in full build', type: 'info'),
-            icon: const Icon(Icons.upload_outlined, size: 15),
-            label: const Text('Import'),
-            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF475569), side: const BorderSide(color: Color(0xFFE2E8F0))),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              setState(() {
-                _showAddDeptForm = true;
-                _editDept = null;
-              });
-              _scrollToForm(_deptFormKey);
-            },
-            icon: const Icon(Icons.add, size: 15),
-            label: const Text('Add Department'),
-            style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
-          ),
-        ]),
-      ],
+            FilledButton.icon(
+              onPressed: () {
+                setState(() {
+                  _showAddDeptForm = true;
+                  _editDept = null;
+                });
+                _scrollToForm(_deptFormKey);
+              },
+              icon: const Icon(Icons.add, size: 15),
+              label: const Text('Add Department'),
+              style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
+            ),
+          ]),
+        ],
+      ),
     );
   }
 

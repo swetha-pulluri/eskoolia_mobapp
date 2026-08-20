@@ -230,24 +230,32 @@ class _FeesDuesRemindersPageState extends ConsumerState<FeesDuesRemindersPage> {
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.start,
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('COLLECTIONS FOLLOW-UP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fdPurple)),
-            SizedBox(height: 5),
-            Text('Dues & Reminders', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: fdInk1, height: 1.1)),
-            SizedBox(height: 6),
-            Text('Escalation tiers, class-wise due lists, and a detailed interaction log for each student.', style: TextStyle(fontSize: 14, color: fdInk3)),
-          ],
-        ),
-        Padding(padding: const EdgeInsets.only(top: 8), child: FdOutlineButton(label: 'Export CSV', onPressed: _exportCsv)),
-      ],
+    // Its own card — same white/gray-bordered style already used by the
+    // stats bar, Late Fee Calculator Preview, and every class card below it
+    // — instead of floating text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: fdBorder), borderRadius: BorderRadius.circular(12)),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.start,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text('COLLECTIONS FOLLOW-UP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: fdPurple)),
+              SizedBox(height: 5),
+              Text('Dues & Reminders', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: fdInk1, height: 1.1)),
+              SizedBox(height: 6),
+              Text('Escalation tiers, class-wise due lists, and a detailed interaction log for each student.', style: TextStyle(fontSize: 14, color: fdInk3)),
+            ],
+          ),
+          Padding(padding: const EdgeInsets.only(top: 8), child: FdOutlineButton(label: 'Export CSV', onPressed: _exportCsv)),
+        ],
+      ),
     );
   }
 

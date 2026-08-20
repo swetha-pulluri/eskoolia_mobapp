@@ -17,14 +17,39 @@ class _CategoryMeta {
   final IconData icon;
   final Color color;
 
-  const _CategoryMeta({required this.label, required this.description, required this.icon, required this.color});
+  const _CategoryMeta({
+    required this.label,
+    required this.description,
+    required this.icon,
+    required this.color,
+  });
 }
 
 const _kCategoryMeta = {
-  'security': _CategoryMeta(label: 'Security', description: 'Authentication, session & access controls', icon: Icons.shield_outlined, color: Color(0xFFDC2626)),
-  'data_isolation': _CategoryMeta(label: 'Data Isolation', description: 'Tenancy boundaries & audit retention', icon: Icons.storage_outlined, color: Color(0xFF0369A1)),
-  'billing': _CategoryMeta(label: 'Billing', description: 'GST rates & invoice payment terms', icon: Icons.bolt_outlined, color: Color(0xFF6D28D9)),
-  'system': _CategoryMeta(label: 'System', description: 'Infrastructure, backups & tenancy switches', icon: Icons.settings_outlined, color: Color(0xFF059669)),
+  'security': _CategoryMeta(
+    label: 'Security',
+    description: 'Authentication, session & access controls',
+    icon: Icons.shield_outlined,
+    color: Color(0xFFDC2626),
+  ),
+  'data_isolation': _CategoryMeta(
+    label: 'Data Isolation',
+    description: 'Tenancy boundaries & audit retention',
+    icon: Icons.storage_outlined,
+    color: Color(0xFF0369A1),
+  ),
+  'billing': _CategoryMeta(
+    label: 'Billing',
+    description: 'GST rates & invoice payment terms',
+    icon: Icons.bolt_outlined,
+    color: Color(0xFF6D28D9),
+  ),
+  'system': _CategoryMeta(
+    label: 'System',
+    description: 'Infrastructure, backups & tenancy switches',
+    icon: Icons.settings_outlined,
+    color: Color(0xFF059669),
+  ),
 };
 
 /// Super Admin Policies Page
@@ -33,10 +58,12 @@ class SuperAdminPoliciesPage extends ConsumerStatefulWidget {
   const SuperAdminPoliciesPage({super.key});
 
   @override
-  ConsumerState<SuperAdminPoliciesPage> createState() => _SuperAdminPoliciesPageState();
+  ConsumerState<SuperAdminPoliciesPage> createState() =>
+      _SuperAdminPoliciesPageState();
 }
 
-class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage> with SingleTickerProviderStateMixin {
+class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Map<String, bool> _draftToggles = {};
   final Map<String, num> _draftNumbers = {};
@@ -53,11 +80,15 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       final bytes = await repository.exportPolicies(format);
       await saveBytesForDownload(bytes: bytes, filename: 'policies.$format');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Policies exported.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Policies exported.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _exportingFormat = false);
@@ -74,7 +105,8 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     // to render/animate its own indicator; it doesn't require a
     // `TabBarView` to function.
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging || _tabController.index != _tabController.previousIndex) {
+      if (_tabController.indexIsChanging ||
+          _tabController.index != _tabController.previousIndex) {
         setState(() {});
       }
     });
@@ -93,7 +125,10 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
   /// on every rebuild (the old code did `TextEditingController(text: ...)`
   /// inline in `build()`, which reset the cursor/selection on every keystroke).
   TextEditingController _controllerFor(String key, num initialValue) {
-    return _numberControllers.putIfAbsent(key, () => TextEditingController(text: initialValue.toString()));
+    return _numberControllers.putIfAbsent(
+      key,
+      () => TextEditingController(text: initialValue.toString()),
+    );
   }
 
   Widget _buildCategoryTab(IconData icon, String label, Color color) {
@@ -107,7 +142,13 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Flexible(child: Text(label, style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -137,15 +178,13 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
           // Key and badges
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  key,
-                  style: AppTextStyles.policyKey,
-                ),
-              ),
+              Expanded(child: Text(key, style: AppTextStyles.policyKey)),
               if (!isOverridable)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.bgTertiary,
                     border: Border.all(color: AppColors.borderPrimary),
@@ -159,7 +198,10 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
               if (isDirty) const SizedBox(width: 6),
               if (isDirty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.purpleTint,
                     border: Border.all(color: AppColors.purpleSoft),
@@ -167,7 +209,9 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                   ),
                   child: Text(
                     'unsaved',
-                    style: AppTextStyles.chipLabel(color: AppColors.purpleDeep).copyWith(fontSize: 9),
+                    style: AppTextStyles.chipLabel(
+                      color: AppColors.purpleDeep,
+                    ).copyWith(fontSize: 9),
                   ),
                 ),
             ],
@@ -177,7 +221,10 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
           // Description
           Text(
             description,
-            style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 12, height: 1.5),
+            style: AppTextStyles.sectionSubtitle.copyWith(
+              fontSize: 12,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -206,24 +253,35 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.borderPrimary),
+                        borderSide: const BorderSide(
+                          color: AppColors.borderPrimary,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.borderPrimary),
+                        borderSide: const BorderSide(
+                          color: AppColors.borderPrimary,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: AppColors.primaryPurple, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppColors.primaryPurple,
+                          width: 2,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       filled: true,
                       fillColor: AppColors.bgSecondary,
                     ),
                     controller: _controllerFor(key, (value as num)),
                     onChanged: (val) {
                       final parsed = num.tryParse(val);
-                      if (parsed != null) setState(() => _draftNumbers[key] = parsed);
+                      if (parsed != null)
+                        setState(() => _draftNumbers[key] = parsed);
                     },
                   ),
                 ),
@@ -290,198 +348,310 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(
-          child: SingleChildScrollView(
-          child: Column(
-          children: [
-            // PAGE HEADER
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          // Pull-to-refresh + `AlwaysScrollableScrollPhysics` — matches
+          // Admin Home's own scroll behavior exactly.
+          child: RefreshIndicator(
+            onRefresh: () async => ref.invalidate(policiesProvider),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      Text('Policies', style: AppTextStyles.pageTitle),
-                      Text('& Settings', style: AppTextStyles.pageTitleAccent),
-                    ],
+                  // PAGE HEADER — its own card, same white/bordered style as every
+                  // section below it, instead of floating text directly on the
+                  // page background.
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            Text('Policies', style: AppTextStyles.pageTitle),
+                            Text(
+                              '& Settings',
+                              style: AppTextStyles.pageTitleAccent,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Platform-wide configuration and feature controls',
+                          style: AppTextStyles.pageSubtitle,
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _showPlatformSettings(context),
+                              icon: const Icon(Icons.tune, size: 14),
+                              label: const Text('Platform Settings'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _showQuickActions(context, [
+                                ...policiesState.security,
+                                ...policiesState.dataIsolation,
+                                ...policiesState.billing,
+                                ...policiesState.system,
+                              ]),
+                              icon: const Icon(Icons.lock_outline, size: 14),
+                              label: const Text('Quick Actions'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: refreshing
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _draftToggles.clear();
+                                        _draftNumbers.clear();
+                                        for (final controller
+                                            in _numberControllers.values) {
+                                          controller.dispose();
+                                        }
+                                        _numberControllers.clear();
+                                      });
+                                      ref.invalidate(policiesProvider);
+                                    },
+                              icon: refreshing
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.refresh, size: 14),
+                              label: const Text('Refresh'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _exportingFormat
+                                  ? null
+                                  : () => _handleExportPolicies('json'),
+                              icon: const Icon(Icons.download, size: 14),
+                              label: const Text('JSON'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _exportingFormat
+                                  ? null
+                                  : () => _handleExportPolicies('yaml'),
+                              icon: const Icon(Icons.download, size: 14),
+                              label: const Text('YAML'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Platform-wide configuration and feature controls',
-                    style: AppTextStyles.pageSubtitle,
+
+                  // CATEGORY TABS + TAB CONTENT — the Security/Data Isolation/
+                  // Billing/System sub-tabs used to stretch edge-to-edge with just
+                  // a bottom border, unlike every other section on this page,
+                  // which sits in a bordered card with the page's own 20px
+                  // horizontal margin. Now wrapped in that same card style, with
+                  // the tab bar and its active category's content sharing one card
+                  // (a top divider separates them) instead of floating loose.
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        TabBar(
+                          controller: _tabController,
+                          labelColor: AppColors.primaryPurple,
+                          unselectedLabelColor: AppColors.textSecondary,
+                          indicatorColor: AppColors.primaryPurple,
+                          indicatorWeight: 2,
+                          tabs: [
+                            _buildCategoryTab(
+                              Icons.shield_outlined,
+                              'Security',
+                              const Color(0xFFDC2626),
+                            ),
+                            _buildCategoryTab(
+                              Icons.storage_outlined,
+                              'Data Isolation',
+                              const Color(0xFF0369A1),
+                            ),
+                            _buildCategoryTab(
+                              Icons.bolt_outlined,
+                              'Billing',
+                              const Color(0xFF6D28D9),
+                            ),
+                            _buildCategoryTab(
+                              Icons.settings_outlined,
+                              'System',
+                              const Color(0xFF059669),
+                            ),
+                          ],
+                        ),
+                        // TAB CONTENT — just the active category, scrolling as
+                        // part of the page instead of a separately-scrollable
+                        // `TabBarView` page.
+                        _buildCategoryContent(
+                          activeCategoryPolicies,
+                          activeCategoryMeta,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => _showPlatformSettings(context),
-                        icon: const Icon(Icons.tune, size: 14),
-                        label: const Text('Platform Settings'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.borderPrimary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: AppTextStyles.buttonSecondary,
+
+                  // SAVE BAR — matches web exactly (`policies/page.tsx:376-387`):
+                  // a pending-change count plus a single Save button. Web has no
+                  // separate Reset/Discard control in this bar.
+                  Builder(
+                    builder: (context) {
+                      final allPolicies = [
+                        ...policiesState.security,
+                        ...policiesState.dataIsolation,
+                        ...policiesState.billing,
+                        ...policiesState.system,
+                      ];
+                      final dirtyCount = allPolicies.where(_isDirty).length;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () => _showQuickActions(context, [
-                          ...policiesState.security,
-                          ...policiesState.dataIsolation,
-                          ...policiesState.billing,
-                          ...policiesState.system,
-                        ]),
-                        icon: const Icon(Icons.lock_outline, size: 14),
-                        label: const Text('Quick Actions'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.borderPrimary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: AppTextStyles.buttonSecondary,
+                        decoration: const BoxDecoration(
+                          color: AppColors.bgPrimary,
+                          border: Border(
+                            top: BorderSide(color: AppColors.borderPrimary),
+                          ),
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: refreshing
-                            ? null
-                            : () {
-                                setState(() {
-                                  _draftToggles.clear();
-                                  _draftNumbers.clear();
-                                  for (final controller in _numberControllers.values) {
-                                    controller.dispose();
-                                  }
-                                  _numberControllers.clear();
-                                });
-                                ref.invalidate(policiesProvider);
-                              },
-                        icon: refreshing
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.refresh, size: 14),
-                        label: const Text('Refresh'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.borderPrimary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: AppTextStyles.buttonSecondary,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // `Expanded`+ellipsis (not a bare `Text`) — at narrow
+                            // phone widths the unsaved-changes label and the Save
+                            // button together overflowed horizontally (reproduced
+                            // via widget test at 360px width).
+                            Expanded(
+                              child: Text(
+                                dirtyCount > 0
+                                    ? '$dirtyCount unsaved change${dirtyCount > 1 ? 's' : ''}'
+                                    : 'No pending changes',
+                                style: AppTextStyles.sectionSubtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              onPressed: (_saving || dirtyCount == 0)
+                                  ? null
+                                  : () => _handleSave(allPolicies),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryPurple,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: Text(_saving ? 'Saving…' : 'Save changes'),
+                            ),
+                          ],
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _exportingFormat ? null : () => _handleExportPolicies('json'),
-                        icon: const Icon(Icons.download, size: 14),
-                        label: const Text('JSON'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.borderPrimary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: AppTextStyles.buttonSecondary,
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _exportingFormat ? null : () => _handleExportPolicies('yaml'),
-                        icon: const Icon(Icons.download, size: 14),
-                        label: const Text('YAML'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.textPrimary,
-                          side: const BorderSide(color: AppColors.borderPrimary),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          textStyle: AppTextStyles.buttonSecondary,
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-
-            // CATEGORY TABS
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.bgPrimary,
-                border: Border(
-                  bottom: BorderSide(color: AppColors.borderPrimary),
-                ),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                labelColor: AppColors.primaryPurple,
-                unselectedLabelColor: AppColors.textSecondary,
-                indicatorColor: AppColors.primaryPurple,
-                indicatorWeight: 2,
-                tabs: [
-                  _buildCategoryTab(Icons.shield_outlined, 'Security', const Color(0xFFDC2626)),
-                  _buildCategoryTab(Icons.storage_outlined, 'Data Isolation', const Color(0xFF0369A1)),
-                  _buildCategoryTab(Icons.bolt_outlined, 'Billing', const Color(0xFF6D28D9)),
-                  _buildCategoryTab(Icons.settings_outlined, 'System', const Color(0xFF059669)),
-                ],
-              ),
-            ),
-
-            // TAB CONTENT — just the active category, scrolling as part of
-            // the page instead of a separately-scrollable `TabBarView` page.
-            _buildCategoryContent(activeCategoryPolicies, activeCategoryMeta),
-
-            // SAVE BAR — matches web exactly (`policies/page.tsx:376-387`):
-            // a pending-change count plus a single Save button. Web has no
-            // separate Reset/Discard control in this bar.
-            Builder(builder: (context) {
-              final allPolicies = [
-                ...policiesState.security,
-                ...policiesState.dataIsolation,
-                ...policiesState.billing,
-                ...policiesState.system,
-              ];
-              final dirtyCount = allPolicies.where(_isDirty).length;
-              return Container(
-                padding: const EdgeInsets.all(20),
-                decoration: const BoxDecoration(
-                  color: AppColors.bgPrimary,
-                  border: Border(top: BorderSide(color: AppColors.borderPrimary)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // `Expanded`+ellipsis (not a bare `Text`) — at narrow
-                    // phone widths the unsaved-changes label and the Save
-                    // button together overflowed horizontally (reproduced
-                    // via widget test at 360px width).
-                    Expanded(
-                      child: Text(
-                        dirtyCount > 0
-                            ? '$dirtyCount unsaved change${dirtyCount > 1 ? 's' : ''}'
-                            : 'No pending changes',
-                        style: AppTextStyles.sectionSubtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: (_saving || dirtyCount == 0) ? null : () => _handleSave(allPolicies),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryPurple,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                      child: Text(_saving ? 'Saving…' : 'Save changes'),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
           ),
         ),
-      ),
       ),
     );
   }
@@ -491,7 +661,8 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       return _draftToggles[policy.key] != policy.value;
     }
     if (_draftNumbers.containsKey(policy.key)) {
-      return _draftNumbers[policy.key]!.toDouble() != (policy.value as num).toDouble();
+      return _draftNumbers[policy.key]!.toDouble() !=
+          (policy.value as num).toDouble();
     }
     return false;
   }
@@ -500,7 +671,8 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     final updates = <String, dynamic>{};
     for (final policy in allPolicies) {
       if (_isDirty(policy)) {
-        updates[policy.key] = _draftToggles[policy.key] ?? _draftNumbers[policy.key];
+        updates[policy.key] =
+            _draftToggles[policy.key] ?? _draftNumbers[policy.key];
       }
     }
     if (updates.isEmpty) return;
@@ -526,7 +698,9 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Save failed — check your connection and try again.')),
+          const SnackBar(
+            content: Text('Save failed — check your connection and try again.'),
+          ),
         );
       }
     } finally {
@@ -557,69 +731,97 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.bgPrimary,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (sheetContext) {
-        return StatefulBuilder(builder: (sheetContext, setSheetState) {
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(children: [
-                      const Icon(Icons.lock_outline, size: 16, color: AppColors.textSecondary),
-                      const SizedBox(width: 8),
-                      Text('Quick Actions', style: AppTextStyles.sectionTitle.copyWith(fontSize: 15)),
-                    ]),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _quickActionButton(
-                  title: 'Reset to defaults',
-                  subtitle: 'Restore all policies to their default values',
-                  loading: resetting,
-                  onTap: () async {
-                    final confirmed = await _confirmResetDialog(sheetContext);
-                    if (confirmed != true) return;
-                    setSheetState(() => resetting = true);
-                    final result = await _handleResetToDefaults(allPolicies);
-                    setSheetState(() => resetting = false);
-                    if (sheetContext.mounted) Navigator.pop(sheetContext);
-                    if (mounted) {
-                      ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(content: Text(result)));
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-                _quickActionButton(
-                  title: 'Force MFA enrollment',
-                  subtitle: 'Send MFA setup emails to all admins',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(content: Text('Force MFA enrollment is not available — no backend support exists for this action yet.')),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                _quickActionButton(
-                  title: 'Flush all sessions',
-                  subtitle: 'Immediately invalidate all active user sessions',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    ScaffoldMessenger.of(this.context).showSnackBar(
-                      const SnackBar(content: Text('Flushing sessions is not available — no backend support exists for this action yet.')),
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        });
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Actions',
+                            style: AppTextStyles.sectionTitle.copyWith(
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(sheetContext),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _quickActionButton(
+                    title: 'Reset to defaults',
+                    subtitle: 'Restore all policies to their default values',
+                    loading: resetting,
+                    onTap: () async {
+                      final confirmed = await _confirmResetDialog(sheetContext);
+                      if (confirmed != true) return;
+                      setSheetState(() => resetting = true);
+                      final result = await _handleResetToDefaults(allPolicies);
+                      setSheetState(() => resetting = false);
+                      if (sheetContext.mounted) Navigator.pop(sheetContext);
+                      if (mounted) {
+                        ScaffoldMessenger.of(
+                          this.context,
+                        ).showSnackBar(SnackBar(content: Text(result)));
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _quickActionButton(
+                    title: 'Force MFA enrollment',
+                    subtitle: 'Send MFA setup emails to all admins',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Force MFA enrollment is not available — no backend support exists for this action yet.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  _quickActionButton(
+                    title: 'Flush all sessions',
+                    subtitle: 'Immediately invalidate all active user sessions',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(this.context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Flushing sessions is not available — no backend support exists for this action yet.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
       },
     );
   }
@@ -629,12 +831,20 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Reset all policies to defaults?'),
-        content: const Text('This restores every policy value to its platform default. This cannot be undone.'),
+        content: const Text(
+          'This restores every policy value to its platform default. This cannot be undone.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.dangerRed, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.dangerRed,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Reset'),
           ),
         ],
@@ -700,13 +910,24 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: AppTextStyles.policyKey.copyWith(fontSize: 12.5)),
+                  Text(
+                    title,
+                    style: AppTextStyles.policyKey.copyWith(fontSize: 12.5),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11)),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11),
+                  ),
                 ],
               ),
             ),
-            if (loading) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            if (loading)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
           ],
         ),
       ),
@@ -716,9 +937,12 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
   // No longer wraps itself in a `SingleChildScrollView` — the page above
   // is now the single scroll region; nesting a second vertical scroll view
   // with unbounded height inside it would throw a layout assertion.
-  Widget _buildCategoryContent(List<PolicyEntity> policies, _CategoryMeta meta) {
+  Widget _buildCategoryContent(
+    List<PolicyEntity> policies,
+    _CategoryMeta meta,
+  ) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -731,7 +955,10 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                 width: 36,
                 height: 36,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: meta.color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: meta.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Icon(meta.icon, size: 18, color: meta.color),
               ),
               const SizedBox(width: 12),
@@ -739,8 +966,19 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(meta.label, style: AppTextStyles.boardLabel.copyWith(fontSize: 14, fontWeight: FontWeight.w700)),
-                    Text(meta.description, style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5)),
+                    Text(
+                      meta.label,
+                      style: AppTextStyles.boardLabel.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      meta.description,
+                      style: AppTextStyles.sectionSubtitle.copyWith(
+                        fontSize: 11.5,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -755,17 +993,27 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.settings_outlined, size: 28, color: AppColors.textTertiary),
+                    const Icon(
+                      Icons.settings_outlined,
+                      size: 28,
+                      color: AppColors.textTertiary,
+                    ),
                     const SizedBox(height: 10),
-                    Text('No policies loaded', style: AppTextStyles.sectionSubtitle),
+                    Text(
+                      'No policies loaded',
+                      style: AppTextStyles.sectionSubtitle,
+                    ),
                   ],
                 ),
               ),
             )
           else
             ...policies.map<Widget>((policy) {
-              final isDirty = (_draftToggles.containsKey(policy.key) && _draftToggles[policy.key] != policy.value) ||
-                  (_draftNumbers.containsKey(policy.key) && _draftNumbers[policy.key] != policy.value);
+              final isDirty =
+                  (_draftToggles.containsKey(policy.key) &&
+                      _draftToggles[policy.key] != policy.value) ||
+                  (_draftNumbers.containsKey(policy.key) &&
+                      _draftNumbers[policy.key] != policy.value);
 
               return _buildPolicyRow(
                 key: policy.key,
@@ -791,7 +1039,9 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.bgPrimary,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (sheetContext) {
         return DraggableScrollableSheet(
           initialChildSize: 0.7,
@@ -799,55 +1049,80 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
           minChildSize: 0.3,
           expand: false,
           builder: (context, scrollController) {
-            return Consumer(builder: (context, ref, _) {
-              final settingsAsync = ref.watch(policySettingsProvider);
-              return SingleChildScrollView(
-                controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text('Platform Settings', style: AppTextStyles.sectionTitle.copyWith(fontSize: 15)),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.bgTertiary,
-                                border: Border.all(color: AppColors.borderPrimary),
-                                borderRadius: BorderRadius.circular(999),
+            return Consumer(
+              builder: (context, ref, _) {
+                final settingsAsync = ref.watch(policySettingsProvider);
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Platform Settings',
+                                style: AppTextStyles.sectionTitle.copyWith(
+                                  fontSize: 15,
+                                ),
                               ),
-                              child: Text('read-only', style: AppTextStyles.chipLabel().copyWith(fontSize: 9)),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bgTertiary,
+                                  border: Border.all(
+                                    color: AppColors.borderPrimary,
+                                  ),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'read-only',
+                                  style: AppTextStyles.chipLabel().copyWith(
+                                    fontSize: 9,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (settingsAsync.isLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (settingsAsync.hasError)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            'Failed to load platform settings.\n${settingsAsync.error}',
+                            style: AppTextStyles.sectionSubtitle,
+                          ),
+                        )
+                      else
+                        ...settingsAsync.value!.entries.map(
+                          (section) => _buildSettingSection(
+                            section.key,
+                            section.value as Map<String, dynamic>,
+                          ),
                         ),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (settingsAsync.isLoading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (settingsAsync.hasError)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Text(
-                          'Failed to load platform settings.\n${settingsAsync.error}',
-                          style: AppTextStyles.sectionSubtitle,
-                        ),
-                      )
-                    else
-                      ...settingsAsync.value!.entries.map((section) => _buildSettingSection(section.key, section.value as Map<String, dynamic>)),
-                  ],
-                ),
-              );
-            });
+                    ],
+                  ),
+                );
+              },
+            );
           },
         );
       },
@@ -868,7 +1143,11 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
           initiallyExpanded: true,
           title: Text(
             title.toUpperCase(),
-            style: AppTextStyles.sectionSubtitle.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.6, fontSize: 11),
+            style: AppTextStyles.sectionSubtitle.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+              fontSize: 11,
+            ),
           ),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           children: data.entries.map((entry) {
@@ -876,17 +1155,29 @@ class _SuperAdminPoliciesPageState extends ConsumerState<SuperAdminPoliciesPage>
             final valueColor = value == true
                 ? AppColors.successGreen
                 : value == false
-                    ? AppColors.dangerRed
-                    : AppColors.textPrimary;
+                ? AppColors.dangerRed
+                : AppColors.textPrimary;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(entry.key, style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 12)),
+                    child: Text(
+                      entry.key,
+                      style: AppTextStyles.sectionSubtitle.copyWith(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                  Text('$value', style: AppTextStyles.boardLabel.copyWith(fontSize: 12, color: valueColor)),
+                  Text(
+                    '$value',
+                    style: AppTextStyles.boardLabel.copyWith(
+                      fontSize: 12,
+                      color: valueColor,
+                    ),
+                  ),
                 ],
               ),
             );

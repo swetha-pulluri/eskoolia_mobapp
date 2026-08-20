@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/file_download_helper.dart';
-import '../../../../core/widgets/kpi_card.dart';
+import '../widgets/compact_kpi_card.dart';
 import '../../../../core/widgets/action_badge_widget.dart';
 import '../../domain/entities/audit_entity.dart';
 import '../providers/school_tenancy_provider.dart';
@@ -22,10 +22,19 @@ String _normalizeSeverity(String s) {
 
 /// Matches web's real `ACTION_OPTIONS` exactly (`audit/page.tsx:138-153`).
 const _kActionOptions = [
-  'auth.login', 'auth.impersonate', 'school.provision', 'school.archive',
-  'plan.upgrade', 'plan.downgrade', 'invoice.generated', 'invoice.overdue',
-  'api_key.rotate', 'policy.updated', 'backup.complete',
-  'migration.complete', 'migration.rollback',
+  'auth.login',
+  'auth.impersonate',
+  'school.provision',
+  'school.archive',
+  'plan.upgrade',
+  'plan.downgrade',
+  'invoice.generated',
+  'invoice.overdue',
+  'api_key.rotate',
+  'policy.updated',
+  'backup.complete',
+  'migration.complete',
+  'migration.rollback',
 ];
 
 /// Matches web's `fmtTs()` (`audit/page.tsx:66-73`) — split time/date, not
@@ -33,7 +42,10 @@ const _kActionOptions = [
 /// does (bold time, muted date below).
 (String time, String date) _fmtTimestamp(String iso) {
   final d = DateTime.parse(iso).toLocal();
-  return (DateFormat('HH:mm:ss').format(d), DateFormat('dd MMM yyyy').format(d));
+  return (
+    DateFormat('HH:mm:ss').format(d),
+    DateFormat('dd MMM yyyy').format(d),
+  );
 }
 
 /// Matches web's `SEV[key].dotCls` (`audit/page.tsx:14-18`) — the small
@@ -94,7 +106,8 @@ class SuperAdminAuditPage extends ConsumerStatefulWidget {
   const SuperAdminAuditPage({super.key});
 
   @override
-  ConsumerState<SuperAdminAuditPage> createState() => _SuperAdminAuditPageState();
+  ConsumerState<SuperAdminAuditPage> createState() =>
+      _SuperAdminAuditPageState();
 }
 
 class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
@@ -156,14 +169,19 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       );
       await saveBytesForDownload(
         bytes: Uint8List.fromList(bytes),
-        filename: 'eskoolia-audit-${DateTime.now().toIso8601String().split('T').first}.csv',
+        filename:
+            'eskoolia-audit-${DateTime.now().toIso8601String().split('T').first}.csv',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Audit log exported.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Audit log exported.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _exportBusy = false);
@@ -178,7 +196,11 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
     return '${diff.inDays}d ago';
   }
 
-  Future<void> _pickDate(BuildContext context, {required bool isFrom, required AuditFilters filters}) async {
+  Future<void> _pickDate(
+    BuildContext context, {
+    required bool isFrom,
+    required AuditFilters filters,
+  }) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -186,7 +208,8 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       lastDate: DateTime(2100),
     );
     if (picked == null) return;
-    final iso = '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    final iso =
+        '${picked.year.toString().padLeft(4, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
     if (isFrom) {
       _applyFilters(dateFrom: iso);
     } else {
@@ -224,7 +247,9 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
     final events = page.results;
     final refreshing = auditAsync.isLoading;
     final totalPages = (page.count / kAuditPageSize).ceil().clamp(1, 999999);
-    final pageStart = page.count == 0 ? 0 : (filters.page - 1) * kAuditPageSize + 1;
+    final pageStart = page.count == 0
+        ? 0
+        : (filters.page - 1) * kAuditPageSize + 1;
     final pageEnd = (filters.page * kAuditPageSize).clamp(0, page.count);
 
     // KPIs — matches web's `kpis` exactly (`audit/page.tsx:222-227`): Total
@@ -233,349 +258,587 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
     // events ("in loaded window" / "failed actions"), not the full filtered
     // result set — a real web quirk, not something to "fix" into a global
     // count here.
-    final criticalCount = events.where((e) => _normalizeSeverity(e.severity) == 'error').length;
+    final criticalCount = events
+        .where((e) => _normalizeSeverity(e.severity) == 'error')
+        .length;
     final uniqueActors = events.map((e) => e.actor).toSet().length;
     final last24h = events
-        .where((e) => DateTime.now().difference(DateTime.parse(e.timestamp)).inHours < 24)
+        .where(
+          (e) =>
+              DateTime.now().difference(DateTime.parse(e.timestamp)).inHours <
+              24,
+        )
         .length;
 
     return SchoolTenancyLayout(
       child: Container(
         color: AppColors.bgSecondary,
         child: SafeArea(
-          child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // PAGE HEADER
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          // Pull-to-refresh + `AlwaysScrollableScrollPhysics` — matches
+          // Admin Home's own scroll behavior exactly.
+          child: RefreshIndicator(
+            onRefresh: () async => ref.invalidate(auditEventsProvider),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // PAGE HEADER — its own card, same white/bordered style as
+                  // every section below it, instead of floating text directly
+                  // on the page background.
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            Text('Audit', style: AppTextStyles.pageTitle),
+                            Text('Log', style: AppTextStyles.pageTitleAccent),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Immutable record of all platform-level actions',
+                          style: AppTextStyles.pageSubtitle,
+                        ),
+                        const SizedBox(height: 16),
+                        // `Wrap` (not a bare `Row`) — at narrow phone widths or
+                        // larger text-scale settings, "Refresh" + "Exporting…"
+                        // together could exceed the available row width with
+                        // neither button able to shrink; matches the same
+                        // header-button convention already used elsewhere in
+                        // School Tenancy (Policies/Schools tabs).
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: refreshing
+                                  ? null
+                                  : () => ref.invalidate(auditEventsProvider),
+                              icon: refreshing
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.refresh, size: 14),
+                              label: const Text('Refresh'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: _exportBusy
+                                  ? null
+                                  : () => _handleExportCsv(filters),
+                              icon: _exportBusy
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.download, size: 14),
+                              label: Text(
+                                _exportBusy ? 'Exporting…' : 'Export CSV',
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                                side: const BorderSide(
+                                  color: AppColors.borderPrimary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                textStyle: AppTextStyles.buttonSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // KPI CARDS — `KpiCardGrid` (width-constrained, height-
+                  // intrinsic tiles), not a fixed-`childAspectRatio` `GridView`,
+                  // which forces every tile to a height derived only from
+                  // width/aspect-ratio math regardless of actual text content —
+                  // a real, already-diagnosed-elsewhere `RenderFlex overflowed
+                  // on the bottom` at narrow widths / larger text-scale
+                  // settings (see `KpiCardGrid`'s own doc comment;
+                  // Dashboard/Schools tabs already use this fix).
+                  CompactKpiCardGrid(
+                    spacing: 14,
+                    cards: [
+                      CompactKpiCard(
+                        label: 'Total Events',
+                        value: '${page.count}',
+                        icon: Icons.show_chart,
+                        sparklineData: const [
+                          4,
+                          7,
+                          5,
+                          9,
+                          6,
+                          11,
+                          8,
+                          10,
+                          9,
+                          13,
+                          10,
+                          12,
+                          11,
+                          14,
+                        ],
+                        sparklineColor: const Color(0xFF5836E0),
+                        trend: 'in loaded window',
+                        trendColor: AppColors.textTertiary,
+                        footnote: 'All events',
+                      ),
+                      CompactKpiCard(
+                        label: 'Critical / Error',
+                        value: '$criticalCount',
+                        icon: Icons.cancel_outlined,
+                        sparklineData: const [
+                          14,
+                          11,
+                          13,
+                          9,
+                          12,
+                          8,
+                          10,
+                          7,
+                          9,
+                          6,
+                          8,
+                          5,
+                          7,
+                          4,
+                        ],
+                        sparklineColor: const Color(0xFFE0463A),
+                        trend: 'failed actions',
+                        trendColor: AppColors.dangerRed,
+                        footnote: 'High severity',
+                      ),
+                      CompactKpiCard(
+                        label: 'Unique Actors',
+                        value: '$uniqueActors',
+                        icon: Icons.group_outlined,
+                        sparklineData: const [
+                          4,
+                          7,
+                          5,
+                          9,
+                          6,
+                          11,
+                          8,
+                          10,
+                          9,
+                          13,
+                          10,
+                          12,
+                          11,
+                          14,
+                        ],
+                        sparklineColor: const Color(0xFF0369A1),
+                        trend: 'distinct users',
+                        trendColor: AppColors.infoBlue,
+                        footnote: 'All actors',
+                      ),
+                      CompactKpiCard(
+                        label: 'Last 24 Hours',
+                        value: '$last24h',
+                        icon: Icons.access_time,
+                        sparklineData: const [
+                          4,
+                          7,
+                          5,
+                          9,
+                          6,
+                          11,
+                          8,
+                          10,
+                          9,
+                          13,
+                          10,
+                          12,
+                          11,
+                          14,
+                        ],
+                        sparklineColor: const Color(0xFF0E9F6E),
+                        trend: 'recent activity',
+                        trendColor: AppColors.successGreen,
+                        footnote: 'Today',
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // SEARCH BAR
+                  TextField(
+                    controller: _searchController,
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Search actor, action, school, IP…',
+                      hintStyle: AppTextStyles.sectionSubtitle,
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 18,
+                        color: AppColors.textTertiary,
+                      ),
+                      filled: true,
+                      fillColor: AppColors.bgPrimary,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: AppColors.borderPrimary,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: AppColors.borderPrimary,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: AppColors.primaryPurple,
+                          width: 2,
+                        ),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // SEVERITY FILTER BUTTONS — now real server-side filters
+                  // (`severity=critical|warning|info`), matching web's SEV_OPTS
+                  // exactly (`audit/page.tsx:155-160`).
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildFilterButton('All', null, filters.severity),
+                      _buildFilterButton(
+                        'Critical',
+                        'critical',
+                        filters.severity,
+                      ),
+                      _buildFilterButton(
+                        'Warning',
+                        'warning',
+                        filters.severity,
+                      ),
+                      _buildFilterButton('Info', 'info', filters.severity),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // ACTION FILTER TOGGLE — matches web's `Filter` icon + label
+                  // button (`audit/page.tsx:322-333`), previously missing
+                  // entirely from Flutter. `LayoutBuilder` drops the date-range
+                  // group to its own row below "Action" once the combined
+                  // content (action button + 2 date fields + a clear-dates
+                  // icon, all with real minimum widths that can't shrink to
+                  // zero) wouldn't fit a single row at narrow phone widths —
+                  // a plain `Row` here could genuinely overflow on a 320dp
+                  // screen once both dates are set (clear-dates icon appears).
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final actionButton = OutlinedButton.icon(
+                        onPressed: () => setState(
+                          () => _showActionOptions = !_showActionOptions,
+                        ),
+                        icon: const Icon(Icons.filter_list, size: 14),
+                        label: Text(
+                          filters.action ?? 'Action',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor:
+                              (_showActionOptions || filters.action != null)
+                              ? AppColors.purpleTint
+                              : AppColors.bgSecondary,
+                          side: BorderSide(
+                            color:
+                                (_showActionOptions || filters.action != null)
+                                ? AppColors.purpleSoft
+                                : AppColors.borderPrimary,
+                          ),
+                          foregroundColor:
+                              (_showActionOptions || filters.action != null)
+                              ? AppColors.purpleDeep
+                              : AppColors.textSecondary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                      final dateRangeRow = Row(
+                        children: [
+                          Expanded(
+                            child: _dateField(
+                              context,
+                              'From',
+                              filters.dateFrom,
+                              () => _pickDate(
+                                context,
+                                isFrom: true,
+                                filters: filters,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: _dateField(
+                              context,
+                              'To',
+                              filters.dateTo,
+                              () => _pickDate(
+                                context,
+                                isFrom: false,
+                                filters: filters,
+                              ),
+                            ),
+                          ),
+                          if (filters.dateFrom != null ||
+                              filters.dateTo != null)
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              tooltip: 'Clear dates',
+                              onPressed: () =>
+                                  _applyFilters(dateFrom: null, dateTo: null),
+                            ),
+                        ],
+                      );
+                      if (constraints.maxWidth < 380) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            actionButton,
+                            const SizedBox(height: 8),
+                            dateRangeRow,
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          actionButton,
+                          const SizedBox(width: 8),
+                          Expanded(child: dateRangeRow),
+                        ],
+                      );
+                    },
+                  ),
+
+                  // Action filter option pills — matches web's expanded panel
+                  // (`audit/page.tsx:362-379`).
+                  if (_showActionOptions) ...[
+                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 6,
+                      runSpacing: 6,
                       children: [
-                        Text('Audit', style: AppTextStyles.pageTitle),
-                        Text('Log', style: AppTextStyles.pageTitleAccent),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Immutable record of all platform-level actions',
-                      style: AppTextStyles.pageSubtitle,
-                    ),
-                    const SizedBox(height: 16),
-                    // `Wrap` (not a bare `Row`) — at narrow phone widths or
-                    // larger text-scale settings, "Refresh" + "Exporting…"
-                    // together could exceed the available row width with
-                    // neither button able to shrink; matches the same
-                    // header-button convention already used elsewhere in
-                    // School Tenancy (Policies/Schools tabs).
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: refreshing ? null : () => ref.invalidate(auditEventsProvider),
-                          icon: refreshing
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.refresh, size: 14),
-                          label: const Text('Refresh'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.borderPrimary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            textStyle: AppTextStyles.buttonSecondary,
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _exportBusy ? null : () => _handleExportCsv(filters),
-                          icon: _exportBusy
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.download, size: 14),
-                          label: Text(_exportBusy ? 'Exporting…' : 'Export CSV'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: const BorderSide(color: AppColors.borderPrimary),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            textStyle: AppTextStyles.buttonSecondary,
-                          ),
+                        _buildActionPill('All actions', null, filters.action),
+                        ..._kActionOptions.map(
+                          (a) => _buildActionPill(a, a, filters.action),
                         ),
                       ],
                     ),
                   ],
-                ),
-              ),
 
-              // KPI CARDS — `KpiCardGrid` (width-constrained, height-
-              // intrinsic tiles), not a fixed-`childAspectRatio` `GridView`,
-              // which forces every tile to a height derived only from
-              // width/aspect-ratio math regardless of actual text content —
-              // a real, already-diagnosed-elsewhere `RenderFlex overflowed
-              // on the bottom` at narrow widths / larger text-scale
-              // settings (see `KpiCardGrid`'s own doc comment;
-              // Dashboard/Schools tabs already use this fix).
-              KpiCardGrid(
-                spacing: 14,
-                cards: [
-                  KpiCard(
-                    label: 'Total Events',
-                    value: '${page.count}',
-                    icon: Icons.show_chart,
-                    sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
-                    sparklineColor: const Color(0xFF5836E0),
-                    trend: 'in loaded window',
-                    trendColor: AppColors.textTertiary,
-                    footnote: 'All events',
-                  ),
-                  KpiCard(
-                    label: 'Critical / Error',
-                    value: '$criticalCount',
-                    icon: Icons.cancel_outlined,
-                    sparklineData: const [14, 11, 13, 9, 12, 8, 10, 7, 9, 6, 8, 5, 7, 4],
-                    sparklineColor: const Color(0xFFE0463A),
-                    trend: 'failed actions',
-                    trendColor: AppColors.dangerRed,
-                    footnote: 'High severity',
-                  ),
-                  KpiCard(
-                    label: 'Unique Actors',
-                    value: '$uniqueActors',
-                    icon: Icons.group_outlined,
-                    sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
-                    sparklineColor: const Color(0xFF0369A1),
-                    trend: 'distinct users',
-                    trendColor: AppColors.infoBlue,
-                    footnote: 'All actors',
-                  ),
-                  KpiCard(
-                    label: 'Last 24 Hours',
-                    value: '$last24h',
-                    icon: Icons.access_time,
-                    sparklineData: const [4, 7, 5, 9, 6, 11, 8, 10, 9, 13, 10, 12, 11, 14],
-                    sparklineColor: const Color(0xFF0E9F6E),
-                    trend: 'recent activity',
-                    trendColor: AppColors.successGreen,
-                    footnote: 'Today',
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // SEARCH BAR
-              TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search actor, action, school, IP…',
-                  hintStyle: AppTextStyles.sectionSubtitle,
-                  prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textTertiary),
-                  filled: true,
-                  fillColor: AppColors.bgPrimary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.borderPrimary),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.borderPrimary),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: AppColors.primaryPurple, width: 2),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // SEVERITY FILTER BUTTONS — now real server-side filters
-              // (`severity=critical|warning|info`), matching web's SEV_OPTS
-              // exactly (`audit/page.tsx:155-160`).
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildFilterButton('All', null, filters.severity),
-                  _buildFilterButton('Critical', 'critical', filters.severity),
-                  _buildFilterButton('Warning', 'warning', filters.severity),
-                  _buildFilterButton('Info', 'info', filters.severity),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // ACTION FILTER TOGGLE — matches web's `Filter` icon + label
-              // button (`audit/page.tsx:322-333`), previously missing
-              // entirely from Flutter. `LayoutBuilder` drops the date-range
-              // group to its own row below "Action" once the combined
-              // content (action button + 2 date fields + a clear-dates
-              // icon, all with real minimum widths that can't shrink to
-              // zero) wouldn't fit a single row at narrow phone widths —
-              // a plain `Row` here could genuinely overflow on a 320dp
-              // screen once both dates are set (clear-dates icon appears).
-              LayoutBuilder(builder: (context, constraints) {
-                final actionButton = OutlinedButton.icon(
-                  onPressed: () => setState(() => _showActionOptions = !_showActionOptions),
-                  icon: const Icon(Icons.filter_list, size: 14),
-                  label: Text(filters.action ?? 'Action', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleTint : AppColors.bgSecondary,
-                    side: BorderSide(color: (_showActionOptions || filters.action != null) ? AppColors.purpleSoft : AppColors.borderPrimary),
-                    foregroundColor: (_showActionOptions || filters.action != null) ? AppColors.purpleDeep : AppColors.textSecondary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                );
-                final dateRangeRow = Row(
-                  children: [
-                    Expanded(child: _dateField(context, 'From', filters.dateFrom, () => _pickDate(context, isFrom: true, filters: filters))),
-                    const SizedBox(width: 6),
-                    Expanded(child: _dateField(context, 'To', filters.dateTo, () => _pickDate(context, isFrom: false, filters: filters))),
-                    if (filters.dateFrom != null || filters.dateTo != null)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 16),
-                        tooltip: 'Clear dates',
-                        onPressed: () => _applyFilters(dateFrom: null, dateTo: null),
-                      ),
-                  ],
-                );
-                if (constraints.maxWidth < 380) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [actionButton, const SizedBox(height: 8), dateRangeRow],
-                  );
-                }
-                return Row(
-                  children: [actionButton, const SizedBox(width: 8), Expanded(child: dateRangeRow)],
-                );
-              }),
-
-              // Action filter option pills — matches web's expanded panel
-              // (`audit/page.tsx:362-379`).
-              if (_showActionOptions) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _buildActionPill('All actions', null, filters.action),
-                    ..._kActionOptions.map((a) => _buildActionPill(a, a, filters.action)),
-                  ],
-                ),
-              ],
-
-              const SizedBox(height: 12),
-              Text(
-                auditAsync.isLoading
-                    ? 'Loading…'
-                    : page.count > 0
+                  const SizedBox(height: 12),
+                  Text(
+                    auditAsync.isLoading
+                        ? 'Loading…'
+                        : page.count > 0
                         ? '$pageStart–$pageEnd of ${page.count} events'
                         : '0 events',
-                style: AppTextStyles.sectionSubtitle,
-              ),
+                    style: AppTextStyles.sectionSubtitle,
+                  ),
 
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.bgPrimary,
-                  border: Border.all(color: AppColors.borderPrimary),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: events.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              const Icon(Icons.shield_outlined, size: 28, color: AppColors.textTertiary),
-                              const SizedBox(height: 10),
-                              Text('No events match the current filter', style: AppTextStyles.boardLabel.copyWith(fontSize: 13)),
-                              const SizedBox(height: 6),
-                              TextButton(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  ref.read(auditFiltersProvider.notifier).state = const AuditFilters();
-                                },
-                                child: const Text('Clear all filters'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    // Matches web's real column-based table exactly
-                    // (`audit/page.tsx:381-443`: TIME / ACTOR / ACTION /
-                    // DETAIL / IP ADDRESS / SEVERITY, plus the leading
-                    // severity dot) — replaces the previous per-event card
-                    // layout, which had no column headers at all.
-                    // Horizontally scrollable (same fixed-width-column
-                    // pattern used by the Fee Configuration tables) since
-                    // 6 real columns don't fit a phone screen at once.
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: _auditTableWidth,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _auditHeaderRow(),
-                              for (var i = 0; i < events.length; i++) _auditRow(events[i], isLast: i == events.length - 1),
-                            ],
-                          ),
-                        ),
-                      ),
-              ),
-
-              // PAGINATION — real page navigation matching web's real
-              // paginated table (`audit/page.tsx:446-494`), replacing the
-              // old flat "Events (N)" list that just dumped everything from
-              // one 200-row fetch. Simplified to Prev/Next + first/last
-              // jump for mobile width rather than web's 7-pill page
-              // navigator, which doesn't fit a phone screen.
-              if (!auditAsync.isLoading && totalPages > 1) ...[
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // `Expanded`+ellipsis — with neither side of a
-                    // `spaceBetween` Row able to shrink the other, a 3-digit
-                    // page count ("Page 100 of 328") combined with the 4
-                    // fixed-size nav buttons could overflow on a 320dp
-                    // screen without this.
-                    Expanded(
-                      child: Text(
-                        'Page ${filters.page} of $totalPages',
-                        style: AppTextStyles.sectionSubtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgPrimary,
+                      border: Border.all(color: AppColors.borderPrimary),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: events.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 40),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  const Icon(
+                                    Icons.shield_outlined,
+                                    size: 28,
+                                    color: AppColors.textTertiary,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    'No events match the current filter',
+                                    style: AppTextStyles.boardLabel.copyWith(
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  TextButton(
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      ref
+                                              .read(
+                                                auditFiltersProvider.notifier,
+                                              )
+                                              .state =
+                                          const AuditFilters();
+                                    },
+                                    child: const Text('Clear all filters'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        // Matches web's real column-based table exactly
+                        // (`audit/page.tsx:381-443`: TIME / ACTOR / ACTION /
+                        // DETAIL / IP ADDRESS / SEVERITY, plus the leading
+                        // severity dot) — replaces the previous per-event card
+                        // layout, which had no column headers at all.
+                        // Horizontally scrollable (same fixed-width-column
+                        // pattern used by the Fee Configuration tables) since
+                        // 6 real columns don't fit a phone screen at once.
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: _auditTableWidth,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _auditHeaderRow(),
+                                  for (var i = 0; i < events.length; i++)
+                                    _auditRow(
+                                      events[i],
+                                      isLast: i == events.length - 1,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ),
+
+                  // PAGINATION — real page navigation matching web's real
+                  // paginated table (`audit/page.tsx:446-494`), replacing the
+                  // old flat "Events (N)" list that just dumped everything from
+                  // one 200-row fetch. Simplified to Prev/Next + first/last
+                  // jump for mobile width rather than web's 7-pill page
+                  // navigator, which doesn't fit a phone screen.
+                  if (!auditAsync.isLoading && totalPages > 1) ...[
+                    const SizedBox(height: 14),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _pageNavButton(Icons.first_page, filters.page > 1 ? () => _applyFilters(page: 1) : null),
-                        _pageNavButton(Icons.chevron_left, filters.page > 1 ? () => _applyFilters(page: filters.page - 1) : null),
-                        _pageNavButton(Icons.chevron_right, filters.page < totalPages ? () => _applyFilters(page: filters.page + 1) : null),
-                        _pageNavButton(Icons.last_page, filters.page < totalPages ? () => _applyFilters(page: totalPages) : null),
+                        // `Expanded`+ellipsis — with neither side of a
+                        // `spaceBetween` Row able to shrink the other, a 3-digit
+                        // page count ("Page 100 of 328") combined with the 4
+                        // fixed-size nav buttons could overflow on a 320dp
+                        // screen without this.
+                        Expanded(
+                          child: Text(
+                            'Page ${filters.page} of $totalPages',
+                            style: AppTextStyles.sectionSubtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            _pageNavButton(
+                              Icons.first_page,
+                              filters.page > 1
+                                  ? () => _applyFilters(page: 1)
+                                  : null,
+                            ),
+                            _pageNavButton(
+                              Icons.chevron_left,
+                              filters.page > 1
+                                  ? () => _applyFilters(page: filters.page - 1)
+                                  : null,
+                            ),
+                            _pageNavButton(
+                              Icons.chevron_right,
+                              filters.page < totalPages
+                                  ? () => _applyFilters(page: filters.page + 1)
+                                  : null,
+                            ),
+                            _pageNavButton(
+                              Icons.last_page,
+                              filters.page < totalPages
+                                  ? () => _applyFilters(page: totalPages)
+                                  : null,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ],
-                ),
-              ],
 
-              const SizedBox(height: 20),
-            ],
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -595,7 +858,14 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
   static const _colIp = 110.0;
   static const _colSeverity = 90.0;
   static const _auditTableWidth =
-      _colDot + _colTime + _colActor + _colAction + _colDetail + _colIp + _colSeverity + 32;
+      _colDot +
+      _colTime +
+      _colActor +
+      _colAction +
+      _colDetail +
+      _colIp +
+      _colSeverity +
+      32;
 
   static const _auditThStyle = TextStyle(
     fontSize: 10,
@@ -614,12 +884,30 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       child: const Row(
         children: [
           SizedBox(width: _colDot),
-          SizedBox(width: _colTime, child: Text('TIME', style: _auditThStyle)),
-          SizedBox(width: _colActor, child: Text('ACTOR', style: _auditThStyle)),
-          SizedBox(width: _colAction, child: Text('ACTION', style: _auditThStyle)),
-          SizedBox(width: _colDetail, child: Text('DETAIL', style: _auditThStyle)),
-          SizedBox(width: _colIp, child: Text('IP ADDRESS', style: _auditThStyle)),
-          SizedBox(width: _colSeverity, child: Text('SEVERITY', style: _auditThStyle)),
+          SizedBox(
+            width: _colTime,
+            child: Text('TIME', style: _auditThStyle),
+          ),
+          SizedBox(
+            width: _colActor,
+            child: Text('ACTOR', style: _auditThStyle),
+          ),
+          SizedBox(
+            width: _colAction,
+            child: Text('ACTION', style: _auditThStyle),
+          ),
+          SizedBox(
+            width: _colDetail,
+            child: Text('DETAIL', style: _auditThStyle),
+          ),
+          SizedBox(
+            width: _colIp,
+            child: Text('IP ADDRESS', style: _auditThStyle),
+          ),
+          SizedBox(
+            width: _colSeverity,
+            child: Text('SEVERITY', style: _auditThStyle),
+          ),
         ],
       ),
     );
@@ -631,7 +919,13 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       onTap: () => _showEventDetail(context, event),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: AppColors.borderPrimary))),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: isLast
+                ? BorderSide.none
+                : const BorderSide(color: AppColors.borderPrimary),
+          ),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -642,7 +936,10 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(color: _severityDotColor(event.severity), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: _severityDotColor(event.severity),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),
@@ -651,8 +948,21 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(time, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textTertiary)),
-                  Text(date, style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary)),
+                  Text(
+                    time,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                  Text(
+                    date,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -662,12 +972,19 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 event.actor,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
             SizedBox(
               width: _colAction,
-              child: ActionBadge(action: event.action, color: _actionBadgeColor(event.action)),
+              child: ActionBadge(
+                action: event.action,
+                color: _actionBadgeColor(event.action),
+              ),
             ),
             SizedBox(
               width: _colDetail,
@@ -675,7 +992,10 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 event.detail,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
             SizedBox(
@@ -684,10 +1004,17 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                 event.actorIp.isEmpty ? '—' : event.actorIp,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textTertiary),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: AppColors.textTertiary,
+                ),
               ),
             ),
-            SizedBox(width: _colSeverity, child: SeverityBadge(severity: event.severity)),
+            SizedBox(
+              width: _colSeverity,
+              child: SeverityBadge(severity: event.severity),
+            ),
           ],
         ),
       ),
@@ -706,7 +1033,12 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
     );
   }
 
-  Widget _dateField(BuildContext context, String label, String? value, VoidCallback onTap) {
+  Widget _dateField(
+    BuildContext context,
+    String label,
+    String? value,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -718,13 +1050,22 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.textTertiary),
+            const Icon(
+              Icons.calendar_today_outlined,
+              size: 12,
+              color: AppColors.textTertiary,
+            ),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 value ?? label,
                 overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11.5, color: value == null ? AppColors.textTertiary : AppColors.textPrimary),
+                style: AppTextStyles.sectionSubtitle.copyWith(
+                  fontSize: 11.5,
+                  color: value == null
+                      ? AppColors.textTertiary
+                      : AppColors.textPrimary,
+                ),
               ),
             ),
           ],
@@ -743,7 +1084,9 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.bgPrimary,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
@@ -763,11 +1106,26 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('EVENT DETAIL', style: AppTextStyles.sectionSubtitle.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.6)),
-                          Text('#${event.id}', style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11)),
+                          Text(
+                            'EVENT DETAIL',
+                            style: AppTextStyles.sectionSubtitle.copyWith(
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          Text(
+                            '#${event.id}',
+                            style: AppTextStyles.sectionSubtitle.copyWith(
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
                       ),
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -775,49 +1133,108 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                     spacing: 8,
                     children: [
                       SeverityBadge(severity: event.severity),
-                      ActionBadge(action: event.action, color: AppColors.primaryPurple),
+                      ActionBadge(
+                        action: event.action,
+                        color: AppColors.primaryPurple,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _detailBlock('Timestamp', '${_relativeTime(event.timestamp)}\n${timestamp.toLocal()}'),
-                  _detailBlock('Actor', event.actorIp.isEmpty ? event.actor : '${event.actor}\n${event.actorIp}'),
+                  _detailBlock(
+                    'Timestamp',
+                    '${_relativeTime(event.timestamp)}\n${timestamp.toLocal()}',
+                  ),
+                  _detailBlock(
+                    'Actor',
+                    event.actorIp.isEmpty
+                        ? event.actor
+                        : '${event.actor}\n${event.actorIp}',
+                  ),
                   if (event.schoolName != null)
-                    _detailBlock('School', event.tenantId != null ? '${event.schoolName}\n${event.tenantId}' : event.schoolName!),
+                    _detailBlock(
+                      'School',
+                      event.tenantId != null
+                          ? '${event.schoolName}\n${event.tenantId}'
+                          : event.schoolName!,
+                    ),
                   _detailBlock('Detail', event.detail),
                   const SizedBox(height: 4),
-                  Text('STATUS', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.6)),
+                  Text(
+                    'STATUS',
+                    style: AppTextStyles.sectionSubtitle.copyWith(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _statusColor(event.status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: _statusColor(event.status).withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: _statusColor(
+                          event.status,
+                        ).withValues(alpha: 0.3),
+                      ),
                     ),
-                    child: Text(event.status, style: AppTextStyles.chipLabel(color: _statusColor(event.status))),
+                    child: Text(
+                      event.status,
+                      style: AppTextStyles.chipLabel(
+                        color: _statusColor(event.status),
+                      ),
+                    ),
                   ),
-                  if (event.errorMessage != null && event.errorMessage!.isNotEmpty) ...[
+                  if (event.errorMessage != null &&
+                      event.errorMessage!.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: AppColors.redSoft,
-                        border: Border.all(color: AppColors.dangerRed.withValues(alpha: 0.4)),
+                        border: Border.all(
+                          color: AppColors.dangerRed.withValues(alpha: 0.4),
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('ERROR', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.dangerRed)),
+                          Text(
+                            'ERROR',
+                            style: AppTextStyles.sectionSubtitle.copyWith(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.dangerRed,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text(event.errorMessage!, style: AppTextStyles.boardLabel.copyWith(fontSize: 12, color: AppColors.dangerRed)),
+                          Text(
+                            event.errorMessage!,
+                            style: AppTextStyles.boardLabel.copyWith(
+                              fontSize: 12,
+                              color: AppColors.dangerRed,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
-                  if (event.affectedFields != null && event.affectedFields!.isNotEmpty) ...[
+                  if (event.affectedFields != null &&
+                      event.affectedFields!.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Text('CHANGED FIELDS', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.6)),
+                    Text(
+                      'CHANGED FIELDS',
+                      style: AppTextStyles.sectionSubtitle.copyWith(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     ...event.affectedFields!.map((field) {
                       final before = event.beforeValues?[field];
@@ -833,11 +1250,30 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(field, style: AppTextStyles.boardLabel.copyWith(fontFamily: 'monospace', fontSize: 12)),
+                            Text(
+                              field,
+                              style: AppTextStyles.boardLabel.copyWith(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                              ),
+                            ),
                             if (before != null)
-                              Text('$before', style: const TextStyle(color: AppColors.dangerRed, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                              Text(
+                                '$before',
+                                style: const TextStyle(
+                                  color: AppColors.dangerRed,
+                                  decoration: TextDecoration.lineThrough,
+                                  fontSize: 12,
+                                ),
+                              ),
                             if (after != null)
-                              Text('$after', style: const TextStyle(color: AppColors.successGreen, fontSize: 12)),
+                              Text(
+                                '$after',
+                                style: const TextStyle(
+                                  color: AppColors.successGreen,
+                                  fontSize: 12,
+                                ),
+                              ),
                           ],
                         ),
                       );
@@ -858,7 +1294,14 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label.toUpperCase(), style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.6)),
+          Text(
+            label.toUpperCase(),
+            style: AppTextStyles.sectionSubtitle.copyWith(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(value, style: AppTextStyles.boardLabel.copyWith(fontSize: 13)),
         ],
@@ -882,11 +1325,15 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
     return OutlinedButton(
       onPressed: () => _applyFilters(severity: value),
       style: OutlinedButton.styleFrom(
-        backgroundColor: isSelected ? AppColors.purpleTint : AppColors.bgSecondary,
+        backgroundColor: isSelected
+            ? AppColors.purpleTint
+            : AppColors.bgSecondary,
         side: BorderSide(
           color: isSelected ? AppColors.purpleSoft : AppColors.borderPrimary,
         ),
-        foregroundColor: isSelected ? AppColors.purpleDeep : AppColors.textSecondary,
+        foregroundColor: isSelected
+            ? AppColors.purpleDeep
+            : AppColors.textSecondary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -903,9 +1350,15 @@ class _SuperAdminAuditPageState extends ConsumerState<SuperAdminAuditPage> {
         _applyFilters(action: value);
       },
       style: OutlinedButton.styleFrom(
-        backgroundColor: isSelected ? AppColors.purpleTint : AppColors.bgSecondary,
-        side: BorderSide(color: isSelected ? AppColors.purpleSoft : AppColors.borderPrimary),
-        foregroundColor: isSelected ? AppColors.purpleDeep : AppColors.textSecondary,
+        backgroundColor: isSelected
+            ? AppColors.purpleTint
+            : AppColors.bgSecondary,
+        side: BorderSide(
+          color: isSelected ? AppColors.purpleSoft : AppColors.borderPrimary,
+        ),
+        foregroundColor: isSelected
+            ? AppColors.purpleDeep
+            : AppColors.textSecondary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),

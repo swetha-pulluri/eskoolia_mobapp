@@ -38,28 +38,41 @@ class MyClassesPage extends ConsumerWidget {
   }
 
   Widget _pageHeader() {
+    // Now its own card — same white/bordered/shadowed style already used
+    // by the roster card below — instead of floating text directly on the
+    // page background, per explicit request.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'TEACHER PORTAL · MY CLASSES',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
-          ),
-          const SizedBox(height: 6),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink1),
-              children: [
-                TextSpan(text: 'My '),
-                TextSpan(text: 'Classes', style: TextStyle(fontStyle: FontStyle.italic, color: AppColors.brandPurple)),
-              ],
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: AppColors.ink1.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'TEACHER PORTAL · MY CLASSES',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text('Select a class tab to view the student roster.', style: TextStyle(fontSize: 12, color: AppColors.ink2)),
-        ],
+            const SizedBox(height: 6),
+            RichText(
+              text: const TextSpan(
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.ink1),
+                children: [
+                  TextSpan(text: 'My '),
+                  TextSpan(text: 'Classes', style: TextStyle(fontStyle: FontStyle.italic, color: AppColors.brandPurple)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('Select a class tab to view the student roster.', style: TextStyle(fontSize: 12, color: AppColors.ink2)),
+          ],
+        ),
       ),
     );
   }
@@ -89,6 +102,7 @@ class MyClassesPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _pageHeader(),
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
@@ -125,6 +139,7 @@ class MyClassesPage extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _pageHeader(),
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Wrap(

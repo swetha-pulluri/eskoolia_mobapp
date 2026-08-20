@@ -557,34 +557,48 @@ class _StudentCategoriesScreenState extends ConsumerState<StudentCategoriesScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
+          // Own card — same white/gray-bordered style already used by the
+          // summary cards and the "Categories" `AdminSectionCard` below —
+          // instead of floating text directly on the page background.
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.borderPrimary), borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text.rich(
-                      TextSpan(
-                        style: GoogleFonts.playfairDisplay(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.15, color: const Color(0xFF0F172A)),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const TextSpan(text: 'Student '),
-                          TextSpan(text: 'Categories', style: GoogleFonts.playfairDisplay(fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: const Color(0xFF6C3CE1))),
+                          Text.rich(
+                            TextSpan(
+                              style: GoogleFonts.playfairDisplay(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.15, color: const Color(0xFF0F172A)),
+                              children: [
+                                const TextSpan(text: 'Student '),
+                                TextSpan(text: 'Categories', style: GoogleFonts.playfairDisplay(fontStyle: FontStyle.italic, fontWeight: FontWeight.w400, color: const Color(0xFF6C3CE1))),
+                              ],
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Text('Classification tags used across admissions, fee rules, and reporting.', style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary)),
+                          ),
                         ],
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 4),
-                      child: Text('Classification tags used across admissions, fee rules, and reporting.', style: TextStyle(fontSize: 12.5, color: AppColors.textTertiary)),
-                    ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                WebButton(label: '+ New Category', onPressed: () => _openForm()),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          WebButton(label: '+ New Category', onPressed: () => _openForm()),
-          const SizedBox(height: 16),
           _summaryCards(summary),
           const SizedBox(height: 16),
           AdminSectionCard(

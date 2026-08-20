@@ -57,6 +57,7 @@ class TeacherProfilePage extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _pageHeader(),
+                const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: profileAsync.when(
@@ -75,6 +76,10 @@ class TeacherProfilePage extends ConsumerWidget {
                     data: (profile) => _content(profile),
                   ),
                 ),
+                // Clear gap from the Bank & Payroll card above — previously
+                // butted right up against it with zero spacing, reading as
+                // one merged block instead of two separate elements.
+                const SizedBox(height: 20),
                 // Only remaining logout entry point now that the top bar's
                 // avatar dropdown (which used to carry it) is gone in favor
                 // of the bottom-nav Profile tab — mirrors the Admin
@@ -106,23 +111,28 @@ class TeacherProfilePage extends ConsumerWidget {
   }
 
   Widget _pageHeader() {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'TEACHER PORTAL · MY PROFILE',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
-          ),
-          SizedBox(height: 6),
-          Text('Staff Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-          SizedBox(height: 4),
-          Text(
-            'Your own onboarding and payroll details, as recorded during onboarding.',
-            style: TextStyle(fontSize: 13, color: AppColors.ink2),
-          ),
-        ],
+    // Now its own card (same purple-bordered/shadowed `_card()` shell as
+    // every section below) instead of floating text directly on the page
+    // background, per explicit request.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      child: _card(
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TEACHER PORTAL · MY PROFILE',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.ink2),
+            ),
+            SizedBox(height: 6),
+            Text('Staff Profile', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.ink1)),
+            SizedBox(height: 4),
+            Text(
+              'Your own onboarding and payroll details, as recorded during onboarding.',
+              style: TextStyle(fontSize: 13, color: AppColors.ink2),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -131,8 +141,8 @@ class TeacherProfilePage extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _headerCard(profile),
-        const SizedBox(height: 14),
+        _heroHeader(profile),
+        const SizedBox(height: 16),
         _section(
           icon: Icons.person_outline,
           title: 'Personal Info',
@@ -146,20 +156,9 @@ class TeacherProfilePage extends ConsumerWidget {
             _ProfileField('Nationality', profile.nationality),
           ],
         ),
-        const SizedBox(height: 14),
-        _section(
-          icon: Icons.call_outlined,
-          title: 'Contact & Address',
-          fields: [
-            _ProfileField('Email', profile.email),
-            _ProfileField('Phone', profile.phone),
-            _ProfileField('Emergency Contact', profile.emergencyMobile),
-            _ProfileField('Current Address', profile.currentAddress),
-            _ProfileField('Permanent Address', profile.permanentAddress),
-            _ProfileField('City / State', profile.cityState),
-          ],
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        _contactAddressCard(profile),
+        const SizedBox(height: 12),
         _section(
           icon: Icons.school_outlined,
           title: 'Qualifications & Employment',
@@ -171,82 +170,120 @@ class TeacherProfilePage extends ConsumerWidget {
             _ProfileField('Joining Date', profile.joinDate),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         _bankCard(profile),
       ],
     );
   }
 
-  Widget _headerCard(TeacherProfileEntity profile) {
-    final metaParts = [
-      profile.staffNo,
+  /// Card shell shared by every section below — white fill, a faint
+  /// brand-purple border/shadow instead of a plain gray border, matching
+  /// `ParentProfilePage`'s own `_card()` treatment exactly.
+  Widget _card(Widget child) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.16)),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: AppColors.brandPurple.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 6))],
+      ),
+      child: child,
+    );
+  }
+
+  /// Photo-centered hero, matching `ParentProfilePage._heroHeader` exactly:
+  /// purple gradient card, a white "halo" ring behind the avatar, centered
+  /// name, a centered meta line, and an ID pill underneath. Same data as
+  /// before (name, staff no., designation, department, status) — just
+  /// reshaped into that same visual template instead of a compact left-icon
+  /// row: the staff number takes the pill's role (an ID, like a child's
+  /// admission number), and designation/department/status become the
+  /// centered meta line (like a child's class/section/roll line).
+  Widget _heroHeader(TeacherProfileEntity profile) {
+    final metaLine = [
       profile.designationName?.isNotEmpty == true ? profile.designationName! : '—',
       profile.departmentName?.isNotEmpty == true ? profile.departmentName! : '—',
       if (profile.status.isNotEmpty) profile.status,
-    ];
+    ].join(' · ');
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(14),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFF2EFFE), Color(0xFFDCD3FB)]),
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 48,
-            height: 48,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.purpleSoft),
-            child: Text(
-              profile.initials,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.brandPurple),
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+            child: Container(
+              width: 88,
+              height: 88,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.brandPurple),
+              child: Text(
+                profile.initials,
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white),
+              ),
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  profile.displayName,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink1),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  metaParts.join(' · '),
-                  style: const TextStyle(fontSize: 12.5, color: AppColors.ink3),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+          const SizedBox(height: 14),
+          Text(
+            profile.displayName,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink1),
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
+          if (metaLine.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(metaLine, style: const TextStyle(fontSize: 12.5, color: AppColors.ink3), textAlign: TextAlign.center),
+          ],
+          if (profile.staffNo.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999), border: Border.all(color: AppColors.brandPurple.withValues(alpha: 0.4))),
+              child: Text(profile.staffNo, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.brandPurple)),
+            ),
+          ],
         ],
       ),
     );
   }
 
+  /// Small purple "badge" behind the section icon, and a deep-purple bold
+  /// heading — matching `ParentProfilePage._sectionTitleRow` exactly.
+  Widget _sectionTitleRow(IconData icon, String title) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: AppColors.purpleSoft, borderRadius: BorderRadius.circular(9)),
+          child: Icon(icon, size: 15, color: AppColors.brandPurple),
+        ),
+        const SizedBox(width: 10),
+        // `Expanded` so a longer title (e.g. "Qualifications & Employment")
+        // wraps to a second line instead of overflowing the card's width —
+        // a bare `Text` here has no bound and can't shrink or wrap.
+        Expanded(
+          child: Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.purpleDeep)),
+        ),
+      ],
+    );
+  }
+
   Widget _section({required IconData icon, required String title, required List<_ProfileField> fields}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
+    return _card(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: AppColors.brandPurple),
-              const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-            ],
-          ),
+          _sectionTitleRow(icon, title),
           const SizedBox(height: 14),
           _fieldGrid(fields),
         ],
@@ -254,25 +291,64 @@ class TeacherProfilePage extends ConsumerWidget {
     );
   }
 
+  /// Contact & Address — same 6 fields as before, restyled as a stacked
+  /// icon-led list (matching `ParentProfilePage._contactAddressCard`
+  /// exactly) instead of the plain label-grid every other section uses.
+  Widget _contactAddressCard(TeacherProfileEntity profile) {
+    return _card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitleRow(Icons.call_outlined, 'Contact & Address'),
+          const SizedBox(height: 16),
+          _contactRow(Icons.mail_outline, 'Email', profile.email),
+          const SizedBox(height: 14),
+          _contactRow(Icons.call_outlined, 'Phone', profile.phone),
+          const SizedBox(height: 14),
+          _contactRow(Icons.error_outline, 'Emergency Contact', profile.emergencyMobile),
+          const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Divider(height: 1, color: AppColors.border)),
+          _contactRow(Icons.location_on_outlined, 'Current Address', profile.currentAddress),
+          const SizedBox(height: 14),
+          _contactRow(Icons.location_on_outlined, 'Permanent Address', profile.permanentAddress),
+          const SizedBox(height: 14),
+          _contactRow(Icons.map_outlined, 'City / State', profile.cityState),
+        ],
+      ),
+    );
+  }
+
+  Widget _contactRow(IconData icon, String label, String? value) {
+    final v = value?.trim();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.brandPurple),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label.toUpperCase(), style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.ink3)),
+              const SizedBox(height: 3),
+              Text(v == null || v.isEmpty ? '—' : v, style: const TextStyle(fontSize: 13.5, color: AppColors.ink1, height: 1.3)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _bankCard(TeacherProfileEntity profile) {
     final salary = profile.basicSalary.trim();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7F7),
-        border: Border.all(color: const Color(0xFFFEE2E2)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
+    // Same purple `_card`/`_sectionTitleRow` treatment as every other
+    // section now, per explicit request — no more standalone red tint.
+    return _card(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance_outlined, size: 16, color: Color(0xFFDC2626)),
-              const SizedBox(width: 8),
-              const Text('Bank & Payroll', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.ink1)),
-              const Spacer(),
+              Expanded(child: _sectionTitleRow(Icons.account_balance_outlined, 'Bank & Payroll')),
               const Flexible(
                 child: Text(
                   'SENSITIVE',

@@ -2,22 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/router/app_router.dart';
 import '../../../../core/constants/app_assets.dart';
-import '../../../../core/utils/module_nav_utils.dart';
 import '../../../../core/widgets/global_app_shell.dart';
-import '../../../../core/widgets/module_pill_with_flyout.dart';
 import '../../../notes/presentation/widgets/note_trigger_button.dart';
-import '../../domain/entities/teacher_module_entity.dart';
 
 const _navBg = Color(0xFFFFFFFF);
 const _navBorder = Color(0xFFECECF2);
 const _navInk3 = Color(0xFF9197AE);
 const _navPurple = Color(0xFF6D4AFF);
 
-/// Teacher Portal's top bar — logo, TEACHER badge, the module-pill
-/// navigation strip (restored — top-level module browsing lives both here
-/// AND on the bottom nav's "All Modules" tab; they're not mutually
-/// exclusive), and exactly three trailing icons: Search, Sticky Notes,
-/// Notifications. No avatar/profile icon here — that's the bottom nav's
+/// Teacher Portal's top bar — logo, TEACHER badge, and exactly three
+/// trailing icons: Search, Sticky Notes, Notifications. The module-pill
+/// navigation strip that used to sit between the badge and those icons was
+/// removed per explicit request; top-level module browsing still lives on
+/// the bottom nav's "All Modules" tab. No avatar/profile icon here — that's
+/// the bottom nav's
 /// Profile tab; logout lives on `TeacherProfilePage` accordingly (same
 /// precedent Admin's own `_GlobalTopBar` set when its Profile bottom-nav tab
 /// replaced its avatar menu — see that class's doc comment on `AvatarMenu`).
@@ -95,30 +93,13 @@ class TeacherTopBar extends ConsumerWidget {
                 ),
                 SizedBox(width: isNarrow ? 6 : 8),
                 _TeacherRoleBadge(isNarrow: isNarrow),
-                SizedBox(width: isNarrow ? 6 : 10),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final m in TeacherModules.all) ModulePillWithFlyout(module: m, isActive: isModuleActive(m, currentPath)),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(width: isNarrow ? 2 : 4),
-                // Deliberately NOT wrapped in its own `Expanded` (unlike the
-                // module-pill row above): giving these two `Expanded`
-                // regions equal 50/50 weight let the module-pill row's
-                // `Expanded` claim half the width even when it didn't need
-                // it, leaving this row's own `SingleChildScrollView`
-                // partially off-screen — Search stayed visible but Notes/
-                // Notifications needed a manual horizontal scroll to reach,
-                // which read as "the notification icon is missing". A plain
-                // `Row` here takes only its own intrinsic width, so these 3
-                // fixed-size icons are always fully visible; the module-pill
-                // `Expanded` above simply gets whatever width is left over
-                // (it already scrolls internally if that's tight).
+                // Module-pill navigation strip removed here per explicit
+                // request — top-level module browsing still lives on the
+                // bottom nav's "All Modules" tab, so it isn't lost, just no
+                // longer duplicated in the top bar. `Spacer` pushes the
+                // trailing icon row (Search/Notes/Notifications) to the far
+                // right, same position they held before.
+                const Spacer(),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

@@ -124,8 +124,16 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
   }
 
   Widget _header(WidgetRef ref, String period, AnalyticsDataEntity? data) {
-    return Column(
+    // Own card — same white/gray-bordered style already used by every KPI
+    // and chart `_card()` below — instead of floating text directly on
+    // the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFF3F4F6))),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(children: [
           Container(
@@ -185,6 +193,7 @@ class AdmissionsAnalyticsPage extends ConsumerWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

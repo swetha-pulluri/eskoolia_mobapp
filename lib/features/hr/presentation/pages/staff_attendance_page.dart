@@ -359,12 +359,21 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
     // its minimum) and the three buttons exceeds the screen, producing a
     // real `RenderFlex` overflow. Below ~640px stack the title above a
     // full-width button `Wrap` instead of placing them side by side.
-    return LayoutBuilder(builder: (context, constraints) {
-      if (constraints.maxWidth < 640) {
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [title, const SizedBox(height: 12), buttons]);
-      }
-      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: title), buttons]);
-    });
+    //
+    // Own card — same white/gray-bordered style already used by every
+    // `AttendanceKpiCard` and department card below — instead of floating
+    // text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _line), borderRadius: BorderRadius.circular(14)),
+      child: LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth < 640) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [title, const SizedBox(height: 12), buttons]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: title), buttons]);
+      }),
+    );
   }
 
   /// Real source is `daily-summary` (school-scoped active-staff total +

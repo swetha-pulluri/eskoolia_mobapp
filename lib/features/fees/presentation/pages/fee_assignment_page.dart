@@ -430,41 +430,54 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
   }
 
   Widget _buildHeader() {
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 12,
-      runSpacing: 12,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text('STUDENT FEE MAPPING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: faPurple)),
-            SizedBox(height: 6),
-            Text('Fee Assignment', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: faInk1, height: 1.1)),
-            SizedBox(height: 8),
-            Text('Assign fee structures to students class by class, with concession and override support.', style: TextStyle(fontSize: 14, color: faInk3)),
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            InkWell(
-              onTap: () => FaInfoDialog.show(context),
-              borderRadius: BorderRadius.circular(17),
-              child: Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: faBorder, width: 1.5)),
-                child: const Text('i', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: faPurple)),
+    // Its own card — same white/gray-bordered style already used by the
+    // stats bar / filters block, the class cards below, and the equivalent
+    // headers on Fees Home and Fee Configuration — instead of floating text
+    // directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: faBorder),
+      ),
+      child: Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Text('STUDENT FEE MAPPING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: faPurple)),
+              SizedBox(height: 6),
+              Text('Fee Assignment', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: faInk1, height: 1.1)),
+              SizedBox(height: 8),
+              Text('Assign fee structures to students class by class, with concession and override support.', style: TextStyle(fontSize: 14, color: faInk3)),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () => FaInfoDialog.show(context),
+                borderRadius: BorderRadius.circular(17),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: faBorder, width: 1.5)),
+                  child: const Text('i', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: faPurple)),
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            FaPrimaryButton(label: '+ Bulk Assign', onPressed: () => _openBulkModal('all', 'All Classes')),
-          ],
-        ),
-      ],
+              const SizedBox(width: 10),
+              FaPrimaryButton(label: '+ Bulk Assign', onPressed: () => _openBulkModal('all', 'All Classes')),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -571,13 +584,22 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
       ('unassigned', 'Unassigned ${stats.unassigned}'),
       ('assigned', 'Assigned ${stats.assigned}'),
     ];
-    return Row(
-      children: [
-        for (final t in tabs) ...[
-          _tabPill(t.$1, t.$2),
-          const SizedBox(width: 8),
+    // A plain `Row` here overflowed on narrow phones once the counts grew to
+    // 2-3 digits — every other row on this page (header, stats bar, filters,
+    // class-card header) already had to switch to `Wrap` for the same
+    // reason. `Wrap` would drop pills to a second line instead, which reads
+    // oddly for a tab strip, so this uses the same horizontal-scroll
+    // convention already used for Fee Configuration's own tab-pill row.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final t in tabs) ...[
+            _tabPill(t.$1, t.$2),
+            const SizedBox(width: 8),
+          ],
         ],
-      ],
+      ),
     );
   }
 

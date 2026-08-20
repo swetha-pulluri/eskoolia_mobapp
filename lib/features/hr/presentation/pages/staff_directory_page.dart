@@ -372,29 +372,38 @@ class _StaffDirectoryPageState extends ConsumerState<StaffDirectoryPage> {
   // real bounded width from its Column ancestor, so it can wrap the two
   // buttons onto their own line(s) and never overflow.
   Widget _buildHero(bool loading, List<StaffEntity> staffList) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('STAFF RECORDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _muted)),
-        const SizedBox(height: 4),
-        RichText(
-          text: const TextSpan(
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _ink),
-            children: [TextSpan(text: 'Staff '), TextSpan(text: 'list & Onboarding', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
+    // Own card — same white/gray-bordered style already used by
+    // `_buildSmartFilter`/`_buildSearchRow`/`_buildAllStaffCard` below —
+    // instead of floating text directly on the page background.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _line), borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('STAFF RECORDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _muted)),
+          const SizedBox(height: 4),
+          RichText(
+            text: const TextSpan(
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: _ink),
+              children: [TextSpan(text: 'Staff '), TextSpan(text: 'list & Onboarding', style: TextStyle(color: _brand, fontStyle: FontStyle.italic, fontWeight: FontWeight.w400))],
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        const Text('Department parent accordions with staff child rows, fast filters, and profile details in a side panel.', style: TextStyle(fontSize: 13, color: _muted)),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OutlinedButton(onPressed: staffList.isEmpty ? null : () => _exportCsv(staffList), child: const Text('Export CSV')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: _brand),
-            onPressed: () => context.push('/hr/onboard'),
-            child: const Text('Onboard Staff'),
-          ),
-        ]),
-      ],
+          const SizedBox(height: 4),
+          const Text('Department parent accordions with staff child rows, fast filters, and profile details in a side panel.', style: TextStyle(fontSize: 13, color: _muted)),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton(onPressed: staffList.isEmpty ? null : () => _exportCsv(staffList), child: const Text('Export CSV')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _brand),
+              onPressed: () => context.push('/hr/onboard'),
+              child: const Text('Onboard Staff'),
+            ),
+          ]),
+        ],
+      ),
     );
   }
 
