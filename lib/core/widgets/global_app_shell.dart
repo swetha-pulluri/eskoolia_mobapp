@@ -66,15 +66,12 @@ class GlobalAppShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authNotifierProvider);
-<<<<<<< Updated upstream
+
     final isAuthenticated = authState.maybeWhen(
       authenticated: (_) => true,
       orElse: () => false,
     );
-=======
-    final isAuthenticated = authState.maybeWhen(authenticated: (_) => true, orElse: () => false);
     final currentPath = ref.watch(currentRoutePathProvider);
->>>>>>> Stashed changes
 
     // Pre-login (splash/login screen) has no shell in the reference
     // frontend either — `(dashboard)/layout.tsx` only wraps the
@@ -120,20 +117,19 @@ class GlobalAppShell extends ConsumerWidget {
             else
               const ModuleSubNav(),
             Expanded(child: child),
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
+
+
             // Admin gets Home/All Modules/Widgets/Profile; Teacher gets its
             // own Home/All Modules/Profile bar (no Widgets tab — that
             // preference panel is an Admin-only concept); Parent gets its
             // own `ParentBottomNav` (`/parent/home`, `/parent/modules`,
-<<<<<<< Updated upstream
+
             // `/parent/profile`) instead of Admin's un-prefixed paths. Each
             // portal renders exactly one bottom nav.
-=======
+
             // `/parent/profile`) instead of Admin's un-prefixed paths.
->>>>>>> Stashed changes
+
             if (isTeacher)
               const _TeacherBottomNav()
             else if (isParent)
