@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../inspire_hub/presentation/pages/inspire_hub_page.dart';
-import '../../../inspire_hub/presentation/providers/inspire_hub_providers.dart';
 import '../../domain/models/student_group.dart';
 import '../providers/student_providers.dart';
 import '../widgets/student_group_widgets.dart';
@@ -597,7 +596,7 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
         _buildHeader(),
         const SizedBox(height: 20),
         ResponsiveGrid(
-          baseCols: 6,
+          baseCols: 5,
           breakpoints: {900: 2},
           gap: 12,
           children: [
@@ -606,18 +605,10 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
             GroupStatCard(eyebrow: 'Waiting', value: '${_stats?.unassigned ?? '-'}', label: 'Unassigned Students', barColor: const Color(0xFFE67E22)),
             GroupStatCard(eyebrow: 'House', value: '${_stats?.houseCount ?? '-'}', label: 'School Houses', barColor: const Color(0xFF8B7BD9)),
             GroupStatCard(eyebrow: 'Club', value: '${_stats?.clubCount ?? '-'}', label: 'School Clubs', barColor: const Color(0xFFFF8D5B)),
-            InkWell(
-              onTap: _onOpenInspireHub,
-              borderRadius: BorderRadius.circular(14),
-              child: GroupStatCard(
-                eyebrow: 'InspireHub',
-                value: '${ref.read(inspireHubStoreProvider).aggregates().eventCount}',
-                label: 'Finalised Events',
-                barColor: const Color(0xFF7C3AED),
-              ),
-            ),
           ],
         ),
+        const SizedBox(height: 16),
+        _buildInspireHubCard(),
         const SizedBox(height: 20),
         _sectionHead('School Houses', const Color(0xFF00B894), '${_houses.length} House${_houses.length != 1 ? 's' : ''}'),
         const SizedBox(height: 12),
@@ -799,6 +790,44 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildInspireHubCard() {
+    return InkWell(
+      onTap: _onOpenInspireHub,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFFDA22FF)]),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Open InspireHub', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                  SizedBox(height: 2),
+                  Text('Competitions · AI reviews · Insights', style: TextStyle(fontSize: 11.5, color: Color(0xE6FFFFFF))),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white),
+          ],
+        ),
+      ),
     );
   }
 

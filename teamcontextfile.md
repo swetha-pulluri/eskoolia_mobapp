@@ -380,6 +380,24 @@ Completed Work:
 
 ---
 
+## Date: 2026-08-20 (Thursday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Roles & Permissions page: split the "Role Permission" heading and its search/filter/New Role controls into their own bordered card (separate from the "All Roles" card below), narrowed the New Role button, tightened the card's spacing/top margin, and switched the role-card grid to a fixed row height so cards no longer stretch with empty space on wider screens
+- Login Permission page: removed the redundant top app-bar "Login Credentials" title, turned the hero section (breadcrumb/title/badge/subtitle) into its own bordered card, and tightened the vertical spacing between a user's name and staff ID in the users table
+- Student Groups: fixed two real `RenderFlex` overflow bugs in the House/Club "Student List" accordion header — an unguarded club member-count `Row` and a fixed-width house progress bar — both now use a single ellipsizing `Text.rich` so they clip instead of overflowing on narrow phones
+- School Clubs: club cards now wrap the full club name onto a second line instead of truncating it with an ellipsis
+- Built the InspireHub feature (Competitions & AI-generated student reviews) from scratch under `lib/features/inspire_hub/`: domain models, an on-device draft/history store, a backend repository (create competition, bulk-save results, AI review generation with a local fallback), and Dashboard/Compose/History tabs
+- Restructured InspireHub so saving a competition now pushes a dedicated Results page (participant picker, result cards with AI review, other-outcomes bulk marking, snapshot, CSV export) instead of continuing to scroll the same Compose tab
+- Added the full "More filters" panel to InspireHub's History tab (Type / Level / Month / Sort by dropdowns, active-filter count badge, Clear all), matching the web reference
+- Added an "InspireHub" stat-card tile to the Student Groups header stats row as its entry point, replacing the old standalone gradient pill button
+- Investigated a report that the InspireHub tile "wasn't showing" — added and ran a headless widget test that renders the real page with mocked data; confirmed the tile renders correctly (its label is just uppercased by the shared stat-card style), so the report was an environment/build issue, not a code defect; removed the temporary test file afterwards
+
+---
+
 ## Project Structure
 
 ```
