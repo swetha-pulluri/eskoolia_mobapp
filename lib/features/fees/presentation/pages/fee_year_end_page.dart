@@ -372,27 +372,6 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            decoration: const BoxDecoration(color: Color(0xFFFAFAFF), border: Border(bottom: BorderSide(color: fyBorder))),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 12,
-              runSpacing: 6,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('$_pendingCount pending', style: const TextStyle(fontSize: 12.5, color: fyInk1, fontWeight: FontWeight.w600)),
-                    const Text('  ·  ', style: TextStyle(fontSize: 12.5, color: fyBorder)),
-                    Text('$_resolvedCount resolved', style: const TextStyle(fontSize: 12.5, color: Color(0xFF16A34A), fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                _carryAllButton(height: 26, fontSize: 12, padding: 12, radius: 6),
-              ],
-            ),
-          ),
           if (_loading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 48),
@@ -432,7 +411,7 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
   static const _colCheck = 44.0;
   static const _colStudent = 190.0;
   static const _colOutstanding = 120.0;
-  static const _colStatus = 110.0;
+  static const _colStatus = 84.0;
   static const _colResolution = 230.0;
   static const _colAction = 100.0;
   static const _cfTableWidth = _colCheck + _colStudent + _colOutstanding + _colStatus + _colResolution + _colAction + 40;
