@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/school_entity.dart';
@@ -63,6 +64,77 @@ class SchoolDetailPage extends ConsumerStatefulWidget {
 
 class _SchoolDetailPageState extends ConsumerState<SchoolDetailPage> {
   bool _busy = false;
+  bool _llmBusy = false;
+
+  Future<void> _launch(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open $url')));
+      }
+    }
+  }
+
+  /// Same real call as the Schools list's own "Impersonate" action
+  /// (`schools_tab.dart`) — kept here too now that the list row itself no
+  /// longer surfaces it inline, so nothing is actually lost by that
+  /// simplification.
+  Future<void> _handleImpersonate(SchoolEntity school) async {
+    setState(() => _busy = true);
+    try {
+      final repository = ref.read(schoolTenancyRepositoryProvider);
+      final result = await repository.impersonateSchool(school.tenantId);
+      await _launch(result.handoffUrl);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Impersonation failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handleArchive(SchoolEntity school) async {
+    if (!await _confirm('Archive school', 'Archive ${school.name}? This can be undone via Restore.')) return;
+    setState(() => _busy = true);
+    try {
+      final repository = ref.read(schoolTenancyRepositoryProvider);
+      await repository.archiveSchool(school.tenantId);
+      ref.invalidate(schoolDetailProvider(widget.tenantId));
+      ref.invalidate(schoolsProvider);
+      ref.invalidate(schoolsGlobalStatsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${school.name} archived.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _handleLLMToggle(SchoolEntity school, LLMSchoolStateEntity llm) async {
+    setState(() => _llmBusy = true);
+    try {
+      final repository = ref.read(schoolTenancyRepositoryProvider);
+      final newVal = await repository.toggleSchoolLLM(llm.id, !llm.llmEnabled);
+      ref.invalidate(llmStatesProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('LLM ${newVal ? 'enabled' : 'disabled'} for ${school.name}.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update LLM access: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _llmBusy = false);
+    }
+  }
 
   Future<bool> _confirm(String title, String message) async {
     final result = await showDialog<bool>(
@@ -210,6 +282,43 @@ class _SchoolDetailPageState extends ConsumerState<SchoolDetailPage> {
                   _row('Backup retention', '${school.backupRetention} days'),
                   _row('Provisioned at', _formatDate(school.provisionedAt)),
                 ]),
+                // LLM access toggle — used to only live on the Schools
+                // list's own row (`getLLMStates()`/`toggleSchoolLLM()`); kept
+                // here too so the list can drop it without losing the
+                // capability.
+                Consumer(
+                  builder: (context, ref, _) {
+                    final llmStates = ref.watch(llmStatesProvider).value;
+                    final llm = llmStates?[school.tenantId];
+                    return _section('Access Control', [
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'LLM access',
+                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                              ),
+                            ),
+                            if (_llmBusy)
+                              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            else
+                              Switch(
+                                value: llm?.llmEnabled ?? false,
+                                onChanged: llm == null ? null : (_) => _handleLLMToggle(school, llm),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (llm == null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 9),
+                          child: Text('Not in LLM registry', style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 11)),
+                        ),
+                    ]);
+                  },
+                ),
                 const SizedBox(height: 4),
                 // `Wrap` (not `Row`) — on a narrow screen these two buttons
                 // at their natural size don't reliably fit on one line;
@@ -302,18 +411,26 @@ class _SchoolDetailPageState extends ConsumerState<SchoolDetailPage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              if (isSuspended)
+              if (isArchived)
+                _actionButton('Restore', Icons.restart_alt, _busy ? null : () => _handleStatusChange(school, 'active'), primary: true)
+              else if (isSuspended)
                 _actionButton('Reactivate', Icons.restart_alt, _busy ? null : () => _handleStatusChange(school, 'active'), primary: true)
-              else if (!isArchived)
+              else
                 _actionButton('Suspend', Icons.pause_circle_outline, _busy ? null : () async {
                   if (await _confirm('Suspend school', 'Suspend ${school.name}? Their admin console access will be blocked.')) {
                     await _handleStatusChange(school, 'suspended');
                   }
                 }),
-              if (!isArchived)
+              if (!isArchived) ...[
                 _actionButton('Reset Admin Password', Icons.key_outlined, _busy ? null : () => _handleResetPassword(school)),
-              if (!isArchived)
+                // Impersonate/Archive used to only live on the Schools list's
+                // per-row actions — kept here too so the list can drop them
+                // without losing the capability, now that this detail page
+                // is the single place for every per-school action.
+                _actionButton('Impersonate', Icons.people_outline, _busy ? null : () => _handleImpersonate(school)),
+                _actionButton('Archive', Icons.archive_outlined, _busy ? null : () => _handleArchive(school)),
                 _actionButton('Edit School', Icons.edit_outlined, _busy ? null : () => _openEdit(school), primary: true),
+              ],
             ],
           ),
         ],

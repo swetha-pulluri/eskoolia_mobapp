@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/file_download_helper.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../widgets/compact_kpi_card.dart';
 import '../../../../core/widgets/filter_pill_widget.dart';
-import '../../../../core/widgets/status_chip_widget.dart';
 import '../../domain/entities/school_entity.dart';
 import '../providers/school_tenancy_provider.dart';
 import '../widgets/school_tenancy_layout.dart';
@@ -92,10 +90,6 @@ const Object _unset = Object();
 class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
   final TextEditingController _searchController = TextEditingController();
 
-  /// tenant_ids currently mid-LLM-toggle, used to show a spinner and
-  /// disable that row's switch while in flight.
-  final Set<String> _llmToggling = {};
-
   /// "Schools list" accordion (03) — matches web's `accListOpen`, which
   /// defaults to open (`schools/page.tsx`), unlike "Add school" (01).
   bool _schoolsListOpen = true;
@@ -172,10 +166,6 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
   }
 
   void _closeAddSchool() => setState(() => _addSchoolOpen = false);
-
-  /// tenant_id currently mid-mutation (suspend/restore/archive/impersonate),
-  /// used to show a spinner and disable that row's actions while in flight.
-  String? _busyTenantId;
 
   bool _exportBusy = false;
 
@@ -286,144 +276,9 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     );
   }
 
-  Future<void> _launch(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not open $url')));
-      }
-    }
-  }
-
-  void _notImplemented(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _refreshAfterMutation() async {
     ref.invalidate(schoolsProvider);
     ref.invalidate(schoolsGlobalStatsProvider);
-  }
-
-  Future<void> _handleLLMToggle(
-    SchoolEntity school,
-    LLMSchoolStateEntity llm,
-  ) async {
-    setState(() => _llmToggling.add(school.tenantId));
-    try {
-      final repository = ref.read(schoolTenancyRepositoryProvider);
-      final newVal = await repository.toggleSchoolLLM(llm.id, !llm.llmEnabled);
-      ref.invalidate(llmStatesProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'LLM ${newVal ? 'enabled' : 'disabled'} for ${school.name}.',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update LLM access: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _llmToggling.remove(school.tenantId));
-    }
-  }
-
-  Future<void> _handleImpersonate(SchoolEntity school) async {
-    setState(() => _busyTenantId = school.tenantId);
-    try {
-      final repository = ref.read(schoolTenancyRepositoryProvider);
-      final result = await repository.impersonateSchool(school.tenantId);
-      await _launch(result.handoffUrl);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Impersonation failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _busyTenantId = null);
-    }
-  }
-
-  Future<void> _handleStatusChange(
-    SchoolEntity school,
-    String newStatus,
-    String successMessage,
-  ) async {
-    setState(() => _busyTenantId = school.tenantId);
-    try {
-      final repository = ref.read(schoolTenancyRepositoryProvider);
-      await repository.updateSchoolStatus(school.tenantId, newStatus);
-      await _refreshAfterMutation();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(successMessage)));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _busyTenantId = null);
-    }
-  }
-
-  Future<void> _handleArchive(SchoolEntity school) async {
-    setState(() => _busyTenantId = school.tenantId);
-    try {
-      final repository = ref.read(schoolTenancyRepositoryProvider);
-      await repository.archiveSchool(school.tenantId);
-      await _refreshAfterMutation();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${school.name} archived.')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _busyTenantId = null);
-    }
-  }
-
-  Future<bool> _confirm(String title, String message) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 
   List<Color> _getAvatarGradient(String tenantId) {
@@ -483,7 +338,6 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     final schools = schoolsAsync.value!;
     final globalStats = globalStatsAsync.value;
     final healthFlagCounts = schools.healthFlagsCounts;
-    final llmStates = ref.watch(llmStatesProvider).value;
 
     // Page-level stats (over the current filtered/paginated batch only) —
     // mirrors web's `totalStudents`/`totalActiveStudents`/`totalStaff`
@@ -951,8 +805,14 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
+                                    // `purpleTint` (not `purpleSoft`) —
+                                    // matches this same badge's own icon
+                                    // container's background right next to
+                                    // it, which already uses `purpleTint`;
+                                    // they used to be two different purple
+                                    // shades sitting side by side.
                                     color: _smartFiltersOpen
-                                        ? AppColors.purpleSoft
+                                        ? AppColors.purpleTint
                                         : AppColors.bgSecondary,
                                     border: Border.all(
                                       color: _smartFiltersOpen
@@ -1337,23 +1197,39 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                                     vertical: 3,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.purpleSoft,
+                                    // `purpleTint` — matches this badge's own
+                                    // icon container right next to it (same
+                                    // fix as Section 02's badge above).
+                                    color: _schoolsListOpen
+                                        ? AppColors.purpleTint
+                                        : AppColors.bgSecondary,
+                                    border: Border.all(
+                                      color: _schoolsListOpen
+                                          ? Colors.transparent
+                                          : AppColors.borderPrimary,
+                                    ),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
                                     '03',
-                                    style: AppTextStyles.numberedBadge.copyWith(
-                                      color: AppColors.purpleDeep,
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 0.4,
+                                      color: _schoolsListOpen
+                                          ? AppColors.purpleDeep
+                                          : AppColors.textTertiary,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 14),
                                 Container(
                                   width: 32,
                                   height: 32,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: AppColors.purpleSoft,
+                                    color: AppColors.purpleTint,
                                     borderRadius: BorderRadius.circular(9),
                                   ),
                                   child: const Icon(
@@ -1642,14 +1518,6 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
                                     return _buildSchoolCard(
                                       gradient: gradient,
                                       school: school,
-                                      llm: llmStates?[school.tenantId],
-                                      llmBusy: _llmToggling.contains(
-                                        school.tenantId,
-                                      ),
-                                      onLlmToggle: (v) => _handleLLMToggle(
-                                        school,
-                                        llmStates![school.tenantId]!,
-                                      ),
                                     );
                                   }),
 
@@ -1738,262 +1606,98 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     );
   }
 
-  /// One school — a real [Card] (not a plain [Container] stacked inside the
-  /// page's outer scroll view) matching web's table row content, field for
-  /// field: School / Tenant · State / Board / GSTIN / Plan · Students /
-  /// Status / LLM / Actions. Tapping the header navigates to the school's
-  /// detail screen (mirrors web's `<Link href={/super-admin/schools/
-  /// ${tenant_id}}>` on the name) instead of only expanding in place —
-  /// per-row actions (Edit/Impersonate/Suspend/Archive) stay inline and act
-  /// immediately, matching web's own separate "Actions" column.
+  /// One school — a compact two-column row matching web's own table row
+  /// exactly (`schools/page.tsx`'s `<table>`: SCHOOL column = avatar/name/
+  /// subdomain, TENANT · STATE column on the right), not the previous
+  /// expanded card that also showed board/plan/status chips, the GSTIN/PAN/
+  /// UDISE/Seats/Staff grid, the LLM toggle, and Edit/Impersonate/Suspend/
+  /// Archive inline. Those didn't disappear — they now live on the School
+  /// Detail page ([SchoolDetailPage], already showing every one of those
+  /// fields plus its own Impersonate/Archive/LLM actions added alongside
+  /// this change) — tapping a row (matching web's own `<Link>` on the name)
+  /// is the way there, same as before.
   Widget _buildSchoolCard({
     required List<Color> gradient,
     required SchoolEntity school,
-    LLMSchoolStateEntity? llm,
-    bool llmBusy = false,
-    ValueChanged<bool>? onLlmToggle,
   }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       color: AppColors.bgPrimary,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: AppColors.borderPrimary),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => context.go('/super-admin/schools/${school.tenantId}'),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  // Avatar
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: gradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _getSchoolInitials(school.name),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+      child: InkWell(
+        onTap: () => context.go('/super-admin/schools/${school.tenantId}'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              // Avatar
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: Text(
+                    _getSchoolInitials(school.name),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 12),
-
-                  // School + Tenant · State
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(school.name, style: AppTextStyles.accordionTitle),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${school.subdomainUrl}.eskoolia.com',
-                          style: AppTextStyles.accordionSubtitle,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${school.tenantId} · ${_orDash(school.state)}',
-                          style: AppTextStyles.accordionSubtitle.copyWith(
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: AppColors.textTertiary,
-                    size: 20,
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Board / Plan · Students / Status
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    BoardChip(
-                      label: _orDash(school.board),
-                      color: AppColors.getBoardColor(school.board),
-                    ),
-                    BoardChip(
-                      label:
-                          '${school.plan[0].toUpperCase()}${school.plan.substring(1)} · ${school.students}',
-                      color: AppColors.getPlanColor(school.plan),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgTertiary,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: school.status == 'active'
-                                  ? AppColors.successGreen
-                                  : AppColors.textTertiary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            school.status[0].toUpperCase() +
-                                school.status.substring(1),
-                            style: AppTextStyles.chipLabel().copyWith(
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+              const SizedBox(width: 12),
 
-                // GSTIN / UDISE / PAN / Seats / Staff — real fields already
-                // on [SchoolEntity], not otherwise visible in the header row.
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    const spacing = 10.0;
-                    final itemWidth = (constraints.maxWidth - spacing) / 2;
-                    return Wrap(
-                      spacing: spacing,
-                      runSpacing: spacing,
-                      children: [
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildDetailItem(
-                            'GSTIN',
-                            school.gstin?.isNotEmpty == true
-                                ? school.gstin!
-                                : 'Unregistered',
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildDetailItem('PAN', _orDash(school.pan)),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildDetailItem(
-                            'UDISE+ code',
-                            _orDash(school.udiseCode),
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildDetailItem(
-                            'Seats',
-                            school.seats > 0 ? '${school.seats}' : '—',
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _buildDetailItem('Staff', '${school.staff}'),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-
-                // LLM — real toggle wired to `getLLMStates()`/`toggleSchoolLLM()`.
-                // `Wrap` (not `Row`) so the "Not in LLM registry" caption
-                // reflows onto its own line instead of overflowing on
-                // narrower cards — the label + switch + caption together
-                // don't reliably fit on one line at this card width.
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
+              // SCHOOL column — name + subdomain, matches web's table cell.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'LLM access',
-                      style: AppTextStyles.sectionSubtitle.copyWith(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      school.name,
+                      style: AppTextStyles.accordionTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (llmBusy)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      Switch(
-                        value: llm?.llmEnabled ?? false,
-                        onChanged: llm == null ? null : onLlmToggle,
-                      ),
-                    if (llm == null)
-                      Text(
-                        'Not in LLM registry',
-                        style: AppTextStyles.sectionSubtitle.copyWith(
-                          fontSize: 11,
-                        ),
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${school.subdomainUrl}.eskoolia.com',
+                      style: AppTextStyles.accordionSubtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
+              ),
+              const SizedBox(width: 12),
 
-                // Action buttons — mirrors web's per-row action set exactly
-                // (`schools/page.tsx`): archived schools get Restore/Audit
-                // Logs, everyone else gets Edit/Impersonate/Suspend/Archive.
-                // "Open" is the header tap above, matching web's Link.
-                _buildRowActions(school),
-              ],
-            ),
+              // TENANT · STATE column — web's own second table column,
+              // right-aligned to sit at the row's trailing edge like a
+              // table's second `<td>` rather than wrapping under the name.
+              Text(
+                '${school.tenantId} · ${_orDash(school.state)}',
+                textAlign: TextAlign.right,
+                style: AppTextStyles.accordionSubtitle.copyWith(fontFamily: 'monospace'),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: AppColors.textTertiary, size: 20),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.sectionSubtitle.copyWith(fontSize: 10),
         ),
-        const SizedBox(height: 4),
-        Text(value, style: AppTextStyles.boardLabel.copyWith(fontSize: 14)),
-      ],
+      ),
     );
   }
 
@@ -2028,146 +1732,4 @@ class _SuperAdminSchoolsPageState extends ConsumerState<SuperAdminSchoolsPage> {
     );
   }
 
-  Widget _buildRowActions(SchoolEntity school) {
-    final busy = _busyTenantId == school.tenantId;
-
-    if (school.status == 'archived') {
-      return Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _buildActionButton(
-            'Open',
-            Icons.open_in_new,
-            busy
-                ? null
-                : () => context.go('/super-admin/schools/${school.tenantId}'),
-          ),
-          _buildActionButton(
-            'Restore',
-            Icons.restore,
-            busy
-                ? null
-                : () async {
-                    if (await _confirm(
-                      'Restore school',
-                      'Restore ${school.name} to active status?',
-                    )) {
-                      await _handleStatusChange(
-                        school,
-                        'active',
-                        '${school.name} restored to active.',
-                      );
-                    }
-                  },
-            busy: busy,
-          ),
-          _buildActionButton(
-            'Audit Logs',
-            Icons.description_outlined,
-            busy
-                ? null
-                : () => context.go('/super-admin/schools/${school.tenantId}'),
-          ),
-          _buildActionButton(
-            'Delete',
-            Icons.delete_outline,
-            () => _notImplemented(
-              'Permanent delete is not yet available — contact system administrator.',
-            ),
-          ),
-        ],
-      );
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _buildActionButton(
-          'Open',
-          Icons.open_in_new,
-          busy
-              ? null
-              : () => context.go('/super-admin/schools/${school.tenantId}'),
-        ),
-        // Navigates to the dedicated Edit School screen — mirrors web's own
-        // separate `/super-admin/schools/{tenantId}/edit` route, which has
-        // its own distinct 5-section field set, not this "Add a new school"
-        // wizard's 9 sections.
-        _buildActionButton(
-          'Edit',
-          Icons.edit_outlined,
-          busy
-              ? null
-              : () =>
-                    context.go('/super-admin/schools/${school.tenantId}/edit'),
-        ),
-        _buildActionButton(
-          'Impersonate',
-          Icons.people_outline,
-          busy ? null : () => _handleImpersonate(school),
-          busy: busy,
-        ),
-        _buildActionButton(
-          'Suspend',
-          Icons.pause_circle_outline,
-          (busy || school.status == 'suspended')
-              ? null
-              : () async {
-                  if (await _confirm(
-                    'Suspend school',
-                    'Suspend ${school.name}? Their admin console access will be blocked.',
-                  )) {
-                    await _handleStatusChange(
-                      school,
-                      'suspended',
-                      '${school.name} suspended.',
-                    );
-                  }
-                },
-        ),
-        _buildActionButton(
-          'Archive',
-          Icons.archive_outlined,
-          busy
-              ? null
-              : () async {
-                  if (await _confirm(
-                    'Archive school',
-                    'Archive ${school.name}? This can be undone via Restore.',
-                  )) {
-                    await _handleArchive(school);
-                  }
-                },
-          busy: busy,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    String label,
-    IconData icon,
-    VoidCallback? onPressed, {
-    bool busy = false,
-  }) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: busy
-          ? const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Icon(icon, size: 14),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        side: const BorderSide(color: AppColors.borderPrimary),
-        foregroundColor: AppColors.textPrimary,
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-      ),
-    );
-  }
 }

@@ -1167,3 +1167,50 @@ Developer: Archana
 - No backend changes; no web frontend modifications. All work performed only inside `eskoolia_mobapp`.
 - Nothing committed or pushed today, aside from the read-only `git fetch`/fast-forward `git pull` of Swetha's already-pushed commit (no new commits created locally).
 - Splash screen "box" issue carries over to the next session as an open item.
+
+---
+
+## 21-08-2026
+Developer: Archana
+**Branch:** Main
+
+### Work Done — Billing: New/Edit Invoice line-items header alignment (`new_invoice_sheet.dart`)
+- Fixed a real mismatch (reported via screenshot): the line-item column headings (SAC/QTY/RATE/AMOUNT) sat in one block above the whole line-item card instead of above their own field, so on a narrow phone the headings visually drifted away from the data they described. Moved each label to sit directly above its own field/value inside the card, guaranteeing correct alignment regardless of screen width.
+
+### Work Done — Billing: Tax Invoice web-parity inspection (inspected, fixed, then reverted)
+- Ran a full inspection of the Tax Invoice feature against the real web reference and found several genuine functional gaps: Edit/Cancel invoice buttons weren't disabled for paid/cancelled invoices (web disables both), "Send to buyer" wasn't disabled for cancelled invoices, `amount_in_words` could crash on a null/missing backend value with no client-side fallback (web computes one locally), seller GSTIN/state weren't sourced from the MRR endpoint like web does, and there was no busy-state guard against double-tapping Cancel.
+- Implemented and verified (`flutter analyze` clean) fixes for all of the above.
+- Per explicit instruction, fully reverted every one of these Billing-module changes back to the last committed state afterward — none of this is live in the app as of this entry.
+
+### Work Done — Billing: "Recent Invoices" mobile redesign
+- Replaced the dense, all-details-at-once invoice row with a compact card (Invoice No., School, Place of supply, Issued/Due date, Tax type, Status) — matches the explicit spec of showing only the essentials on the list.
+- Tapping a card now opens a new dedicated `InvoiceDetailPage` (full Tax Invoice + GST breakdown + Tax logic + all actions — Download PDF, Send to buyer, Record payment, Edit, Cancel) with a "Back to invoices" control, instead of expanding an inline preview on the same page. Same invoice data and backend calls throughout — no API/business-logic changes.
+- Added a widget test (`test/features/school_tenancy/billing_recent_invoices_test.dart`) that renders the Billing screen at a 375×812 mobile size, verifies the compact card, taps into the detail screen, and taps back — this test caught and fixed a real overflow bug in the shared `_metaChip` widget (a long place/date string could overflow a narrow card; now truncates with ellipsis).
+
+### Work Done — Splash screen not showing on hot restart / browser refresh (`app_router.dart`, `splash_page.dart`)
+- Root-caused properly this time (previous session's fix for this hadn't been verified live): on Flutter Web, a hot restart or browser refresh keeps the browser's current URL (e.g. `/login`), so go_router's `initialLocation: '/splash'` never applies — confirmed and fixed via a `redirect` check that forces any location through `/splash?next=<original>` first.
+- Found and fixed a race on top of that first fix: `checkAuthStatus()` resolving fires go_router's `refreshListenable` almost immediately, which re-evaluates `redirect` using the *original* un-redirected location before splash ever renders — a one-shot "already redirected" flag was already consumed by that point, so the race won and login rendered directly with no splash. Fixed by moving that flag (`splashHandoffDoneProvider`, Riverpod-backed) so it's only set `true` by `SplashPage` itself once its real animation sequence finishes, not eagerly the moment the redirect fires — any racing re-evaluation while splash is still legitimately in progress now gets bounced back to splash too, self-healing instead of racing.
+- Verified live end-to-end with a real headless-browser test (Playwright against an actual running `flutter run -d web-server` build): reproduced the original bug (white flash → straight to login, no splash), then confirmed the fix — URL correctly shows `#/splash?next=...` and holds through the full animation before returning to `#/login`.
+
+### Work Done — Splash screen taking far too long to load/navigate in debug builds (`splash_page.dart`)
+- Root-caused via direct measurement (not guessing): the splash's chroma-key step uses `compute()` to run the logo transparency pass off the UI thread; in a Flutter Web *debug* build, that spins up a new Web Worker which has to bootstrap its own copy of the whole DDC-compiled app before it can run anything — measured taking 15–40+ seconds by itself, unrelated to the actual image work.
+- Iterated through several approaches, each verified live and two of which were reverted after surfacing real regressions rather than being left in place on assumption:
+  - Shortened the `compute()` timeout (8s → 2s → 1s) — reduced the worst case but didn't address the root cause.
+  - Tried skipping chroma-keying only in debug builds (fast, but removed the transparent letter-by-letter effect entirely in debug — user correctly rejected this trade-off).
+  - Tried caching the computed result and running the `compute()` call as a fire-and-forget background upgrade — this caused a real regression: the app would show the logo and then never navigate to login at all, because whatever `compute()` does on this platform/SDK combination interferes with the animation ticker instead of staying safely off-thread. Reverted immediately on user report.
+  - **Final fix**: removed `compute()`/the background-isolate approach entirely and run the chroma-key pass synchronously, in-line, before the reveal animation starts. This has a fundamentally safer failure mode — no concurrent Future/isolate race is possible, so the call is guaranteed to eventually return; worst case it's slow, never stuck. Verified live: the pass genuinely takes ~5 seconds in a debug build (confirmed via an in-app timing log — real DDC interpreter slowness, not a bug) but always completes and navigates correctly afterward, with the transparent letter-by-letter cascade rendering correctly (confirmed via screenshot: mascot + cascading letters, no flat background box). Release builds are unaffected — no DDC involved there, so this same call resolves in milliseconds.
+
+### Work Done — Edit School: two missing sections added (`edit_school_page.dart`, `school_entity.dart`, `school_dto.dart`)
+- Found (via user screenshot comparison against the real web Edit School page) that sections "06 Contact & address" and "07 Identity extras & branding" existed on web but were entirely missing from the Flutter Edit School screen, which only had sections 01–05.
+- Confirmed all the underlying fields (principal name/email/phone, front-office phone/email, website, campus address, city, PIN code, country, school type, medium of instruction, year established, motto, affiliation number) already exist on the backend `SchoolTenant` model/serializer and are already returned by the GET endpoint — the Flutter `SchoolEntity`/`SchoolDto` simply wasn't parsing them. Extended both, regenerated the DTO's JSON (de)serialization code via `build_runner`, and wired the new fields into the page's load/save/UI exactly matching web's field grouping, labels, and save-payload semantics (a few fields are always sent even when blank, matching web's own save behavior).
+- Also fixed a related gap on the same screen: the "Brand color" field only showed a plain hex-code text box with no way to actually pick a color (web has a native color-swatch input). Added a real tappable color swatch next to the hex field that opens the same preset color palette already used by the "Add a new school" wizard (no new package dependency, no new visual assets) — swatch preview updates live as the hex text changes.
+
+### Testing / Verification
+- Ran `flutter analyze` after every change throughout today — clean each time (only the same pre-existing, unrelated baseline lints).
+- Unlike most previous sessions, had live browser access this time: used a headless Chromium (Playwright) driving both release and debug `flutter run -d web-server` builds to directly reproduce and verify the splash-screen and reload/refresh fixes end-to-end (screenshots + console logs), rather than relying solely on the user's own reports — this is what caught the `compute()` background-upgrade regression before it was reported, and confirmed the final synchronous fix actually works rather than assuming it from reasoning alone.
+- Added a real widget test for the Billing "Recent Invoices" redesign (see above) as the first automated test coverage for this module.
+
+### Remarks
+- No backend changes; no web frontend modifications. All work performed only inside `eskoolia_mobapp`.
+- Nothing committed or pushed today.
+- The Tax Invoice web-parity fixes were implemented, verified, and then explicitly reverted per instruction — worth revisiting from a clean state in a future session if still wanted.

@@ -80,6 +80,35 @@ const _kSsoOptions = [
   ['microsoft', 'Microsoft OAuth'],
   ['saml', 'SAML 2.0'],
 ];
+// Same preset palette as the "Add a new school" wizard's brand-color swatch
+// grid (`add_school_page.dart`) — web's Edit School page uses a native
+// `<input type="color">` swatch instead, which has no cross-platform Flutter
+// equivalent without a new picker dependency; reusing the app's own existing
+// palette keeps a real tappable color swatch (not just a hex text field)
+// while staying consistent with the rest of the module.
+const _kPaletteColors = [
+  '#5836E0',
+  '#A65D08',
+  '#1A4ACF',
+  '#0E9F6E',
+  '#992558',
+  '#0369A1',
+  '#06794F',
+  '#E0463A',
+];
+
+// Matches web's `MEDIUM_OF_INSTRUCTION_OPTIONS` exactly (`lib/school-choices.ts`).
+const _kMediumOfInstructionOptions = [
+  'English',
+  'English & Hindi',
+  'English & Telugu',
+  'Telugu',
+  'Hindi',
+  'Urdu',
+  'Kannada',
+  'Tamil',
+  'Marathi',
+];
 
 class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
   final _nameController = TextEditingController();
@@ -89,6 +118,24 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
   final _udiseController = TextEditingController();
   final _panController = TextEditingController();
   final _backupRetentionController = TextEditingController();
+  // Section 06 — Contact & address.
+  final _principalNameController = TextEditingController();
+  final _principalEmailController = TextEditingController();
+  final _principalPhoneController = TextEditingController();
+  final _schoolPhoneController = TextEditingController();
+  final _schoolEmailController = TextEditingController();
+  final _websiteController = TextEditingController();
+  final _campusAddressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _pinCodeController = TextEditingController();
+  final _countryController = TextEditingController();
+  // Section 07 — Identity extras & branding.
+  final _schoolTypeController = TextEditingController();
+  final _yearEstablishedController = TextEditingController();
+  final _mottoController = TextEditingController();
+  final _affiliationNumberController = TextEditingController();
+  final _logoUrlController = TextEditingController();
+  final _brandColorController = TextEditingController();
 
   String _plan = 'trial';
   String _status = 'active';
@@ -100,6 +147,7 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
   String _shardRegion = '';
   String _storageRegion = '';
   String _ssoMethod = 'native';
+  String _mediumOfInstruction = '';
 
   bool _loaded = false;
   bool _saving = false;
@@ -124,6 +172,23 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
     _storageRegion = school.storageRegion;
     _backupRetentionController.text = school.backupRetention.toString();
     _ssoMethod = school.ssoMethod.isEmpty ? 'native' : school.ssoMethod;
+    _principalNameController.text = school.principalName ?? '';
+    _principalEmailController.text = school.principalEmail ?? '';
+    _principalPhoneController.text = school.principalPhone ?? '';
+    _schoolPhoneController.text = school.schoolPhone ?? '';
+    _schoolEmailController.text = school.schoolEmail ?? '';
+    _websiteController.text = school.website ?? '';
+    _campusAddressController.text = school.campusAddress ?? '';
+    _cityController.text = school.city ?? '';
+    _pinCodeController.text = school.pinCode ?? '';
+    _countryController.text = (school.country?.isNotEmpty ?? false) ? school.country! : 'India';
+    _schoolTypeController.text = school.schoolType ?? '';
+    _mediumOfInstruction = school.mediumOfInstruction ?? '';
+    _yearEstablishedController.text = school.yearEstablished != null ? school.yearEstablished.toString() : '';
+    _mottoController.text = school.motto ?? '';
+    _affiliationNumberController.text = school.affiliationNumber ?? '';
+    _logoUrlController.text = school.logoUrl ?? '';
+    _brandColorController.text = school.brandColor ?? '';
   }
 
   @override
@@ -135,6 +200,22 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
     _udiseController.dispose();
     _panController.dispose();
     _backupRetentionController.dispose();
+    _principalNameController.dispose();
+    _principalEmailController.dispose();
+    _principalPhoneController.dispose();
+    _schoolPhoneController.dispose();
+    _schoolEmailController.dispose();
+    _websiteController.dispose();
+    _campusAddressController.dispose();
+    _cityController.dispose();
+    _pinCodeController.dispose();
+    _countryController.dispose();
+    _schoolTypeController.dispose();
+    _yearEstablishedController.dispose();
+    _mottoController.dispose();
+    _affiliationNumberController.dispose();
+    _logoUrlController.dispose();
+    _brandColorController.dispose();
     super.dispose();
   }
 
@@ -167,6 +248,30 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
         if (_backupRetentionController.text.trim().isNotEmpty)
           'backup_retention': int.tryParse(_backupRetentionController.text.trim()),
         'sso_method': _ssoMethod,
+        // Matches web's `handleSave()` exactly (`edit/page.tsx:155-190`) —
+        // most contact/identity fields are omitted when blank, but
+        // school_phone/school_email/website/medium_of_instruction/motto are
+        // always sent (even empty), clearing them server-side if the user
+        // blanks them out.
+        if (_principalNameController.text.trim().isNotEmpty) 'principal_name': _principalNameController.text.trim(),
+        if (_principalEmailController.text.trim().isNotEmpty) 'principal_email': _principalEmailController.text.trim(),
+        if (_principalPhoneController.text.trim().isNotEmpty) 'principal_phone': _principalPhoneController.text.trim(),
+        'school_phone': _schoolPhoneController.text.trim(),
+        'school_email': _schoolEmailController.text.trim(),
+        'website': _websiteController.text.trim(),
+        if (_campusAddressController.text.trim().isNotEmpty) 'campus_address': _campusAddressController.text.trim(),
+        if (_cityController.text.trim().isNotEmpty) 'city': _cityController.text.trim(),
+        if (_pinCodeController.text.trim().isNotEmpty) 'pin_code': _pinCodeController.text.trim(),
+        if (_countryController.text.trim().isNotEmpty) 'country': _countryController.text.trim(),
+        if (_schoolTypeController.text.trim().isNotEmpty) 'school_type': _schoolTypeController.text.trim(),
+        'medium_of_instruction': _mediumOfInstruction,
+        if (_yearEstablishedController.text.trim().isNotEmpty)
+          'year_established': int.tryParse(_yearEstablishedController.text.trim()),
+        'motto': _mottoController.text.trim(),
+        if (_affiliationNumberController.text.trim().isNotEmpty)
+          'affiliation_number': _affiliationNumberController.text.trim(),
+        if (_logoUrlController.text.trim().isNotEmpty) 'logo_url': _logoUrlController.text.trim(),
+        if (_brandColorController.text.trim().isNotEmpty) 'brand_color': _brandColorController.text.trim(),
       });
       ref.invalidate(schoolDetailProvider(widget.tenantId));
       ref.invalidate(schoolsProvider);
@@ -241,13 +346,20 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
                               const SizedBox(height: 4),
                               Text(widget.tenantId, style: AppTextStyles.sectionSubtitle.copyWith(fontFamily: 'monospace', fontSize: 11.5)),
                               const SizedBox(height: 14),
-                              Row(
+                              // `Wrap` (not `Row`) — a plain Row of these two
+                              // fixed-size buttons overflowed by a few pixels
+                              // now that this header sits inside its own
+                              // card, whose padding narrows the available
+                              // width slightly versus floating on the full
+                              // page background.
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
                                 children: [
                                   OutlinedButton(
                                     onPressed: _saving ? null : _back,
                                     child: const Text('Cancel'),
                                   ),
-                                  const SizedBox(width: 8),
                                   ElevatedButton.icon(
                                     onPressed: _saving ? null : _save,
                                     icon: const Icon(Icons.save_outlined, size: 14),
@@ -335,6 +447,46 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
                             _field('Backup retention (days)', child: _textField(_backupRetentionController, '30', number: true)),
                           ]),
                         ]),
+
+                        _section('06', 'Contact & address', [
+                          _fieldRow([
+                            _field('Principal name', child: _textField(_principalNameController, 'Dr. Anjali Rao')),
+                            _field('Principal email', child: _textField(_principalEmailController, 'principal@school.edu')),
+                          ]),
+                          _fieldRow([
+                            _field('Principal phone', child: _textField(_principalPhoneController, '+91 98765 43210')),
+                            _field('Front-office phone', child: _textField(_schoolPhoneController, '+91 40 1234 5678')),
+                          ]),
+                          _fieldRow([
+                            _field('Front-office email', child: _textField(_schoolEmailController, 'info@school.edu')),
+                            _field('Website', child: _textField(_websiteController, 'https://school.edu')),
+                          ]),
+                          _field('Campus address', child: _textField(_campusAddressController, 'Street, area, landmark', multiline: true)),
+                          _fieldRow([
+                            _field('City', child: _textField(_cityController, 'Hyderabad')),
+                            _field('PIN code', child: _textField(_pinCodeController, '500081', digitsOnly: true, maxLength: 6)),
+                          ]),
+                          _field('Country', child: _textField(_countryController, 'India')),
+                        ]),
+
+                        _section('07', 'Identity extras & branding', [
+                          _fieldRow([
+                            _field('School type', child: _textField(_schoolTypeController, 'K-12 · Day school')),
+                            _field('Medium of instruction', child: _dropdown(
+                              _mediumOfInstruction.isEmpty ? null : _mediumOfInstruction,
+                              _kMediumOfInstructionOptions.map((m) => [m, m]).toList(),
+                              (v) => setState(() => _mediumOfInstruction = v ?? ''),
+                              hint: '— Select —',
+                            )),
+                          ]),
+                          _fieldRow([
+                            _field('Year established', child: _textField(_yearEstablishedController, '1998', number: true, maxLength: 4)),
+                            _field('Board affiliation number', child: _textField(_affiliationNumberController, 'e.g. 1234567')),
+                          ]),
+                          _field('Motto / tagline', child: _textField(_mottoController, 'Knowledge is Power')),
+                          _field('Logo URL', child: _textField(_logoUrlController, 'https://…/logo.png')),
+                          _field('Brand color', child: _brandColorField()),
+                        ]),
                       ],
                     ),
                   ),
@@ -347,11 +499,12 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
                     color: AppColors.bgPrimary,
                     border: Border(top: BorderSide(color: AppColors.borderPrimary)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       OutlinedButton(onPressed: _saving ? null : _back, child: const Text('Cancel')),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: _saving ? null : _save,
                         icon: const Icon(Icons.save_outlined, size: 14),
@@ -464,12 +617,15 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
     bool lower = false,
     bool number = false,
     bool digitsOnly = false,
+    bool multiline = false,
     int? maxLength,
   }) {
     return TextField(
       controller: controller,
       keyboardType: number || digitsOnly ? TextInputType.number : TextInputType.text,
       maxLength: maxLength,
+      minLines: multiline ? 3 : 1,
+      maxLines: multiline ? 5 : 1,
       style: TextStyle(fontFamily: mono ? 'monospace' : null, fontSize: 13),
       onChanged: (upper || lower)
           ? (v) {
@@ -522,6 +678,90 @@ class _EditSchoolPageState extends ConsumerState<EditSchoolPage> {
           items: safeItems,
           onChanged: onChanged,
           style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+        ),
+      ),
+    );
+  }
+
+  Color? _hexToColor(String hex) {
+    final cleaned = hex.trim().replaceFirst('#', '');
+    if (cleaned.length != 6) return null;
+    final value = int.tryParse(cleaned, radix: 16);
+    return value == null ? null : Color(0xFF000000 | value);
+  }
+
+  /// Matches web's brand-color field layout — a colored swatch next to the
+  /// hex text input (`edit/page.tsx`'s `<input type="color">` + text pair).
+  /// Flutter has no cross-platform native color-input equivalent, so the
+  /// swatch opens the same preset palette already used by the "Add a new
+  /// school" wizard instead of a full picker — still a real, tappable color
+  /// swatch (not just a hex code), just constrained to that palette.
+  Widget _brandColorField() {
+    return AnimatedBuilder(
+      animation: _brandColorController,
+      builder: (context, _) {
+        final color = _hexToColor(_brandColorController.text) ?? const Color(0xFF6D4AFF);
+        return Row(
+          children: [
+            InkWell(
+              onTap: _openColorPalettePicker,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.borderPrimary),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: _textField(_brandColorController, '#6d4aff', mono: true)),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openColorPalettePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgPrimary,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Brand color', style: AppTextStyles.sectionTitle.copyWith(fontSize: 14)),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: _kPaletteColors.map((hex) {
+                final selected = _brandColorController.text.toLowerCase() == hex.toLowerCase();
+                return InkWell(
+                  onTap: () {
+                    setState(() => _brandColorController.text = hex);
+                    Navigator.pop(context);
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _hexToColor(hex),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: selected ? AppColors.textPrimary : Colors.transparent, width: 2),
+                    ),
+                    child: selected ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );

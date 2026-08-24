@@ -100,6 +100,25 @@ import '../../features/settings/presentation/pages/document_branding_page.dart';
 /// isn't reachable from that far up the tree).
 final currentRoutePathProvider = StateProvider<String>((ref) => '/splash');
 
+/// Flips to `true` only once [SplashPage] itself has actually finished its
+/// timed reveal and is handing off to its real destination (see
+/// `splash_page.dart`'s `initState`) — deliberately NOT flipped the moment
+/// `redirect` below first *decides* to force the user through `/splash`.
+///
+/// Why it matters: `checkAuthStatus()` (kicked off in `main.dart`) usually
+/// resolves within the same tick/microtask as app boot, which fires
+/// `refreshListenable` and makes go_router re-evaluate `redirect`
+/// independently — using the *original*, not-yet-redirected location (e.g.
+/// `/login`) rather than the just-computed `/splash` target. A one-shot
+/// boolean flipped eagerly on the first evaluation would already read as
+/// "done" by the time that racing re-evaluation runs, so it would fall
+/// through to the normal auth check and settle on `/login` directly —
+/// leaving splash computed internally (visible in `redirect` logs) but
+/// never actually rendered. Keeping this false until `SplashPage` itself
+/// confirms completion means any such racing re-evaluation still gets
+/// bounced back to `/splash` too, so it's self-healing instead of a race.
+final splashHandoffDoneProvider = StateProvider<bool>((ref) => false);
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   // Built exactly once per app lifetime — do NOT `ref.watch(authNotifierProvider)`
   // here. Watching it would rebuild this whole provider (and therefore
@@ -125,11 +144,40 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         }
       });
 
-      // The splash screen controls its own single, timed hand-off to
-      // `/login` (see `SplashPage`) — it must never be redirected away
-      // from early by auth-state changes, in either direction, or its
-      // animation would be cut short the moment `checkAuthStatus()`
-      // resolves underneath it.
+      // Force every route evaluation through `/splash` until `SplashPage`
+      // itself confirms its handoff is done (`splashHandoffDoneProvider`),
+      // regardless of what location the platform handed us as the
+      // "initial" one. `initialLocation: '/splash'` above only applies when
+      // the platform doesn't already provide a route — on Flutter Web
+      // specifically, the platform's initial route is whatever the
+      // browser's current URL already says. That meant hot-restarting (or
+      // refreshing) while already deep-linked past login skipped `/splash`
+      // entirely, since the browser's address bar still had e.g. `/login`
+      // in it even though Dart's own state had just been reset. The
+      // original destination is preserved via a `next` query param so
+      // splash can continue there once it finishes, instead of always
+      // bouncing to `/login`.
+      //
+      // Checked on every evaluation (not just once) rather than a one-shot
+      // flag set as soon as we decide to redirect: `checkAuthStatus()`
+      // resolving fires `refreshListenable` almost immediately after boot,
+      // which makes go_router re-evaluate `redirect` again using the
+      // *original* un-redirected location — a one-shot flag would already
+      // read "done" by then and let that racing evaluation settle straight
+      // on `/login`, with `/splash` computed internally but never actually
+      // rendered. Re-checking the provider (still false) instead bounces
+      // that race back to `/splash` too.
+      if (!ref.read(splashHandoffDoneProvider)) {
+        if (state.matchedLocation != '/splash') {
+          final original = state.uri.toString();
+          return '/splash?next=${Uri.encodeComponent(original)}';
+        }
+      }
+
+      // The splash screen controls its own single, timed hand-off (see
+      // `SplashPage`) — it must never be redirected away from early by
+      // auth-state changes, in either direction, or its animation would be
+      // cut short the moment `checkAuthStatus()` resolves underneath it.
       if (state.matchedLocation == '/splash') return null;
 
       final currentAuthState = ref.read(authNotifierProvider);

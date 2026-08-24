@@ -69,9 +69,50 @@ class SchoolDto {
   
   @JsonKey(name: 'brand_color')
   final String? brandColor;
-  
+
   @JsonKey(name: 'logo_url')
   final String? logoUrl;
+
+  @JsonKey(name: 'school_type')
+  final String? schoolType;
+
+  @JsonKey(name: 'medium_of_instruction')
+  final String? mediumOfInstruction;
+
+  @JsonKey(name: 'year_established')
+  final int? yearEstablished;
+
+  final String? motto;
+
+  @JsonKey(name: 'affiliation_number')
+  final String? affiliationNumber;
+
+  @JsonKey(name: 'principal_name')
+  final String? principalName;
+
+  @JsonKey(name: 'principal_email')
+  final String? principalEmail;
+
+  @JsonKey(name: 'principal_phone')
+  final String? principalPhone;
+
+  @JsonKey(name: 'school_phone')
+  final String? schoolPhone;
+
+  @JsonKey(name: 'school_email')
+  final String? schoolEmail;
+
+  final String? website;
+
+  @JsonKey(name: 'campus_address')
+  final String? campusAddress;
+
+  final String? city;
+
+  @JsonKey(name: 'pin_code')
+  final String? pinCode;
+
+  final String? country;
 
   SchoolDto({
     required this.tenantId,
@@ -102,6 +143,21 @@ class SchoolDto {
     this.pan,
     this.brandColor,
     this.logoUrl,
+    this.schoolType,
+    this.mediumOfInstruction,
+    this.yearEstablished,
+    this.motto,
+    this.affiliationNumber,
+    this.principalName,
+    this.principalEmail,
+    this.principalPhone,
+    this.schoolPhone,
+    this.schoolEmail,
+    this.website,
+    this.campusAddress,
+    this.city,
+    this.pinCode,
+    this.country,
   });
 
   factory SchoolDto.fromJson(Map<String, dynamic> json) => _$SchoolDtoFromJson(json);
@@ -137,6 +193,21 @@ class SchoolDto {
       pan: pan,
       brandColor: brandColor,
       logoUrl: logoUrl,
+      schoolType: schoolType,
+      mediumOfInstruction: mediumOfInstruction,
+      yearEstablished: yearEstablished,
+      motto: motto,
+      affiliationNumber: affiliationNumber,
+      principalName: principalName,
+      principalEmail: principalEmail,
+      principalPhone: principalPhone,
+      schoolPhone: schoolPhone,
+      schoolEmail: schoolEmail,
+      website: website,
+      campusAddress: campusAddress,
+      city: city,
+      pinCode: pinCode,
+      country: country,
     );
   }
 }

@@ -122,6 +122,205 @@ const _kStateOptions = [
   ['19', 'West Bengal'],
 ];
 
+/// Searchable combobox matching web's own State field exactly (`schools/
+/// page.tsx`'s react-select-style control): the field itself (placeholder +
+/// chevron, purple border while open) with a panel appearing directly BELOW
+/// it — search box on top, "Select State..." as a clearing first row, then
+/// the filtered list — rather than a separate full-screen sheet. Built on
+/// `CompositedTransformTarget`/`Follower` (not `DropdownMenu`, whose popup
+/// is positioned once at open-time and does not track the field afterward):
+/// the follower re-tracks the field's live position on every frame, so the
+/// panel never detaches from it even if this field's parent form scrolls
+/// while the panel is open.
+class _StatePickerField extends StatefulWidget {
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  const _StatePickerField({required this.value, required this.onChanged});
+
+  @override
+  State<_StatePickerField> createState() => _StatePickerFieldState();
+}
+
+class _StatePickerFieldState extends State<_StatePickerField> {
+  final _layerLink = LayerLink();
+  final _fieldKey = GlobalKey();
+  final _searchController = TextEditingController();
+  OverlayEntry? _overlayEntry;
+  bool _isOpen = false;
+  String _query = '';
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggle() => _isOpen ? _close() : _open();
+
+  void _open() {
+    _searchController.clear();
+    _query = '';
+    _overlayEntry = _buildOverlay();
+    Overlay.of(context).insert(_overlayEntry!);
+    setState(() => _isOpen = true);
+  }
+
+  void _close() {
+    _removeOverlay();
+    if (mounted) setState(() => _isOpen = false);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  void _select(String? code) {
+    widget.onChanged(code);
+    _close();
+  }
+
+  OverlayEntry _buildOverlay() {
+    final fieldWidth = (_fieldKey.currentContext!.findRenderObject() as RenderBox).size.width;
+    return OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            // Full-screen invisible barrier — matches web's own
+            // click-outside-closes behavior for this control.
+            Positioned.fill(
+              child: GestureDetector(behavior: HitTestBehavior.translucent, onTap: _close),
+            ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0, 42),
+              child: StatefulBuilder(
+                builder: (context, setOverlayState) {
+                  final q = _query.trim().toLowerCase();
+                  final filtered = q.isEmpty
+                      ? _kStateOptions
+                      : _kStateOptions.where((o) => o[1].toLowerCase().contains(q) || o[0].contains(q)).toList();
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        width: fieldWidth,
+                        constraints: const BoxConstraints(maxHeight: 320),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFDFE0EB)),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: TextField(
+                                controller: _searchController,
+                                autofocus: true,
+                                onChanged: (v) => setOverlayState(() => _query = v),
+                                style: const TextStyle(fontSize: 13),
+                                decoration: InputDecoration(
+                                  hintText: 'Search state...',
+                                  hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF9AA0B2)),
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFFDFE0EB))),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: Color(0xFFDFE0EB))),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.primaryPurple, width: 1.5)),
+                                ),
+                              ),
+                            ),
+                            Flexible(
+                              child: ListView(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                children: [
+                                  _optionTile(context, 'Select State...', null),
+                                  for (final o in filtered) _optionTile(context, o[1], o[0]),
+                                  if (filtered.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(child: Text('No states match "$_query"', style: const TextStyle(fontSize: 12.5, color: Color(0xFF9AA0B2)))),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _optionTile(BuildContext context, String label, String? code) {
+    final isSelected = code == widget.value;
+    return InkWell(
+      onTap: () => _select(code),
+      child: Container(
+        width: double.infinity,
+        color: isSelected ? AppColors.purpleTint : Colors.transparent,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isSelected ? AppColors.primaryPurple : const Color(0xFF1D2433),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = _kStateOptions.where((o) => o[0] == widget.value).firstOrNull;
+    return CompositedTransformTarget(
+      link: _layerLink,
+      child: InkWell(
+        key: _fieldKey,
+        borderRadius: BorderRadius.circular(8),
+        onTap: _toggle,
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            border: Border.all(color: _isOpen ? AppColors.primaryPurple : const Color(0xFFDFE0EB), width: _isOpen ? 1.5 : 1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  selected == null ? 'Select State...' : selected[1],
+                  style: TextStyle(fontSize: 13, color: selected == null ? const Color(0xFF9AA0B2) : const Color(0xFF1D2433)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(_isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, size: 20, color: const Color(0xFF8B8EA8)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // Web's Section 07 "Subscription plan" select (`schools/page.tsx`) doesn't
 // use the backend's create-time `ProvisionSchoolRequestSerializer.plan`
 // choice list at all — it renders the real, server-driven billing plans
@@ -865,23 +1064,20 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             _field(
               'State',
               required: true,
-              child: AppDropdown<String>(
+              // A tappable field opening a search bottom sheet — not
+              // `AppDropdown` (a plain `DropdownButton` wrapper with no
+              // filtering, genuinely tedious to scroll through 35 states in)
+              // and not `DropdownMenu` either: that widget's popup menu is
+              // positioned relative to the field's on-screen position at the
+              // moment it opens, and this field sits inside the wizard's own
+              // scrollable body — scrolling afterward (or the field simply
+              // being far down the page already) left the search box
+              // effectively invisible/out of view while the option list
+              // still floated on screen. A `showModalBottomSheet` is its own
+              // fresh, always-fully-visible overlay regardless of where the
+              // field sits, so the search box is always on screen with it.
+              child: _StatePickerField(
                 value: _stateCode,
-                hint: const Text(
-                  'Select state…',
-                  style: TextStyle(fontSize: 13),
-                ),
-                items: _withCurrentValue(
-                  _kStateOptions
-                      .map(
-                        (o) => DropdownMenuItem(
-                          value: o[0],
-                          child: Text('${o[1]} (${o[0]})'),
-                        ),
-                      )
-                      .toList(),
-                  _stateCode,
-                ),
                 onChanged: (v) => setState(() => _stateCode = v),
               ),
             ),
@@ -953,9 +1149,15 @@ class _AddSchoolFormState extends ConsumerState<AddSchoolForm> {
             ),
             _field(
               'State',
-              child: _decorativeDropdown(
-                'campus_state',
-                _kStateOptions.map((o) => '${o[1]} (${o[0]})').toList(),
+              // Same searchable combobox as Section 02's real State field —
+              // this one's still "decorative" (never submitted, see this
+              // class's own doc comment on `_decorative`), only the storage
+              // key differs, so it gets the same easy-to-search UX for a
+              // 35-option list instead of `_decorativeDropdown`'s plain
+              // scroll-only `AppDropdown`.
+              child: _StatePickerField(
+                value: _decorative['campus_state'] as String?,
+                onChanged: (v) => setState(() => _decorative['campus_state'] = v),
               ),
             ),
             _field(

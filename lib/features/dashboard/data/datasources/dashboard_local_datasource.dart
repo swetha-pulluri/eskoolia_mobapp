@@ -21,7 +21,6 @@ class DashboardLocalDataSource {
         await savePins(DefaultPins.all);
         return DefaultPins.all;
       }
-      
       return pinsJson.map((json) => PinItemEntity.fromJson(json)).toList();
     } catch (e) {
       AppLogger.error('Get pins error', e);

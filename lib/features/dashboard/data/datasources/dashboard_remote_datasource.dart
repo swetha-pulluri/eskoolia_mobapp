@@ -47,7 +47,13 @@ class DashboardRemoteDataSource {
   }
 
   Future<FeesTodayEntity> getFeesToday() async {
-    final response = await _dioClient.get(ApiConstants.feesTodaySummary);
+    // Same backend-side slowness as `getAttendancePulse()` above (observed
+    // timing out past the app-wide 30s receive timeout) — same fix: a
+    // longer timeout just for this one call, not the global default.
+    final response = await _dioClient.get(
+      ApiConstants.feesTodaySummary,
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    );
     return FeesTodayEntity.fromJson(response.data as Map<String, dynamic>);
   }
 }

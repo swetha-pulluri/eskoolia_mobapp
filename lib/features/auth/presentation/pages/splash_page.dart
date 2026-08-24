@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show compute, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
+import '../../../../config/router/app_router.dart';
 import '../../../../core/constants/app_assets.dart';
 
 // Precisely measured from the source asset itself (not eyeballed) — the PNG
@@ -41,13 +42,6 @@ const double _wordmarkTopFrac = 0.47;
 // letter's own measured slice of the real logo pixels, not a guess.
 const List<double> _letterBoundaries = [0.0, 0.134, 0.3315, 0.3843, 0.4424, 0.5317, 0.6363, 0.8007, 1.0];
 
-// The asset's own flat background colour, sampled directly from its corner
-// pixel (measured, not guessed) — chroma-keyed out at runtime below so only
-// the logo itself ever paints, never the rectangular canvas around it.
-const double _bgR = 250, _bgG = 250, _bgB = 250;
-const double _chromaThreshold = 40; // distance below which a pixel counts as background
-const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
-
 // The logo itself is a cool, saturated blue. A warm, light backdrop (not
 // another blue/purple) is what actually makes it pop via contrast, rather
 // than blending into a same-family gradient — a soft ivory-to-champagne
@@ -57,29 +51,28 @@ const Color _bgWarmMid = Color(0xFFFDF6EA);
 const Color _bgWarmBottom = Color(0xFFF7EAD2);
 const Color _glassGold = Color(0xFFE8C777);
 
+// The asset's own flat background colour, sampled directly from its corner
+// pixel (measured, not guessed) — chroma-keyed out at runtime below so only
+// the logo itself ever paints, never the rectangular canvas around it.
+const double _bgR = 250, _bgG = 250, _bgB = 250;
+const double _chromaThreshold = 40; // distance below which a pixel counts as background
+const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
+
 /// Decodes the logo PNG's own bytes and makes every background-coloured
 /// pixel transparent (with a soft feathered edge near the logo's own
 /// strokes), returning a *re-encoded* PNG's bytes. This never touches the
 /// asset file on disk and never alters a single logo pixel's colour — it
 /// only ever changes the *alpha* of pixels that already match the known
-/// flat background colour. Runs off the UI thread via [compute] (same
-/// pattern already used for photo compression elsewhere in this app), since
-/// per-pixel work over a 1254×1254 image is real work — done here as a tight
-/// loop over the raw RGBA byte buffer (not the `image` package's per-pixel
-/// `Pixel` object iterator, which allocates/dispatches per pixel).
+/// flat background colour.
 ///
-/// `encodePng(..., level: 0, filter: PngFilter.none)` — the package's own
-/// default (`level: 6`, Paeth filtering) runs real zlib DEFLATE compression
-/// plus per-scanline filtering over the full ~6.3MB buffer, both for
-/// nothing: this PNG is never written to disk or sent anywhere, it's handed
-/// straight back to the main isolate and immediately decoded again by
-/// `Image.memory` below. `level: 0`/`PngFilter.none` skip that compression
-/// and filtering work entirely — the output is larger, which doesn't matter
-/// for a value that only ever exists in memory for a few milliseconds — and
-/// this was the actual, most *variable* cost in the whole function (it
-/// swings a lot with device load, unlike the cheap per-pixel arithmetic
-/// above), so this is the real fix for the splash intermittently missing
-/// its own timeout and falling back to the flat, non-transparent logo.
+/// Runs synchronously on the calling isolate (not via `compute()`) — a
+/// prior attempt to run this off-thread via `compute()` caused the splash
+/// to get stuck and never navigate, because whatever `compute()` does on
+/// this platform/SDK combination interfered with the animation ticker
+/// instead of staying safely off it. Run inline, the worst case if this
+/// loop is ever slow on a given device is a proportionally delayed splash
+/// (still bounded, still eventually completes) — never a permanent hang,
+/// since there's no concurrent Future/isolate race involved at all.
 Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
   final decoded = img.decodeImage(sourceBytes);
   if (decoded == null) return sourceBytes;
@@ -126,14 +119,14 @@ Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
 /// Once fully revealed, one soft diagonal light sweep crosses the logo,
 /// then it holds, still and fully visible, until the 5-second-plus floor
 /// elapses.
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStateMixin {
   late final AnimationController _revealController;
   late final Animation<double> _mascotFade;
   late final List<Animation<double>> _letterFade;
@@ -211,10 +204,33 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     Future.wait([floor, sequenceDone]).then((_) {
       if (!mounted || _navigated) return;
       _navigated = true;
-      context.go('/login');
+      // Marks the forced-splash handoff as genuinely complete — until this
+      // flips, `app_router.dart`'s `redirect` keeps bouncing any location
+      // back to `/splash` (including a race from `checkAuthStatus()`
+      // resolving mid-splash), so this must be set *before* navigating away
+      // or that same redirect would just force this page right back open.
+      ref.read(splashHandoffDoneProvider.notifier).state = true;
+      // `next` — set by `app_router.dart`'s `redirect` whenever it forced a
+      // mid-session location through `/splash` (e.g. a Flutter Web hot
+      // restart/refresh while already deep-linked past login) — carries the
+      // original destination so the user lands back where they actually
+      // were instead of always being sent to `/login`. Absent on a genuine
+      // first cold launch, where `/login` is the correct explicit default.
+      final next = GoRouterState.of(context).uri.queryParameters['next'];
+      context.go((next != null && next.isNotEmpty) ? next : '/login');
     });
   }
 
+  // An earlier version ran chroma-keying via `compute()` as a fire-and-
+  // forget background upgrade alongside the reveal animation — that caused
+  // the splash to get stuck showing the logo and never navigate at all,
+  // because whatever `compute()` does on this platform/SDK combination
+  // interfered with the animation ticker instead of staying safely off it.
+  // Running it synchronously here instead (see `_loadTransparentLogo`) has
+  // a fundamentally different, safer failure mode: with no concurrent
+  // Future/isolate involved, the call is guaranteed to eventually return —
+  // worst case it's slow (delaying the reveal start by however long the
+  // loop takes), never a permanent hang.
   Future<void> _runSplashSequence() async {
     await _loadTransparentLogo();
     if (!mounted) return;
@@ -229,29 +245,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       Uint8List? transparent;
       try {
-        // `.timeout(...)` matters as much as the `catch` here — a `compute()`
-        // call that *hangs* (rather than throws) on some platform/isolate
-        // configuration would otherwise never resolve at all, leaving the
-        // logo invisible forever with no error to catch. Either way, a
-        // `null` result here (timeout or thrown error) falls back below to
-        // the raw (non-keyed) asset bytes rather than leaving the logo
-        // invisible — still shows the logo, just with its flat background,
-        // if the chroma-key pass can't complete.
-        //
-        // The real fix for the intermittent "sometimes a box, sometimes
-        // letter-by-letter" behavior lives in `_chromaKeyLogoBytes` itself
-        // (using `level: 0`/no filtering when re-encoding, instead of the
-        // package's default zlib-compressed encode, which was the dominant
-        // and most variable cost) — this 8s ceiling is just a generous
-        // backstop for a genuinely hung/very-slow device, not the primary fix.
-        final Future<Uint8List?> computeFuture = compute(_chromaKeyLogoBytes, bytes);
-        transparent = await computeFuture.timeout(
-          const Duration(seconds: 8),
-          onTimeout: () {
-            debugPrint('[SplashPage] chroma-key timed out, showing raw logo instead');
-            return null;
-          },
-        );
+        final stopwatch = Stopwatch()..start();
+        transparent = _chromaKeyLogoBytes(bytes);
+        debugPrint('[SplashPage] chroma-key took ${stopwatch.elapsedMilliseconds}ms');
       } catch (e) {
         debugPrint('[SplashPage] chroma-key failed, showing raw logo instead: $e');
         transparent = null;

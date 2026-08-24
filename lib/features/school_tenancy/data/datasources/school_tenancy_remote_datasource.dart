@@ -92,6 +92,16 @@ class SchoolTenancyRemoteDataSource {
       if (state != null && state.isNotEmpty) queryParams['state'] = state;
       if (healthFlag != null && healthFlag.isNotEmpty) queryParams['health_flag'] = healthFlag;
 
+      // Cache-busting `_ts` — on Flutter Web, tapping "Refresh" with the
+      // exact same filters re-requests the exact same URL, which the
+      // browser's own HTTP cache can serve straight back without a real
+      // network round-trip at all: the UI shows its loading state (the
+      // request genuinely fires) but the response — and therefore the
+      // screen — never actually changes, since it's the cached copy, not a
+      // fresh one. A different value on every call guarantees a unique URL,
+      // so there's nothing for the browser to have cached yet.
+      queryParams['_ts'] = DateTime.now().millisecondsSinceEpoch.toString();
+
       final response = await _dioClient.get(
         '/api/super-admin/schools/',
         queryParameters: queryParams,

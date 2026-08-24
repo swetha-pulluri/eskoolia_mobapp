@@ -27,6 +27,24 @@ class SchoolEntity {
   final String? pan;
   final String? brandColor;
   final String? logoUrl;
+  // School identity metadata (web's Edit School section 07 "Identity extras
+  // & branding").
+  final String? schoolType;
+  final String? mediumOfInstruction;
+  final int? yearEstablished;
+  final String? motto;
+  final String? affiliationNumber;
+  // Contact & address (web's Edit School section 06).
+  final String? principalName;
+  final String? principalEmail;
+  final String? principalPhone;
+  final String? schoolPhone;
+  final String? schoolEmail;
+  final String? website;
+  final String? campusAddress;
+  final String? city;
+  final String? pinCode;
+  final String? country;
 
   const SchoolEntity({
     required this.tenantId,
@@ -56,6 +74,21 @@ class SchoolEntity {
     this.pan,
     this.brandColor,
     this.logoUrl,
+    this.schoolType,
+    this.mediumOfInstruction,
+    this.yearEstablished,
+    this.motto,
+    this.affiliationNumber,
+    this.principalName,
+    this.principalEmail,
+    this.principalPhone,
+    this.schoolPhone,
+    this.schoolEmail,
+    this.website,
+    this.campusAddress,
+    this.city,
+    this.pinCode,
+    this.country,
   });
 }
 

@@ -546,10 +546,22 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                                         ],
                                       ),
                                       const SizedBox(height: 6),
-                                      ProgressBar(
-                                        value: board.percent / 100,
-                                        color: AppColors.getBoardColor(
-                                          board.board,
+                                      // `SizedBox(width: double.infinity)` —
+                                      // this `Column` has no explicit
+                                      // `crossAxisAlignment`, which defaults
+                                      // to `center`; without a defined width,
+                                      // the bar shrank to some minimal size
+                                      // and centered under the row instead of
+                                      // spanning it, so shorter bars (e.g.
+                                      // 16.67%) looked like they started
+                                      // partway across instead of flush left.
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ProgressBar(
+                                          value: board.percent / 100,
+                                          color: AppColors.getBoardColor(
+                                            board.board,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -753,12 +765,18 @@ class SuperAdminDashboardPage extends ConsumerWidget {
                                         ],
                                       ),
                                       const SizedBox(height: 6),
-                                      ProgressBar(
-                                        value: maxMrr > 0
-                                            ? plan.mrr / maxMrr
-                                            : 0,
-                                        color: AppColors.getPlanColor(
-                                          plan.plan,
+                                      // Same fix as "Schools by board" above —
+                                      // stretches to the row's full width
+                                      // instead of shrinking and centering.
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: ProgressBar(
+                                          value: maxMrr > 0
+                                              ? plan.mrr / maxMrr
+                                              : 0,
+                                          color: AppColors.getPlanColor(
+                                            plan.plan,
+                                          ),
                                         ),
                                       ),
                                     ],
