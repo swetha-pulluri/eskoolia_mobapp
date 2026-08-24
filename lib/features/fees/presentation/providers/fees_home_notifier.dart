@@ -65,7 +65,7 @@ class FeesHomeNotifier extends StateNotifier<FeesHomeState> {
     unawaited(_repository.fetchHomeDashboard().then((homeData) {
       if (_disposed) return;
       state = state.copyWith(homeData: homeData);
-    }));
+    }).catchError((_) {}));
 
     try {
       final students = await _repository.fetchStudents();

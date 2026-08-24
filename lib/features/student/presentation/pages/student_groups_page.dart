@@ -607,8 +607,6 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
             GroupStatCard(eyebrow: 'Club', value: '${_stats?.clubCount ?? '-'}', label: 'School Clubs', barColor: const Color(0xFFFF8D5B)),
           ],
         ),
-        const SizedBox(height: 16),
-        _buildInspireHubCard(),
         const SizedBox(height: 20),
         _sectionHead('School Houses', const Color(0xFF00B894), '${_houses.length} House${_houses.length != 1 ? 's' : ''}'),
         const SizedBox(height: 12),
@@ -787,47 +785,22 @@ class _StudentGroupsPageState extends ConsumerState<StudentGroupsPage> {
               label: const Text('Add Group', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B894), foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             ),
+            InkWell(
+              onTap: _onOpenInspireHub,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFFDA22FF)]), borderRadius: BorderRadius.circular(10)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.auto_awesome, size: 15, color: Colors.white),
+                  SizedBox(width: 6),
+                  Text('Open InspireHub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                ]),
+              ),
+            ),
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildInspireHubCard() {
-    return InkWell(
-      onTap: _onOpenInspireHub,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF8E2DE2), Color(0xFFDA22FF)]),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Open InspireHub', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                  SizedBox(height: 2),
-                  Text('Competitions · AI reviews · Insights', style: TextStyle(fontSize: 11.5, color: Color(0xE6FFFFFF))),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white),
-          ],
-        ),
-      ),
     );
   }
 

@@ -192,20 +192,36 @@ class _AcademicsFoundationPageState extends ConsumerState<AcademicsFoundationPag
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('ACADEMICS SETUP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1, color: Color(0xFF6F767E))),
-        const SizedBox(height: 3),
-        RichText(
-          text: TextSpan(
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFE8ECEF)),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 3)],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextSpan(text: 'Foundation ', style: GoogleFonts.playfairDisplay(fontSize: 32, fontWeight: FontWeight.w900, color: const Color(0xFF1A1D1F))),
-              TextSpan(text: '& Core Settings', style: GoogleFonts.playfairDisplay(fontSize: 32, fontStyle: FontStyle.italic, fontWeight: FontWeight.w500, color: const Color(0xFF5B4FCF))),
+              const Text('ACADEMICS SETUP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1, color: Color(0xFF6F767E))),
+              const SizedBox(height: 3),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Foundation ', style: GoogleFonts.playfairDisplay(fontSize: 32, fontWeight: FontWeight.w900, color: const Color(0xFF1A1D1F))),
+                    TextSpan(text: '& Core Settings', style: GoogleFonts.playfairDisplay(fontSize: 32, fontStyle: FontStyle.italic, fontWeight: FontWeight.w500, color: const Color(0xFF5B4FCF))),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Define the core academic structure including academic years, classes, sections, subjects, and rooms.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6F767E)),
+              ),
             ],
           ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Define the core academic structure including academic years, classes, sections, subjects, and rooms.',
-          style: TextStyle(fontSize: 13, color: Color(0xFF6F767E)),
         ),
         const SizedBox(height: 10),
         Wrap(

@@ -202,12 +202,16 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
   /// `renderConcessionRules`). Wrapped in a horizontally-scrolling
   /// container so the fixed widths never overflow on a narrow screen.
   static const _colName = 150.0;
-  static const _colScope = 150.0;
-  static const _colDiscount = 100.0;
-  static const _colStatus = 100.0;
-  static const _colActions = 120.0;
+  static const _colScope = 140.0;
+  static const _colDiscount = 64.0;
+  static const _colStatus = 84.0;
+  static const _colActions = 100.0;
+  // Explicit gap between columns — column widths are sized to their content
+  // now (not padded out to create a gutter), so the gap has to be its own
+  // spacer or the columns would butt up against each other.
+  static const _colGap = 12.0;
   // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
-  static const _tableWidth = _colName + _colScope + _colDiscount + _colStatus + _colActions + 32;
+  static const _tableWidth = _colName + _colScope + _colDiscount + _colStatus + _colActions + _colGap * 4 + 32;
 
   Widget _buildTable() {
     return Container(
@@ -226,7 +230,7 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
               else if (_rows.isEmpty)
                 const Padding(padding: EdgeInsets.all(24), child: Text('No concession rules yet.', style: TextStyle(color: feeConfigInk2)))
               else
-                for (final rule in _rows) _buildRow(rule),
+                for (var i = 0; i < _rows.length; i++) _buildRow(_rows[i], isLast: i == _rows.length - 1),
             ],
           ),
         ),
@@ -241,9 +245,13 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
       child: const Row(
         children: [
           SizedBox(width: _colName, child: Text('NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colScope, child: Text('SCOPE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colDiscount, child: Text('DISCOUNT', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colStatus, child: Text('STATUS', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
@@ -253,18 +261,22 @@ class _ConcessionRulesTabState extends ConsumerState<ConcessionRulesTab> {
   /// Each rule shown as one table row, fields lined up under their own
   /// column headings above — matches web's real table structure
   /// (`renderConcessionRules`) exactly rather than combining fields.
-  Widget _buildRow(ConcessionRule rule) {
+  Widget _buildRow(ConcessionRule rule, {required bool isLast}) {
     final deleting = _deletingId == rule.id;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: feeConfigBorder))),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: feeConfigBorder))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: _colName, child: Text(rule.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colScope, child: Text(rule.appliesTo.isEmpty ? '—' : rule.appliesTo, style: feeConfigTdMuted)),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colDiscount, child: Text('${rule.discountPercentage}%', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colStatus, child: FeeConfigStatusPill(rule.status == 'Inactive' ? 'Inactive' : 'Active')),
+          const SizedBox(width: _colGap),
           SizedBox(
             width: _colActions,
             child: Column(

@@ -37,7 +37,7 @@ class FeesTask {
   factory FeesTask.fromJson(Map<String, dynamic> json) {
     return FeesTask(
       id: (json['id'] as String?) ?? '',
-      color: (json['color'] as String?) ?? '#6D4AFF',
+      color: _nonEmpty(json['color'] as String?) ?? '#6D4AFF',
       title: (json['title'] as String?) ?? '',
       desc: (json['desc'] as String?) ?? '',
       buttons: ((json['buttons'] as List<dynamic>?) ?? const [])
@@ -71,10 +71,16 @@ class FeesAuditItem {
       event: (json['event'] as String?) ?? '',
       desc: (json['desc'] as String?) ?? '',
       date: (json['date'] as String?) ?? '',
-      bg: (json['bg'] as String?) ?? '#6D4AFF',
+      bg: _nonEmpty(json['bg'] as String?) ?? '#6D4AFF',
     );
   }
 }
+
+/// Null AND empty-string both mean "not provided" for these hex colour
+/// fields — a plain `??` only catches the null case, which let a blank
+/// `""` from the backend sail through to `int.parse(..., radix: 16)` and
+/// crash the Task Queue / Audit Trail cards with a FormatException.
+String? _nonEmpty(String? s) => (s == null || s.isEmpty) ? null : s;
 
 class FeesHomeData {
   final List<FeesTask> tasks;

@@ -398,6 +398,20 @@ Completed Work:
 
 ---
 
+## Date: 2026-08-21 (Friday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Fee Configuration (Fee Groups / Fee Types / Fee Schedules / Concession Rules / Late Fee Rules tabs): fixed each table's last row rendering with a "full border" boxed-in look by making only the last row skip its bottom divider (`isLast` flag), instead of doubling up with the table's own outer border; tightened row vertical padding across all five tabs
+- Reduced the STATUS column's fixed width in Fee Groups/Fee Types/Concession Rules so the Active/Inactive pill (and toggle) no longer floats in an oversized empty cell, then added an explicit uniform gap between every column in Fee Types, Fee Schedules, and Concession Rules (replacing leftover column-width slack as the de-facto spacing) so short columns like Taxable/Grace/Discount/Status stay tight without losing separation from their neighbors
+- Fixed the Admin login flow showing a brief "Login" screen before "Home" for an already-authenticated user on hot restart/relaunch: the splash screen's wait for `checkAuthStatus()` had a 5-second timeout that could fire before the real network call (bounded by the app's own 30s connect/receive timeouts) finished, silently defaulting to `/login` and then bouncing to `/home` once auth actually resolved a moment later; removed that timeout so splash always waits for the real result
+- Fee Assignment page: merged the separate Stats-bar and Filters boxes (previously two independently-bordered containers glued together by a divider strip, with no border at all along their shared seam) into one single bordered card matching the same radius/padding convention as the header card and class roster cards
+- Fee Year-End reports: fixed "Export CSV" showing a success toast but the file never appearing in the Files app — it was being written to Android's app-private external-storage folder (`Android/data/<package>/files/Download`), which most file managers don't surface; switched to handing the CSV to the native share/save sheet instead (same working pattern already used for Admissions Analytics' CSV export), so the user can save it to Downloads/Drive/Files themselves
+
+---
+
 ## Project Structure
 
 ```

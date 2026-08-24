@@ -293,13 +293,18 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
   /// scrolls horizontally on a narrow screen; search/filter/pagination
   /// above and below stay full-width.
   static const _colName = 150.0;
-  static const _colGlCode = 130.0;
-  static const _colTaxable = 90.0;
+  static const _colGlCode = 120.0;
+  static const _colTaxable = 64.0;
   static const _colStructure = 150.0;
-  static const _colStatus = 100.0;
+  static const _colStatus = 84.0;
   static const _colActions = 110.0;
+  // Explicit gap between columns — column widths are sized to their content
+  // now (not padded out to create a gutter), so the gap has to be its own
+  // spacer or the columns would butt up against each other.
+  static const _colGap = 12.0;
   // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
-  static const _tableWidth = _colName + _colGlCode + _colTaxable + _colStructure + _colStatus + _colActions + 32;
+  static const _tableWidth =
+      _colName + _colGlCode + _colTaxable + _colStructure + _colStatus + _colActions + _colGap * 5 + 32;
 
   Widget _buildTable() {
     return Container(
@@ -342,7 +347,7 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
                   else if (_rows.isEmpty)
                     const Padding(padding: EdgeInsets.all(24), child: Text('No fee types found.', style: TextStyle(color: feeConfigInk2)))
                   else
-                    for (final row in _rows) _buildRow(row),
+                    for (var i = 0; i < _rows.length; i++) _buildRow(_rows[i], isLast: i == _rows.length - 1),
                 ],
               ),
             ),
@@ -363,10 +368,15 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
       child: const Row(
         children: [
           SizedBox(width: _colName, child: Text('NAME', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colGlCode, child: Text('GL CODE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colTaxable, child: Text('TAXABLE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colStructure, child: Text('DEFAULT STRUCTURE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colStatus, child: Text('STATUS', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
@@ -376,18 +386,23 @@ class _FeeTypesTabState extends ConsumerState<FeeTypesTab> {
   /// Each fee type shown as one table row, fields lined up under their own
   /// column headings above — matches web's real table structure
   /// (`renderFeeTypes`) exactly rather than combining fields together.
-  Widget _buildRow(FeesType row) {
+  Widget _buildRow(FeesType row, {required bool isLast}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: feeConfigBorder))),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: feeConfigBorder))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(width: _colName, child: Text(row.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: feeConfigInk1))),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colGlCode, child: Text(row.glCode, style: feeConfigTdMuted)),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colTaxable, child: Text(row.taxable, style: feeConfigTdMuted)),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colStructure, child: Text(row.defaultStructure, style: feeConfigTdMuted)),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colStatus, child: FeeConfigStatusPill(row.status)),
+          const SizedBox(width: _colGap),
           SizedBox(
             width: _colActions,
             child: Column(

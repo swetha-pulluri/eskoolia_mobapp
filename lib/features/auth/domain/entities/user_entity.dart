@@ -14,6 +14,7 @@ class UserEntity extends Equatable {
   final bool isSuperuser;
   final List<String> roleNames;
   final bool mustChangePassword;
+  final SchoolBrandingEntity? schoolBranding;
 
   const UserEntity({
     required this.id,
@@ -27,6 +28,7 @@ class UserEntity extends Equatable {
     required this.isSuperuser,
     required this.roleNames,
     required this.mustChangePassword,
+    this.schoolBranding,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -44,5 +46,20 @@ class UserEntity extends Equatable {
     isSuperuser,
     roleNames,
     mustChangePassword,
+    schoolBranding,
   ];
+}
+
+/// School-level branding (Settings → School Info → Branding), as returned by
+/// `GET /api/v1/auth/me/`'s `school_branding` field. Reference:
+/// `UserModel.SchoolBrandingModel` (`lib/features/auth/data/models/user_model.dart`).
+class SchoolBrandingEntity extends Equatable {
+  final String? name;
+  final String? brandColorHex;
+  final String? logoUrl;
+
+  const SchoolBrandingEntity({this.name, this.brandColorHex, this.logoUrl});
+
+  @override
+  List<Object?> get props => [name, brandColorHex, logoUrl];
 }

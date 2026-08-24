@@ -151,17 +151,23 @@ class AppTheme {
 
   /// Light theme used by the Dashboard / School Tenancy / Administration /
   /// Admissions / Attendance screens (matches web design tokens 1:1).
-  static ThemeData get lightTheme {
+  ///
+  /// [brandColor] overrides the primary/accent color with the currently
+  /// logged-in school's configured brand color (Settings → School Info →
+  /// Branding, via `brandingNotifierProvider`) — defaults to the static
+  /// eSkoolia purple when no school has one configured yet.
+  static ThemeData lightTheme([Color? brandColor]) {
+    final primary = brandColor ?? dash_colors.AppColors.brandPurple;
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: dash_colors.AppColors.brandPurple,
+      primaryColor: primary,
       scaffoldBackgroundColor: dash_colors.AppColors.bg0,
 
       // Color Scheme
-      colorScheme: const ColorScheme.light(
-        primary: dash_colors.AppColors.brandPurple,
-        secondary: dash_colors.AppColors.brandPurple,
+      colorScheme: ColorScheme.light(
+        primary: primary,
+        secondary: primary,
         surface: dash_colors.AppColors.bg1,
         error: dash_colors.AppColors.error,
         onPrimary: Colors.white,
@@ -293,8 +299,8 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: dash_colors.AppColors.brandPurple,
+          borderSide: BorderSide(
+            color: primary,
             width: 2,
           ),
         ),
@@ -308,7 +314,7 @@ class AppTheme {
       // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: dash_colors.AppColors.brandPurple,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -325,7 +331,7 @@ class AppTheme {
       // Text Button Theme
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: dash_colors.AppColors.brandPurple,
+          foregroundColor: primary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           textStyle: const TextStyle(
             fontSize: 14,

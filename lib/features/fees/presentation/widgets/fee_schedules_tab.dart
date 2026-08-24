@@ -1162,14 +1162,19 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
   /// see `FeeConfigurationPanel.tsx`'s per-group schedule table). Wrapped
   /// in a horizontally-scrolling container so the fixed widths never
   /// overflow on a narrow screen.
-  static const _colFeeType = 150.0;
-  static const _colStructure = 110.0;
+  static const _colFeeType = 140.0;
+  static const _colStructure = 88.0;
   static const _colAmountPlan = 220.0;
-  static const _colGrace = 90.0;
-  static const _colLateFeeRule = 140.0;
+  static const _colGrace = 64.0;
+  static const _colLateFeeRule = 130.0;
   static const _colScheduleActions = 100.0;
+  // Explicit gap between columns — column widths are sized to their content
+  // now (not padded out to create a gutter), so the gap has to be its own
+  // spacer or the columns would butt up against each other.
+  static const _colGap = 12.0;
   // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
-  static const _scheduleTableWidth = _colFeeType + _colStructure + _colAmountPlan + _colGrace + _colLateFeeRule + _colScheduleActions + 32;
+  static const _scheduleTableWidth =
+      _colFeeType + _colStructure + _colAmountPlan + _colGrace + _colLateFeeRule + _colScheduleActions + _colGap * 5 + 32;
 
   Widget _buildScheduleHeaderRow() {
     return Container(
@@ -1178,10 +1183,15 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
       child: const Row(
         children: [
           SizedBox(width: _colFeeType, child: Text('FEE TYPE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colStructure, child: Text('STRUCTURE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colAmountPlan, child: Text('AMOUNT / PLAN', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colGrace, child: Text('GRACE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colLateFeeRule, child: Text('LATE FEE RULE', style: feeConfigThStyle)),
+          SizedBox(width: _colGap),
           SizedBox(width: _colScheduleActions, child: Text('ACTIONS', style: feeConfigThStyle)),
         ],
       ),
@@ -1222,6 +1232,7 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
             width: _colFeeType,
             child: Text(s.feeTypeName ?? '${s.feeType}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
           ),
+          const SizedBox(width: _colGap),
           SizedBox(
             width: _colStructure,
             child: Container(
@@ -1230,9 +1241,13 @@ class _FeeSchedulesTabState extends ConsumerState<FeeSchedulesTab> {
               child: Text(s.collectionFrequency, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: badgeFg)),
             ),
           ),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colAmountPlan, child: amountChips),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colGrace, child: Text('${s.gracePeriod} days', style: const TextStyle(fontSize: 12.5, color: Color(0xFF6B7280)))),
+          const SizedBox(width: _colGap),
           SizedBox(width: _colLateFeeRule, child: Text(s.lateFeeRule.isEmpty ? 'None' : s.lateFeeRule, style: const TextStyle(fontSize: 12.5, color: Color(0xFF8A94A6)))),
+          const SizedBox(width: _colGap),
           SizedBox(
             width: _colScheduleActions,
             child: Column(

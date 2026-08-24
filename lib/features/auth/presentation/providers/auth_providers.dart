@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../data/local/branding_cache_service.dart';
 import '../../../../data/local/preferences_service.dart';
 import '../../../../data/local/secure_storage_service.dart';
 import '../../../../data/network/dio_client.dart';
@@ -17,6 +18,7 @@ import '../../domain/usecases/reset_password_usecase.dart';
 import '../../domain/usecases/verify_reset_code_usecase.dart';
 import 'auth_notifier.dart';
 import 'auth_state.dart';
+import 'branding_notifier.dart';
 import 'password_reset_notifier.dart';
 import 'password_reset_state.dart';
 
@@ -123,6 +125,16 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((
     logoutUseCase,
     checkAuthStatusUseCase,
   );
+});
+
+// Branding
+
+final brandingCacheServiceProvider = Provider<BrandingCacheService>((ref) {
+  return BrandingCacheService();
+});
+
+final brandingNotifierProvider = StateNotifierProvider<BrandingNotifier, BrandingState>((ref) {
+  return BrandingNotifier(ref.watch(brandingCacheServiceProvider));
 });
 
 // Forgot / Verify / Reset Password

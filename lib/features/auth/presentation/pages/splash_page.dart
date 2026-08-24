@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show compute, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
+import '../../../../config/router/portal_routes.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../providers/auth_providers.dart';
+import '../providers/auth_state.dart';
 
 // Precisely measured from the source asset itself (not eyeballed) — the PNG
 // is a square 1254×1254 canvas, RGB with no alpha channel (fully opaque),
@@ -39,14 +44,26 @@ const double _wordmarkTopFrac = 0.47;
 // connecting strokes between letters) — in left-to-right order they line up
 // exactly with the 8 letters "e S k o o l i a", so each span below is that
 // letter's own measured slice of the real logo pixels, not a guess.
-const List<double> _letterBoundaries = [0.0, 0.134, 0.3315, 0.3843, 0.4424, 0.5317, 0.6363, 0.8007, 1.0];
+const List<double> _letterBoundaries = [
+  0.0,
+  0.134,
+  0.3315,
+  0.3843,
+  0.4424,
+  0.5317,
+  0.6363,
+  0.8007,
+  1.0,
+];
 
 // The asset's own flat background colour, sampled directly from its corner
 // pixel (measured, not guessed) — chroma-keyed out at runtime below so only
 // the logo itself ever paints, never the rectangular canvas around it.
 const double _bgR = 250, _bgG = 250, _bgB = 250;
-const double _chromaThreshold = 40; // distance below which a pixel counts as background
-const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
+const double _chromaThreshold =
+    40; // distance below which a pixel counts as background
+const double _chromaFeather =
+    30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
 
 // The logo itself is a cool, saturated blue. A warm, light backdrop (not
 // another blue/purple) is what actually makes it pop via contrast, rather
@@ -83,11 +100,17 @@ const Color _glassGold = Color(0xFFE8C777);
 Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
   final decoded = img.decodeImage(sourceBytes);
   if (decoded == null) return sourceBytes;
-  final rgba = decoded.numChannels == 4 ? decoded : decoded.convert(numChannels: 4);
+  final rgba = decoded.numChannels == 4
+      ? decoded
+      : decoded.convert(numChannels: 4);
   final bytes = rgba.getBytes(order: img.ChannelOrder.rgba);
 
   for (var i = 0; i < bytes.length; i += 4) {
-    final dist = ((bytes[i] - _bgR).abs() + (bytes[i + 1] - _bgG).abs() + (bytes[i + 2] - _bgB).abs()) / 3;
+    final dist =
+        ((bytes[i] - _bgR).abs() +
+            (bytes[i + 1] - _bgG).abs() +
+            (bytes[i + 2] - _bgB).abs()) /
+        3;
     if (dist <= _chromaThreshold) {
       bytes[i + 3] = 0;
     } else if (dist <= _chromaThreshold + _chromaFeather) {
@@ -106,16 +129,18 @@ Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
 }
 
 /// App entry splash screen — the very first thing shown on cold start,
-/// before `/login`. Purely a fixed-duration logo reveal; it does not
-/// perform or duplicate any auth check itself. `checkAuthStatus()`
-/// (triggered once in `main.dart`'s `MyApp.initState`) already runs
-/// independently in the background regardless of which route is showing,
-/// so nothing here re-implements that. This page only ever hands off to
-/// `/login` once its minimum on-screen duration has elapsed — the
-/// *existing*, unmodified redirect logic in `app_router.dart` and
-/// `LoginPage`'s own `authNotifierProvider` listener take it from there
-/// exactly as they already do today, bouncing an already-authenticated
-/// user onward.
+/// before `/login` or the user's own home route. A fixed-duration logo
+/// reveal that also waits for `checkAuthStatus()` (triggered once in
+/// `main.dart`'s `MyApp.initState`, and shared here via the same
+/// `authNotifierProvider` singleton) to actually resolve, then navigates
+/// straight to the correct destination itself — an already-authenticated
+/// user goes directly to their portal's home route, everyone else goes to
+/// `/login`. Deliberately not "always go to `/login` and let the router
+/// bounce an authenticated user onward afterwards": that used to race the
+/// splash's own fixed timer against the async auth check, so whichever
+/// finished first decided what the *first frame after splash* looked
+/// like — often a visible flash of the login screen immediately before
+/// bouncing to home. Waiting for both here removes that race entirely.
 ///
 /// Reveal choreography (all driven off the *same* unaltered logo pixels,
 /// sliced into rectangles and never redrawn): the mascot fades in first,
@@ -126,14 +151,15 @@ Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
 /// Once fully revealed, one soft diagonal light sweep crosses the logo,
 /// then it holds, still and fully visible, until the 5-second-plus floor
 /// elapses.
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage>
+    with TickerProviderStateMixin {
   late final AnimationController _revealController;
   late final Animation<double> _mascotFade;
   late final List<Animation<double>> _letterFade;
@@ -150,6 +176,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   // background would instead pop in as a visible rectangle in the wrong-
   // looking order, so that fallback shows one simple whole-logo fade instead.
   bool _isTransparent = false;
+  // True when a school has its own logo cached locally (Settings → School
+  // Info → Branding) — shown via a plain fade+scale instead of the
+  // eSkoolia-specific chroma-key/letter-cascade below, since the crop
+  // fractions that cascade relies on are measured against the eSkoolia
+  // asset's own canvas and don't apply to an arbitrary uploaded logo.
+  bool _useSchoolLogo = false;
   bool _navigated = false;
 
   @override
@@ -160,7 +192,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // the new 3-second total splash duration, while keeping the same
     // relative choreography (all the Interval fractions below scale
     // automatically with this duration).
-    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+    _revealController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    );
     // Fade only — deliberately no scale or slide here. The mascot's glasses
     // are the same pixels as the wordmark's two "o"s, so the mascot box and
     // the letter boxes share a boundary right through that shape. Any
@@ -169,7 +204,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // side, which showed up as a visible "cut" seam through the O's mid-
     // animation — a fade only ever changes opacity, never size or position,
     // so nothing can misalign at the boundary no matter the timing.
-    _mascotFade = CurvedAnimation(parent: _revealController, curve: const Interval(0.0, 0.10, curve: Curves.easeOut));
+    _mascotFade = CurvedAnimation(
+      parent: _revealController,
+      curve: const Interval(0.0, 0.10, curve: Curves.easeOut),
+    );
 
     // 8 letters, each one now clearly finishing (or nearly so) before the
     // next starts — a ~480ms gap between starts vs. a ~600ms fade each,
@@ -182,18 +220,32 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     for (var i = 0; i < letterCount; i++) {
       final start = firstStart + i * stagger;
       final end = (start + letterDuration).clamp(0.0, 1.0);
-      _letterFade.add(CurvedAnimation(parent: _revealController, curve: Interval(start, end, curve: Curves.easeOut)));
+      _letterFade.add(
+        CurvedAnimation(
+          parent: _revealController,
+          curve: Interval(start, end, curve: Curves.easeOut),
+        ),
+      );
     }
 
     // Used only for the raw-fallback path (chroma-key failed/timed out): one
     // simple fade + scale of the whole logo, over roughly the same span the
     // mascot+letters would otherwise have taken.
-    _wholeLogoFade = CurvedAnimation(parent: _revealController, curve: const Interval(0.0, 0.4, curve: Curves.easeOut));
+    _wholeLogoFade = CurvedAnimation(
+      parent: _revealController,
+      curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
+    );
     _wholeLogoScale = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _revealController, curve: const Interval(0.0, 0.4, curve: Curves.easeOutCubic)),
+      CurvedAnimation(
+        parent: _revealController,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeOutCubic),
+      ),
     );
 
-    _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _sweepController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _sweep = CurvedAnimation(parent: _sweepController, curve: Curves.easeInOut);
 
     // Navigation waits on BOTH the hard floor timer AND the full splash
@@ -208,25 +260,101 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // 3s total, per explicit request (down from ~6.2s).
     final floor = Future<void>.delayed(const Duration(milliseconds: 3000));
     final sequenceDone = _runSplashSequence();
-    Future.wait([floor, sequenceDone]).then((_) {
+    // Also wait for `checkAuthStatus()` (triggered in `main.dart`) to
+    // actually resolve, so the destination below reflects its real outcome
+    // instead of racing it — see the class doc for why. Deliberately no
+    // extra timeout wrapper here: `checkAuthStatus()`'s own network call
+    // (`GET /auth/me/`) can legitimately take close to `ApiConstants`'s own
+    // 30s connect/receive timeouts on a slow/cold connection (e.g. right
+    // after a hot restart, before the OS network stack has "warmed up") —
+    // a splash-side timeout shorter than that raced ahead of a still-
+    // loading, but perfectly healthy, auth check and fell back to `/login`
+    // while it was still resolving, which is exactly the bug this whole
+    // wait exists to prevent. `checkAuthStatus()` is guaranteed to settle
+    // to a terminal state on its own regardless (see `AuthNotifier`), so
+    // there is nothing to bound here beyond that.
+    final authResolved = _waitForAuthResolved();
+    Future.wait([floor, sequenceDone, authResolved]).then((_) {
       if (!mounted || _navigated) return;
       _navigated = true;
-      context.go('/login');
+      final destination = ref
+          .read(authNotifierProvider)
+          .maybeWhen(
+            authenticated: (user) => resolveHomeRouteForPortal(user.portalType),
+            orElse: () => '/login',
+          );
+      context.go(destination);
     });
   }
 
+  /// Completes as soon as `authNotifierProvider`'s state leaves
+  /// `AuthState.initial()` — i.e. `checkAuthStatus()` has produced a real
+  /// answer. Resolves immediately if that has already happened by the time
+  /// this runs.
+  Future<void> _waitForAuthResolved() {
+    final isInitial = ref
+        .read(authNotifierProvider)
+        .maybeWhen(initial: () => true, orElse: () => false);
+    if (!isInitial) return Future.value();
+
+    final completer = Completer<void>();
+    late final ProviderSubscription<AuthState> subscription;
+    subscription = ref.listenManual(authNotifierProvider, (previous, next) {
+      final stillInitial = next.maybeWhen(
+        initial: () => true,
+        orElse: () => false,
+      );
+      if (!stillInitial && !completer.isCompleted) {
+        completer.complete();
+        subscription.close();
+      }
+    });
+    return completer.future;
+  }
+
   Future<void> _runSplashSequence() async {
-    await _loadTransparentLogo();
+    await _loadLogo();
     if (!mounted) return;
     await _revealController.forward();
     if (!mounted) return;
     await _sweepController.forward();
   }
 
+  /// Prefers the currently logged-in school's own cached logo (downloaded
+  /// by `BrandingNotifier.syncFromUser` on a previous auth resolution) over
+  /// the static eSkoolia asset — so a school that has configured a logo
+  /// sees its own branding on this very first frame, cache-first with no
+  /// network round trip. Falls back to the eSkoolia asset + chroma-key
+  /// reveal (unchanged) when no school logo is cached yet.
+  Future<void> _loadLogo() async {
+    final schoolLogoFile = ref.read(brandingNotifierProvider).logoFile;
+    if (schoolLogoFile != null) {
+      try {
+        final bytes = await schoolLogoFile.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _transparentLogoBytes = bytes;
+            _isTransparent = false;
+            _useSchoolLogo = true;
+          });
+        }
+        return;
+      } catch (e) {
+        debugPrint(
+          '[SplashPage] failed to read cached school logo, falling back to eSkoolia asset: $e',
+        );
+      }
+    }
+    await _loadTransparentLogo();
+  }
+
   Future<void> _loadTransparentLogo() async {
     try {
       final data = await rootBundle.load(AppConstants.eskooliaLogo);
-      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
       Uint8List? transparent;
       try {
         // `.timeout(...)` matters as much as the `catch` here — a `compute()`
@@ -244,16 +372,23 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
         // package's default zlib-compressed encode, which was the dominant
         // and most variable cost) — this 8s ceiling is just a generous
         // backstop for a genuinely hung/very-slow device, not the primary fix.
-        final Future<Uint8List?> computeFuture = compute(_chromaKeyLogoBytes, bytes);
+        final Future<Uint8List?> computeFuture = compute(
+          _chromaKeyLogoBytes,
+          bytes,
+        );
         transparent = await computeFuture.timeout(
           const Duration(seconds: 8),
           onTimeout: () {
-            debugPrint('[SplashPage] chroma-key timed out, showing raw logo instead');
+            debugPrint(
+              '[SplashPage] chroma-key timed out, showing raw logo instead',
+            );
             return null;
           },
         );
       } catch (e) {
-        debugPrint('[SplashPage] chroma-key failed, showing raw logo instead: $e');
+        debugPrint(
+          '[SplashPage] chroma-key failed, showing raw logo instead: $e',
+        );
         transparent = null;
       }
       if (mounted) {
@@ -310,17 +445,26 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           Positioned(
             top: -80,
             left: -60,
-            child: _glassOrb(diameter: 260, color: Colors.white.withValues(alpha: 0.8)),
+            child: _glassOrb(
+              diameter: 260,
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
           ),
           Positioned(
             bottom: -100,
             right: -70,
-            child: _glassOrb(diameter: 320, color: _glassGold.withValues(alpha: 0.22)),
+            child: _glassOrb(
+              diameter: 320,
+              color: _glassGold.withValues(alpha: 0.22),
+            ),
           ),
           Positioned(
             top: 120,
             right: -90,
-            child: _glassOrb(diameter: 220, color: Colors.white.withValues(alpha: 0.6)),
+            child: _glassOrb(
+              diameter: 220,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
           ),
           SafeArea(
             child: Center(
@@ -331,7 +475,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               child: logoBytes == null
                   ? const SizedBox.shrink()
                   : AnimatedBuilder(
-                      animation: Listenable.merge([_revealController, _sweepController]),
+                      animation: Listenable.merge([
+                        _revealController,
+                        _sweepController,
+                      ]),
                       builder: (context, child) {
                         return ShaderMask(
                           // `srcATop`: paints the gradient over the logo
@@ -367,6 +514,28 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       child: AnimatedBuilder(
                         animation: _revealController,
                         builder: (context, child) {
+                          if (_useSchoolLogo) {
+                            // A school's own uploaded logo has no known
+                            // crop margin/background color, so it's shown
+                            // as-is (no `_LogoRegion` slicing, no chroma
+                            // key) — just the same fade+scale reveal the
+                            // raw-fallback path below already uses.
+                            return FadeTransition(
+                              opacity: _wholeLogoFade,
+                              child: ScaleTransition(
+                                scale: _wholeLogoScale,
+                                child: SizedBox(
+                                  width: logoWidth,
+                                  height: logoWidth,
+                                  child: Image.memory(
+                                    logoBytes,
+                                    fit: BoxFit.contain,
+                                    gaplessPlayback: true,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
                           if (!_isTransparent) {
                             // Chroma-key didn't complete in time (or at
                             // all): the letter-cascade below relies on each
@@ -428,11 +597,19 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                   height: wordmarkHeight,
                                   child: Stack(
                                     children: [
-                                      for (var i = 0; i < _letterBoundaries.length - 1; i++)
+                                      for (
+                                        var i = 0;
+                                        i < _letterBoundaries.length - 1;
+                                        i++
+                                      )
                                         Positioned(
-                                          left: _letterBoundaries[i] * logoWidth,
+                                          left:
+                                              _letterBoundaries[i] * logoWidth,
                                           top: 0,
-                                          width: (_letterBoundaries[i + 1] - _letterBoundaries[i]) * logoWidth,
+                                          width:
+                                              (_letterBoundaries[i + 1] -
+                                                  _letterBoundaries[i]) *
+                                              logoWidth,
                                           height: wordmarkHeight,
                                           child: FadeTransition(
                                             opacity: _letterFade[i],
@@ -440,7 +617,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                               bytes: logoBytes,
                                               contentWidth: logoWidth,
                                               sliceLeft: _letterBoundaries[i],
-                                              sliceRight: _letterBoundaries[i + 1],
+                                              sliceRight:
+                                                  _letterBoundaries[i + 1],
                                               sliceTop: _wordmarkTopFrac,
                                               sliceBottom: 1.0,
                                             ),
@@ -522,7 +700,11 @@ class _LogoRegion extends StatelessWidget {
               top: -offsetY,
               width: fullSide,
               height: fullSide,
-              child: Image.memory(bytes, fit: BoxFit.fill, gaplessPlayback: true),
+              child: Image.memory(
+                bytes,
+                fit: BoxFit.fill,
+                gaplessPlayback: true,
+              ),
             ),
           ],
         ),

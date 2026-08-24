@@ -45,6 +45,7 @@ class AuthRepositoryImpl implements AuthRepository {
       await _localDataSource.saveUserData(userModel);
 
       // Map to domain entity
+      final branding = userModel.school_branding;
       return UserEntity(
         id: userModel.id,
         username: userModel.username,
@@ -57,6 +58,13 @@ class AuthRepositoryImpl implements AuthRepository {
         isSuperuser: userModel.is_superuser,
         roleNames: userModel.role_names,
         mustChangePassword: userModel.must_change_password,
+        schoolBranding: branding == null
+            ? null
+            : SchoolBrandingEntity(
+                name: branding.name,
+                brandColorHex: branding.brand_color,
+                logoUrl: branding.logo_url,
+              ),
       );
     } catch (e) {
       throw Exception(e.toString());

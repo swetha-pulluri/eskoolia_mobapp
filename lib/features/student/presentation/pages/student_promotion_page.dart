@@ -696,7 +696,7 @@ class _StudentPromotionPageState extends ConsumerState<StudentPromotionPage> {
 
   Widget _buildKpis(({int total, int promoted, int notPromoted, int pending, int completionPct}) kpi) {
     return LayoutBuilder(builder: (context, constraints) {
-      final cols = constraints.maxWidth >= 900 ? 4 : (constraints.maxWidth >= 520 ? 2 : 1);
+      final cols = constraints.maxWidth >= 900 ? 4 : 2;
       final gap = 12.0;
       final w = (constraints.maxWidth - gap * (cols - 1)) / cols;
       final cards = [
@@ -1073,13 +1073,16 @@ class _ClassAccordionCardState extends State<_ClassAccordionCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: widget.isOpen ? const Color(0xFFF8F6FF) : Colors.transparent,
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 10,
-                runSpacing: 8,
+              // Fixed two-row layout (name/progress row, then a single badges
+              // wrap) instead of one big Wrap of four uneven groups — that
+              // let each card's collapsed header take a different number of
+              // wrapped lines depending on its data, so cards looked
+              // inconsistent in height side by side.
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedRotation(
                         turns: widget.isOpen ? 0.25 : 0,
@@ -1087,18 +1090,27 @@ class _ClassAccordionCardState extends State<_ClassAccordionCard> {
                         child: const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF9CA0AE)),
                       ),
                       const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(widget.group.className, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0B0B14))),
-                          Text('${widget.group.sections.length} section${widget.group.sections.length == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA0AE))),
-                        ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(widget.group.className, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0B0B14)), overflow: TextOverflow.ellipsis),
+                            Text('${widget.group.sections.length} section${widget.group.sections.length == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10, color: Color(0xFF9CA0AE))),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      PromoteCircularProgress(promoted: promoted, total: total),
+                      const SizedBox(width: 10),
+                      Container(width: 8, height: 8, decoration: BoxDecoration(color: syncColor, shape: BoxShape.circle)),
                     ],
                   ),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
                       for (final sec in widget.group.sections)
                         Container(
@@ -1106,19 +1118,12 @@ class _ClassAccordionCardState extends State<_ClassAccordionCard> {
                           decoration: BoxDecoration(color: const Color(0xFFF1F1F5), borderRadius: BorderRadius.circular(4)),
                           child: Text(sec.sectionName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6B6B7B))),
                         ),
+                      _countBadge('$total students', const Color(0xFFFAFAFD), const Color(0xFF3A3A4A), border: const Color(0xFFE6E6EC)),
+                      _countBadge('$promoted promote', const Color(0xFFE4F6ED), const Color(0xFF0A8C5A)),
+                      if (notPromoted > 0) _countBadge('$notPromoted not promoted', const Color(0xFFFCE8EE), const Color(0xFFC2264E)),
+                      if (pending > 0) _countBadge('$pending pending', const Color(0xFFFDF1DC), const Color(0xFFB4721B)),
                     ],
                   ),
-                  Wrap(spacing: 6, runSpacing: 6, children: [
-                    _countBadge('$total students', const Color(0xFFFAFAFD), const Color(0xFF3A3A4A), border: const Color(0xFFE6E6EC)),
-                    _countBadge('$promoted promote', const Color(0xFFE4F6ED), const Color(0xFF0A8C5A)),
-                    if (notPromoted > 0) _countBadge('$notPromoted not promoted', const Color(0xFFFCE8EE), const Color(0xFFC2264E)),
-                    if (pending > 0) _countBadge('$pending pending', const Color(0xFFFDF1DC), const Color(0xFFB4721B)),
-                  ]),
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    PromoteCircularProgress(promoted: promoted, total: total),
-                    const SizedBox(width: 10),
-                    Container(width: 8, height: 8, decoration: BoxDecoration(color: syncColor, shape: BoxShape.circle)),
-                  ]),
                 ],
               ),
             ),

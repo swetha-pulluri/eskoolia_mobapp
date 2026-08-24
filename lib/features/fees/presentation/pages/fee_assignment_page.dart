@@ -389,9 +389,7 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
                 children: [
                   _buildHeader(),
                   const SizedBox(height: 20),
-                  _buildStatsBar(stats),
-                  Container(height: 3, decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFFCD34D), Color(0xFFFEF3C7)]))),
-                  _buildFilters(),
+                  _buildStatsAndFilters(stats),
                   const SizedBox(height: 16),
                   _buildTabs(stats),
                   const SizedBox(height: 8),
@@ -481,70 +479,84 @@ class _FeeAssignmentPageState extends ConsumerState<FeeAssignmentPage> {
     );
   }
 
-  Widget _buildStatsBar(({int assigned, int unassigned, int total}) stats) {
+  // A single card (one Container, one border, one radius) — same convention
+  // as `_buildHeader` and `_buildClassCard` — rather than two separate
+  // bordered boxes glued together by a divider strip. That previous
+  // approach gave the stats row and the filters row their own independent
+  // borders/radii, so the "card" was actually two adjacent boxes whose
+  // seam (right where the divider sits) had no side borders at all — a
+  // visible gap in the outer border, and a size/shape that never quite
+  // matched the single-`Container` cards elsewhere on this page.
+  Widget _buildStatsAndFilters(({int assigned, int unassigned, int total}) stats) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(color: Colors.white, border: Border.fromBorderSide(BorderSide(color: faBorder)), borderRadius: BorderRadius.vertical(top: Radius.circular(10))),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        runSpacing: 8,
+      width: double.infinity,
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: faBorder), borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(fontSize: 13.5, color: faInk2),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                TextSpan(text: '${stats.assigned}', style: const TextStyle(fontWeight: FontWeight.w700, color: faInk1)),
-                const TextSpan(text: ' assigned · '),
-                TextSpan(text: '${stats.unassigned}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
-                const TextSpan(text: ' unassigned · '),
-                TextSpan(text: '${stats.total}', style: const TextStyle(fontWeight: FontWeight.w700, color: faInk1)),
-                const TextSpan(text: ' total students'),
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 13.5, color: faInk2),
+                    children: [
+                      TextSpan(text: '${stats.assigned}', style: const TextStyle(fontWeight: FontWeight.w700, color: faInk1)),
+                      const TextSpan(text: ' assigned · '),
+                      TextSpan(text: '${stats.unassigned}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFF59E0B))),
+                      const TextSpan(text: ' unassigned · '),
+                      TextSpan(text: '${stats.total}', style: const TextStyle(fontWeight: FontWeight.w700, color: faInk1)),
+                      const TextSpan(text: ' total students'),
+                    ],
+                  ),
+                ),
+                FaOutlineButton(small: true, label: 'Assign all unassigned →', color: faPurple, borderColor: const Color(0xFFC4B5FD), onPressed: () => _openBulkModal('all', 'All Classes')),
               ],
             ),
           ),
-          FaOutlineButton(small: true, label: 'Assign all unassigned →', color: faPurple, borderColor: const Color(0xFFC4B5FD), onPressed: () => _openBulkModal('all', 'All Classes')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilters() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(left: BorderSide(color: faBorder), right: BorderSide(color: faBorder), bottom: BorderSide(color: faBorder)), borderRadius: BorderRadius.vertical(bottom: Radius.circular(10))),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 14,
-        children: [
-          SizedBox(
-            width: 260,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              const Text('SEARCH', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: faInk3)),
-              const SizedBox(height: 7),
-              TextField(
-                controller: _searchCtrl,
-                decoration: InputDecoration(
-                  hintText: 'Name or admission number...',
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  isDense: true,
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 11),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faBorder)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faBorder)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faPurple)),
+          Container(height: 3, decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFFCD34D), Color(0xFFFEF3C7)]))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 14,
+              children: [
+                SizedBox(
+                  width: 260,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    const Text('SEARCH', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: faInk3)),
+                    const SizedBox(height: 7),
+                    TextField(
+                      controller: _searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'Name or admission number...',
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        isDense: true,
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faBorder)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faBorder)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: faPurple)),
+                      ),
+                    ),
+                  ]),
                 ),
-              ),
-            ]),
+                SizedBox(width: 140, child: _dropdownFilter('YEAR', _yearFilter, [for (final y in _years) y.id], (id) => _years.where((y) => y.id == id).firstOrNull?.name ?? 'Select year', (v) {
+                      setState(() => _yearFilter = v);
+                      _loadForYear(v);
+                    })),
+                SizedBox(width: 160, child: _dropdownFilter('CLASS', _classFilter, ['all', for (final c in _classData) c.id], (id) => id == 'all' ? 'All Classes' : _classData.firstWhere((c) => c.id == id).name.replaceFirst('Class ', ''), (v) => setState(() => _classFilter = v ?? 'all'))),
+                SizedBox(width: 170, child: _dropdownFilter('FEE GROUP', _groupFilter, ['all', for (final g in _groups) g.name], (name) => name == 'all' ? 'All Groups' : name, (v) => setState(() => _groupFilter = v ?? 'all'))),
+              ],
+            ),
           ),
-          SizedBox(width: 140, child: _dropdownFilter('YEAR', _yearFilter, [for (final y in _years) y.id], (id) => _years.where((y) => y.id == id).firstOrNull?.name ?? 'Select year', (v) {
-                setState(() => _yearFilter = v);
-                _loadForYear(v);
-              })),
-          SizedBox(width: 160, child: _dropdownFilter('CLASS', _classFilter, ['all', for (final c in _classData) c.id], (id) => id == 'all' ? 'All Classes' : _classData.firstWhere((c) => c.id == id).name.replaceFirst('Class ', ''), (v) => setState(() => _classFilter = v ?? 'all'))),
-          SizedBox(width: 170, child: _dropdownFilter('FEE GROUP', _groupFilter, ['all', for (final g in _groups) g.name], (name) => name == 'all' ? 'All Groups' : name, (v) => setState(() => _groupFilter = v ?? 'all'))),
         ],
       ),
     );
