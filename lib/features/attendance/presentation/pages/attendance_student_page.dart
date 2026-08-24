@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/attendance_entities.dart';
 import '../providers/attendance_provider.dart';
 import '../widgets/attendance_layout.dart';
@@ -597,7 +597,7 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
             dateFrom: opts.scope == 'range' ? opts.dateFrom : null,
             dateTo: opts.scope == 'range' ? opts.dateTo : null,
           );
-      await Share.shareXFiles([XFile.fromData(bytes, name: 'attendance_export_${opts.scope}.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'attendance_export_${opts.scope}.xlsx');
       _toast('Attendance report downloaded.');
     } catch (e) {
       if (mounted) _toast('Unable to export attendance: $e', error: true);
@@ -607,7 +607,7 @@ class _AttendanceStudentPageState extends ConsumerState<AttendanceStudentPage> {
   Future<void> _handleDownloadSample() async {
     try {
       final bytes = await ref.read(attendanceRepositoryProvider).downloadSample();
-      await Share.shareXFiles([XFile.fromData(bytes, name: 'student_attendance_sheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'student_attendance_sheet.xlsx');
       _toast('Sample attendance template downloaded.');
     } catch (e) {
       if (mounted) _toast('Unable to download sample: $e', error: true);

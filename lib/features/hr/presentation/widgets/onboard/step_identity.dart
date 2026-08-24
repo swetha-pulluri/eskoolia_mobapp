@@ -191,7 +191,15 @@ class _StepIdentityState extends ConsumerState<StepIdentity> {
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Staff photo', style: TextStyle(fontWeight: FontWeight.w800, color: HrColors.ink)),
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(fontWeight: FontWeight.w800, color: HrColors.ink, fontSize: 14),
+                    children: [
+                      TextSpan(text: 'Staff photo'),
+                      TextSpan(text: ' *', style: TextStyle(color: HrColors.red, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
                 const Text('Square JPG or PNG, at least 400×400px. Used for ID card, directory, payroll and attendance.', style: TextStyle(fontSize: 12, color: HrColors.muted)),
                 if (_photoError != null)
                   Padding(

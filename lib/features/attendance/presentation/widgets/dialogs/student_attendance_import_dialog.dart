@@ -1,7 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../../core/utils/file_download_helper.dart';
 import '../../../domain/entities/attendance_entities.dart';
 import '../../providers/attendance_provider.dart';
 
@@ -56,7 +56,7 @@ class _StudentAttendanceImportDialogState extends ConsumerState<StudentAttendanc
   Future<void> _downloadSample() async {
     try {
       final bytes = await ref.read(attendanceRepositoryProvider).downloadSample();
-      await Share.shareXFiles([XFile.fromData(bytes, name: 'student_attendance_sheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'student_attendance_sheet.xlsx');
       widget.onNotify('Sample attendance template downloaded.', 'success');
     } catch (e) {
       widget.onNotify('Unable to download sample: $e', 'error');

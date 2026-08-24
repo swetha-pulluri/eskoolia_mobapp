@@ -1,9 +1,8 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../administration/domain/entities/picked_attachment.dart';
 import '../../domain/entities/attendance_daily_summary_entity.dart';
 import '../../domain/entities/attendance_import_result_entity.dart';
@@ -237,11 +236,19 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
     if (count == 0) setState(() => _error = 'No visible staff to update. Make sure a department is open.');
   }
 
+  // Direct file download — matches web's own `<a download>` export exactly,
+  // via the app-wide `saveBytesForDownload` helper (already the convention
+  // in `staff_directory_page.dart`, School Tenancy's exports, etc.): a
+  // zero-dialog Blob+anchor-click download on web. `Share.shareXFiles` (the
+  // previous approach here) relies on the Web Share API, which most desktop
+  // browsers don't support for files — it silently did nothing on web
+  // instead of downloading, with no visible error.
   Future<void> _downloadSample() async {
     setState(() => _downloadingSample = true);
     try {
       final bytes = await ref.read(hrRepositoryProvider).downloadSampleAttendance();
-      await Share.shareXFiles([XFile.fromData(Uint8List.fromList(bytes), name: 'staff_attendance_sheet.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'staff_attendance_sheet.xlsx');
+      if (mounted) setState(() => _success = 'Sample sheet downloaded');
     } catch (e) {
       if (mounted) setState(() => _error = e is HrApiException ? e.message : 'Failed to download sample');
     } finally {
@@ -257,7 +264,8 @@ class _StaffAttendancePageState extends ConsumerState<StaffAttendancePage> {
             department: _deptFilter == 'all' ? null : _deptFilter,
             attendanceType: _statusFilter == 'all' ? null : _statusFilter,
           );
-      await Share.shareXFiles([XFile.fromData(Uint8List.fromList(bytes), name: 'staff_attendance_$date.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'staff_attendance_$date.xlsx');
+      if (mounted) setState(() => _success = 'Attendance exported');
     } catch (e) {
       if (mounted) setState(() => _error = e is HrApiException ? e.message : 'Failed to export');
     } finally {

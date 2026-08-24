@@ -53,6 +53,14 @@ const double _bgR = 250, _bgG = 250, _bgB = 250;
 const double _chromaThreshold = 40; // distance below which a pixel counts as background
 const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
 
+// The logo is never displayed wider than 340 logical pixels (see
+// `logoWidth`'s clamp in `build()`); at up to a ~3x device pixel ratio that's
+// ~1020 physical pixels for the whole canvas. 720 stays comfortably above
+// that for the actual logo *content* (which is smaller than the full canvas
+// margin-to-margin) while cutting the source's native 1254×1254 down to
+// roughly a third of the pixels the chroma-key scan has to touch.
+const int _chromaKeyWorkingSize = 720;
+
 // The logo itself is a cool, saturated blue. A warm, light backdrop (not
 // another blue/purple) is what actually makes it pop via contrast, rather
 // than blending into a same-family gradient — a soft ivory-to-champagne
@@ -85,10 +93,23 @@ const Color _glassGold = Color(0xFFE8C777);
 /// proportionally delayed splash (still bounded, still eventually
 /// completes) — never a permanent hang, since there's no concurrent
 /// Future/isolate race involved at all.
+///
+/// Resizes to [_chromaKeyWorkingSize] before the per-pixel scan — this was
+/// the actual cause of the multi-second-to-multi-minute delay this function
+/// used to have on a slow/interpreted runtime (Flutter Web's debug-mode DDC
+/// in particular): the source PNG is a fixed 1254×1254 canvas, but the logo
+/// is only ever displayed at a max width of ~340 logical pixels, so scanning
+/// all ~1.57M source pixels one at a time did roughly 10-20× more work than
+/// what's ever actually visible on screen. `_chromaKeyWorkingSize` is picked
+/// comfortably above the largest real on-screen size (accounting for a
+/// ~3x device pixel ratio), so this costs nothing in visible sharpness.
 Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
   final decoded = img.decodeImage(sourceBytes);
   if (decoded == null) return sourceBytes;
-  final rgba = decoded.numChannels == 4 ? decoded : decoded.convert(numChannels: 4);
+  final resized = decoded.width > _chromaKeyWorkingSize || decoded.height > _chromaKeyWorkingSize
+      ? img.copyResize(decoded, width: _chromaKeyWorkingSize, height: _chromaKeyWorkingSize, interpolation: img.Interpolation.average)
+      : decoded;
+  final rgba = resized.numChannels == 4 ? resized : resized.convert(numChannels: 4);
   final bytes = rgba.getBytes(order: img.ChannelOrder.rgba);
 
   for (var i = 0; i < bytes.length; i += 4) {
@@ -176,11 +197,10 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
   void initState() {
     super.initState();
 
-    // ~2.2s for the mascot + letter cascade — compressed (from 4.6s) to fit
-    // the new 3-second total splash duration, while keeping the same
-    // relative choreography (all the Interval fractions below scale
-    // automatically with this duration).
-    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+    // ~3.4s for the mascot + letter cascade, leaving a ~1.1s hold after the
+    // 500ms light-sweep, inside the 5-second total splash duration — all the
+    // Interval fractions below scale automatically with this duration.
+    _revealController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3400));
     // Fade only — deliberately no scale or slide here. The mascot's glasses
     // are the same pixels as the wordmark's two "o"s, so the mascot box and
     // the letter boxes share a boundary right through that shape. Any
@@ -224,8 +244,8 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
     // still loading* — the controller could already be well past several
     // letters' reveal windows by the time there's anything to paint, so the
     // first visible frame would already show most letters "done" instead of
-    // a clean cascade. 3s total, per explicit request (down from ~6.2s).
-    final floor = Future<void>.delayed(const Duration(milliseconds: 3000));
+    // a clean cascade. 5s total, per explicit request.
+    final floor = Future<void>.delayed(const Duration(milliseconds: 5000));
     final sequenceDone = _runSplashSequence();
     // Also wait for `checkAuthStatus()` (triggered in `main.dart`) to
     // actually resolve, so the destination below reflects its real outcome

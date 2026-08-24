@@ -100,6 +100,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authNotifierProvider).maybeWhen(loading: () => true, orElse: () => false);
 
+    // The card's fixed pixel gaps/padding were sized for the system's
+    // *default* text scale. At a larger accessibility text setting, every
+    // label/text grows taller on its own, so those same fixed gaps push the
+    // card's total height well past the screen, forcing it into the outer
+    // scroll fallback — the "different phones look different" complaint.
+    // Text itself is never capped here (still driven entirely by the real
+    // system `TextScaler`, never disabled) — only the whitespace *around*
+    // it shrinks to compensate, so a larger font size still fits without
+    // needing that scroll. At the default scale this multiplier is exactly
+    // 1.0, so nothing about today's normal-size layout changes.
+    final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+    final gapScale = (1 / textScale).clamp(0.55, 1.0);
+    double gap(double base) => base * gapScale;
+
+    // Logo height also adapts to the actual screen height (not just text
+    // scale) — a fixed 116px logo left little headroom on short/small
+    // phones even before accounting for larger text.
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final logoHeight = (screenHeight * 0.15 * gapScale).clamp(64.0, 116.0);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -118,7 +138,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
+                  padding: EdgeInsets.symmetric(horizontal: 28, vertical: gap(36)),
                   decoration: BoxDecoration(
                     color: _cardFill,
                     borderRadius: BorderRadius.circular(32),
@@ -143,7 +163,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                             child: Image.asset(
                               AppConstants.eskooliaLogo,
-                              height: 116,
+                              height: logoHeight,
                               fit: BoxFit.contain,
                               errorBuilder: (_, _, _) => const Text(
                                 'Eskoolia',
@@ -152,22 +172,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 22),
+                        SizedBox(height: gap(22)),
                         const Text(
                           'Welcome Back',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: gap(4)),
                         const Text(
                           'Please sign in to continue',
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 13.5, color: _white70),
                         ),
-                        const SizedBox(height: 26),
+                        SizedBox(height: gap(26)),
 
                         const AuthFieldLabel('USERNAME / EMAIL'),
-                        const SizedBox(height: 8),
+                        SizedBox(height: gap(8)),
                         AuthField(
                           controller: _identifierController,
                           icon: Icons.person_outline,
@@ -175,10 +195,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           autofocus: true,
                           validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                         ),
-                        const SizedBox(height: 18),
+                        SizedBox(height: gap(18)),
 
                         const AuthFieldLabel('PASSWORD'),
-                        const SizedBox(height: 8),
+                        SizedBox(height: gap(8)),
                         AuthField(
                           controller: _passwordController,
                           icon: Icons.lock_outline,
@@ -194,7 +214,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: gap(10)),
 
                         Align(
                           alignment: Alignment.centerRight,
@@ -211,7 +231,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: gap(8)),
 
                         Consumer(
                           builder: (context, ref, child) {
@@ -229,36 +249,42 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             );
                           },
                         ),
-                        const SizedBox(height: 18),
+                        SizedBox(height: gap(18)),
 
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _handleSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: AppColors.purpleDeep,
-                              disabledBackgroundColor: Colors.white.withValues(alpha: 0.85),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                              elevation: 0,
-                            ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.purpleDeep),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text('SIGN IN', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-                                      SizedBox(width: 8),
-                                      Icon(Icons.arrow_forward, size: 18),
-                                    ],
-                                  ),
+                        // `minimumSize` (a floor, not a fixed size) instead of
+                        // wrapping in a fixed-height `SizedBox(height: 52)` —
+                        // the previous fixed height clipped the button's own
+                        // "SIGN IN" text the moment a larger system font size
+                        // made it taller than 52px. This lets the button grow
+                        // with the text instead, exactly like every other
+                        // element on this screen.
+                        ElevatedButton(
+                          onPressed: isLoading ? null : _handleSubmit,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            backgroundColor: Colors.white,
+                            foregroundColor: AppColors.purpleDeep,
+                            disabledBackgroundColor: Colors.white.withValues(alpha: 0.85),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                            elevation: 0,
                           ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2.4, color: AppColors.purpleDeep),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Flexible(child: Text('SIGN IN', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, letterSpacing: 0.5))),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward, size: 18),
+                                  ],
+                                ),
                         ),
-                        const SizedBox(height: 28),
+                        SizedBox(height: gap(28)),
 
                         // Matches the real web login footer exactly
                         // (frontend/app/login/page.tsx) — was "Don't have
@@ -268,7 +294,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           children: [
                             const Icon(Icons.verified_user_outlined, size: 13, color: Colors.white),
                             const SizedBox(width: 5),
-                            const Text('Secured by eSkoolia', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                            // `Flexible` — on a narrow phone (or a larger
+                            // system font size) this line has no room to
+                            // grow horizontally like the rest of the card
+                            // does vertically; without this it silently
+                            // overflows off the right edge instead of
+                            // shrinking/wrapping.
+                            Flexible(
+                              child: Text(
+                                'Secured by eSkoolia',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 2),

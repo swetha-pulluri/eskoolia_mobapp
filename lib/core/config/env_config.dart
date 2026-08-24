@@ -18,7 +18,7 @@ class EnvConfig {
   /// without it, API 28+ blocks cleartext traffic by default and every
   /// request fails immediately regardless of whether the IP is correct.
   static const String _developmentLanIp = '192.168.170.202';
-
+  
   /// Backend port (default Django port)
   static const String _backendPort = '8000';
 

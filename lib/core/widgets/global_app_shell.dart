@@ -217,7 +217,13 @@ class _GlobalTopBar extends ConsumerWidget {
                       if (router.canPop()) {
                         router.pop();
                       } else {
-                        router.go('/home');
+                        // Reached this module/submodule via "All Modules"
+                        // (a `go()`, not a `push()` — see class doc), so
+                        // `canPop()` is false with no Home entry underneath
+                        // to pop to. Falling back to All Modules instead of
+                        // Home avoids the extra Home → All Modules → pick-
+                        // another-module round trip.
+                        router.go('/modules');
                       }
                     },
                     borderRadius: BorderRadius.circular(6),

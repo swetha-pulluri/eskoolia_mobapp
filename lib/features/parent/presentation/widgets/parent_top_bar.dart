@@ -66,7 +66,13 @@ class ParentTopBar extends ConsumerWidget {
                       if (router.canPop()) {
                         router.pop();
                       } else {
-                        router.go('/parent/home');
+                        // Reached this module/submodule via "All Modules"
+                        // (a `go()`, not a `push()`), so `canPop()` is false
+                        // with no Home entry underneath to pop to. Falling
+                        // back to All Modules instead of Home avoids the
+                        // extra Home → All Modules → pick-another-module
+                        // round trip.
+                        router.go('/parent/modules');
                       }
                     },
                     borderRadius: BorderRadius.circular(6),

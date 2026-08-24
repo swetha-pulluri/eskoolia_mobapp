@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../../core/utils/logger.dart';
 import '../../domain/entities/attendance_monthly_report_entity.dart';
 import '../../domain/entities/department_entity.dart';
@@ -94,67 +93,16 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
       _error = null;
     });
     try {
-      final all = await ref.read(hrRepositoryProvider).getAllAttendance();
-      final staffById = {for (final s in widget.staff) s.id: s};
-      final deptNameById = {for (final d in widget.departments) d.id: d.name};
-
-      final filtered = all.results.where((r) {
-        final date = DateTime.tryParse(r.attendanceDate);
-        if (date == null || date.year != _year || date.month != _month) return false;
-        if (_deptId == null) return true;
-        return staffById[r.staffId]?.departmentId == _deptId;
-      }).toList();
-
-      final records = [for (final r in filtered) AttendanceMonthlyRecordEntity(staffId: r.staffId, attendanceDate: r.attendanceDate, attendanceType: r.attendanceType)];
-
-      final perStaff = <int, ({String name, String staffNo, String departmentName, int present, int absent, int leave, int halfDay, int holiday})>{};
-      final absentReasons = <String, int>{};
-      final leaveReasons = <String, int>{};
-      for (final r in filtered) {
-        final s = staffById[r.staffId];
-        final bucket = perStaff[r.staffId] ?? (name: s?.fullName ?? '', staffNo: s?.staffNo ?? '', departmentName: s?.departmentId != null ? (deptNameById[s!.departmentId] ?? '') : '', present: 0, absent: 0, leave: 0, halfDay: 0, holiday: 0);
-        perStaff[r.staffId] = (
-          name: bucket.name,
-          staffNo: bucket.staffNo,
-          departmentName: bucket.departmentName,
-          present: bucket.present + (r.attendanceType == 'P' ? 1 : 0),
-          absent: bucket.absent + (r.attendanceType == 'A' ? 1 : 0),
-          leave: bucket.leave + (r.attendanceType == 'L' ? 1 : 0),
-          halfDay: bucket.halfDay + (r.attendanceType == 'F' ? 1 : 0),
-          holiday: bucket.holiday + (r.attendanceType == 'H' ? 1 : 0),
-        );
-
-        final note = r.note.trim();
-        if (note.isNotEmpty) {
-          if (r.attendanceType == 'A') {
-            absentReasons[note] = (absentReasons[note] ?? 0) + 1;
-          } else if (r.attendanceType == 'L') {
-            leaveReasons[note] = (leaveReasons[note] ?? 0) + 1;
-          }
-        }
-      }
-
-      List<AttendanceReasonInsightEntity> top(Map<String, int> reasons) {
-        final sorted = reasons.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-        return [for (final e in sorted.take(5)) AttendanceReasonInsightEntity(reason: e.key, count: e.value)];
-      }
-
-      final rows = [
-        for (final entry in perStaff.entries)
-          AttendanceMonthlyRowEntity(
-            staffId: entry.key,
-            name: entry.value.name,
-            staffNo: entry.value.staffNo,
-            departmentName: entry.value.departmentName,
-            present: entry.value.present,
-            absent: entry.value.absent,
-            leave: entry.value.leave,
-            halfDay: entry.value.halfDay,
-            holiday: entry.value.holiday,
-          ),
-      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-
-      final report = AttendanceMonthlyReportEntity(records: records, rows: rows, topAbsentReasons: top(absentReasons), topLeaveReasons: top(leaveReasons));
+      // The real, purpose-built `monthly-report` action already filters by
+      // month/year/department server-side and returns exactly this shape —
+      // this used to instead call `getAllAttendance()` (`page_size: 1000`,
+      // no date filter at all) and re-aggregate every row client-side. Once
+      // the school's total attendance history passed 1000 rows, whichever
+      // month landed past that first page — including the current month,
+      // the one most likely to actually be checked — silently always came
+      // back empty, with the Download button staying permanently disabled
+      // regardless of which month/department was picked.
+      final report = await ref.read(hrRepositoryProvider).getMonthlyReport(month: _month, year: _year, departmentId: _deptId);
       if (mounted) setState(() => _report = report);
     } catch (e, st) {
       // Not an HrApiException — a client-side bug (bad parsing, unexpected
@@ -167,6 +115,13 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
     }
   }
 
+  // Direct file download — matches web's own `<a download>` export exactly,
+  // via the app-wide `saveBytesForDownload` helper (already the convention
+  // in `staff_directory_page.dart`, School Tenancy's exports, etc.): a
+  // zero-dialog Blob+anchor-click download on web. `Share.shareXFiles` (the
+  // previous approach here) relies on the Web Share API, which most desktop
+  // browsers don't support for files — it silently did nothing on web
+  // instead of downloading, with no visible error.
   Future<void> _download() async {
     final rows = _report?.rows ?? const [];
     final headers = ['Staff No', 'Name', 'Department', 'Present', 'Absent', 'Leave', 'Attendance %'];
@@ -177,9 +132,14 @@ class _MonthlyAttendanceReportState extends ConsumerState<MonthlyAttendanceRepor
       return [quote(r.staffNo), quote(r.name), quote(r.departmentName), r.present, r.absent, r.leave, '$pct%'].join(',');
     });
     final csv = [headers.join(','), ...lines].join('\n');
-    final bytes = Uint8List.fromList(utf8.encode(csv));
+    final bytes = utf8.encode(csv);
     final monthLabel = '${_monthNames[_month - 1]}-$_year';
-    await Share.shareXFiles([XFile.fromData(bytes, name: 'staff-attendance-report-$monthLabel.csv', mimeType: 'text/csv')]);
+    try {
+      await saveBytesForDownload(bytes: bytes, filename: 'staff-attendance-report-$monthLabel.csv');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report downloaded')));
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Failed to download report: $e');
+    }
   }
 
   @override

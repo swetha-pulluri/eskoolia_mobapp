@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/repositories/hr_repository.dart';
 import '../providers/hr_provider.dart';
 import '../widgets/hr_theme.dart';
@@ -64,7 +64,7 @@ class _StaffVerificationPreviewPageState extends ConsumerState<StaffVerification
     setState(() => _working = true);
     try {
       final bytes = await _getPdfBytes();
-      await Share.shareXFiles([XFile.fromData(Uint8List.fromList(bytes), name: 'staff-verification-form.pdf', mimeType: 'application/pdf')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'staff-verification-form.pdf');
     } catch (e) {
       if (mounted) showHrToast(context, e is HrApiException ? e.message : 'Failed to save PDF.', type: 'error');
     } finally {

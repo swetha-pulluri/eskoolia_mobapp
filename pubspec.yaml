@@ -58,6 +58,11 @@ dependencies:
   # File Picking (Administration attachments, Attendance import dialog)
   file_picker: ^11.0.2
 
+  # Saves generated exports/downloads to the real, user-visible Downloads
+  # location on Android (MediaStore) and iOS, instead of an app-private
+  # folder no file manager shows — see `file_download_io.dart`.
+  media_store_plus: ^0.1.3
+
   # Native camera capture (Student Enroll "Take photo" — the mobile
   # equivalent of the frontend's in-browser getUserMedia camera modal;
   # opens the OS camera app directly instead, the standard native pattern)

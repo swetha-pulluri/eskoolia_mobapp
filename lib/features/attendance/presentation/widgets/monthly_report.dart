@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/attendance_entities.dart';
 import '../providers/attendance_provider.dart';
 
@@ -238,7 +238,7 @@ class _MonthlyReportState extends ConsumerState<MonthlyReport> {
               ? activeClass.first.displayLabel
               : 'All_Classes';
       final filename = 'Attendance_${scope.replaceAll(' ', '_')}_${monthName}_$_activeYear.xlsx';
-      await Share.shareXFiles([XFile.fromData(bytes, name: filename, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')]);
+      await saveBytesForDownload(bytes: bytes, filename: filename);
     } catch (_) {
       // Matches web exactly: `handleDownload` swallows errors silently.
     } finally {

@@ -1,10 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/utils/file_download_helper.dart';
 import '../../../administration/domain/entities/picked_attachment.dart';
 import '../../domain/entities/onboard_draft_entity.dart';
 import '../../domain/entities/staff_entity.dart';
@@ -273,13 +271,33 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
     final step = ref.read(onboardStepProvider);
     final form = ref.read(onboardFormProvider);
 
+    // The backend's `StaffSerializer.validate()` hard-requires `staff_photo`
+    // on create (rejects a blank value with a 400), but nothing on this step
+    // previously blocked advancing without one — the photo picker had no
+    // "required" indicator and wasn't checked anywhere, unlike every other
+    // backend-required field (role/email/phone/address/bank details), which
+    // steps 2/3/5's validators below already gate correctly. Skipped on edit
+    // (`widget.editId != null`): `_loadFromStaff` never re-downloads the
+    // existing photo into `_photo`, so requiring one there would wrongly
+    // block every edit of an already-onboarded staff member.
+    if (step == 1 && widget.editId == null && _photo == null) {
+      showHrToast(context, 'Please upload or take a staff photo before continuing.', type: 'error');
+      return;
+    }
+
     if (step == 9) {
-      final docs = ref.read(onboardDocumentsProvider).valueOrNull ?? const [];
+      // `.future` (not `.read(...).valueOrNull`) — this provider is
+      // `autoDispose` and only watched by `StepDocuments` itself, so it's
+      // possible for `.valueOrNull` to race a fresh (still-loading) instance
+      // and read `null` even right after a successful upload. `.future`
+      // always awaits the real settled value.
+      final docs = await ref.read(onboardDocumentsProvider.future);
       final missing = [
         if (!docs.any((d) => d.docKey == 'signature')) 'Signature',
         if (!docs.any((d) => d.docKey == 'aadhaar')) 'Aadhaar Card',
       ];
       if (missing.isNotEmpty) {
+        if (!mounted) return;
         showHrToast(context, 'Missing required documents: ${missing.join(', ')}', type: 'error');
         return;
       }
@@ -312,11 +330,24 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
 
   Future<void> _submit() async {
     final form = ref.read(onboardFormProvider);
-    const requiredKeys = ['first_name', 'last_name', 'department', 'designation', 'joining_date', 'bank_account_name', 'bank_account_no', 'bank_name', 'basic_salary_input'];
+    // Matches every field `StaffSerializer.validate()` hard-rejects a blank
+    // value for on create (backend `apps/hr/serializers.py`) — this is a
+    // final backstop, not the primary gate (steps 2/3/5's own validators
+    // already require role/mobile/personal_email/current_address before
+    // letting the user past those steps); it exists for the case a resumed
+    // draft was saved mid-step, before those fields were filled, then
+    // reopened and jumped straight to Submit via the step navigator.
+    const requiredKeys = [
+      'first_name', 'last_name', 'department', 'designation', 'role', 'joining_date',
+      'mobile', 'personal_email', 'current_address',
+      'bank_account_name', 'bank_account_no', 'bank_name', 'basic_salary_input',
+    ];
     final missingLabels = <String>[];
     for (final k in requiredKeys) {
       if ((form[k]?.toString() ?? '').trim().isEmpty) missingLabels.add(k.replaceAll('_', ' '));
     }
+    // See `_goNext`'s step-1 check for why this only applies on create.
+    if (widget.editId == null && _photo == null) missingLabels.add('staff photo');
     if (missingLabels.isNotEmpty) {
       showHrToast(context, 'Missing required fields: ${missingLabels.join(', ')}', type: 'error');
       return;
@@ -327,7 +358,15 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
       var staffNo = form['staff_no'] as String? ?? '';
       if (staffNo.isEmpty) staffNo = await ref.read(hrRepositoryProvider).getNextStaffNo();
 
-      final docs = ref.read(onboardDocumentsProvider).valueOrNull ?? const [];
+      // `.future`, not `.read(...).valueOrNull` — see the matching comment
+      // in `_goNext`. By the time `_submit` runs (step 10), `StepDocuments`
+      // (step 9) has long since unmounted and this `autoDispose` provider
+      // has been disposed, so a plain synchronous read recreates it fresh
+      // and observes `AsyncLoading` (i.e. `null`) even though the signature
+      // was genuinely uploaded and saved earlier — silently sending
+      // `other_document: []` and triggering a false "Signature upload is
+      // required." 400 on every submission.
+      final docs = await ref.read(onboardDocumentsProvider.future);
       final signatureDoc = docs.where((d) => d.docKey == 'signature').firstOrNull;
 
       final emergencyContacts = (form['emergency_contacts'] as List?) ?? const [];
@@ -483,7 +522,7 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
   Future<void> _downloadBlankForm() async {
     try {
       final bytes = await ref.read(hrRepositoryProvider).downloadBlankForm();
-      await Share.shareXFiles([XFile.fromData(Uint8List.fromList(bytes), name: 'staff-onboarding-blank-form.pdf', mimeType: 'application/pdf')]);
+      await saveBytesForDownload(bytes: bytes, filename: 'staff-onboarding-blank-form.pdf');
     } catch (e) {
       if (mounted) showHrToast(context, e is HrApiException ? e.message : 'Failed to generate PDF.', type: 'error');
     }
@@ -615,39 +654,109 @@ class _StaffOnboardPageState extends ConsumerState<StaffOnboardPage> {
     }
   }
 
+  // Down to 3 controls on mobile: Save Draft (primary, left) and the
+  // step-navigation button (right) share a row, with a single compact
+  // "More" button centered below for everything else (Upload Signed,
+  // Discard, Blank Form, Scan & Fill, Print/PDF, and Back). Every action
+  // still calls the exact same existing handler as before — nothing new,
+  // just regrouped.
   Widget _buildFooter(int step) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            TextButton(onPressed: () => _confirmDiscard(), child: const Text('Discard', style: TextStyle(color: HrColors.muted))),
-            OutlinedButton(onPressed: _saveDraft, child: const Text('Save draft')),
-            OutlinedButton(onPressed: () => _stub('Upload signed document — coming soon'), child: const Text('Upload signed')),
-            OutlinedButton(onPressed: _downloadBlankForm, child: const Text('Blank form')),
-            OutlinedButton(onPressed: () => _stub('QR scan to fill — coming soon'), child: const Text('Scan & fill')),
-            OutlinedButton(onPressed: _openVerificationPreview, child: const Text('Print / PDF')),
-          ]),
-          // `Wrap` (not a `Row(mainAxisSize: min)`) — this group is a child
-          // of the outer spaceBetween `Wrap`, so it's handed the FULL
-          // footer width, not the leftover after the action-buttons Wrap;
-          // "Back" + a long final-step label ("Update & Onboard") can
-          // exceed that on a narrow phone.
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            if (step > 1) TextButton(onPressed: _goBack, child: const Text('Back')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
-              onPressed: _submitting ? null : _goNext,
-              child: _submitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(step >= onboardTotalSteps ? (widget.editId != null ? 'Update & Onboard' : 'Submit & Onboard') : onboardStepByNum(step + 1).label),
+          Row(
+            children: [
+              Expanded(child: FilledButton.tonal(onPressed: _saveDraft, child: const Text('Save draft'))),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: HrColors.brand),
+                  onPressed: _submitting ? null : _goNext,
+                  child: _submitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(
+                          step >= onboardTotalSteps ? (widget.editId != null ? 'Update & Onboard' : 'Submit & Onboard') : onboardStepByNum(step + 1).label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: () => _showMoreActionsSheet(step),
+              icon: const Icon(Icons.more_horiz, size: 18),
+              label: const Text('More'),
             ),
-          ]),
+          ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showMoreActionsSheet(int step) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_document),
+              title: const Text('Upload signed'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _stub('Upload signed document — coming soon');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: HrColors.red),
+              title: const Text('Discard'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _confirmDiscard();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Blank form'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _downloadBlankForm();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner),
+              title: const Text('Scan & fill'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _stub('QR scan to fill — coming soon');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Print / PDF'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _openVerificationPreview();
+              },
+            ),
+            if (step > 1)
+              ListTile(
+                leading: const Icon(Icons.arrow_back),
+                title: const Text('Back'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _goBack();
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

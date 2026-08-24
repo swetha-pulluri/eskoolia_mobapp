@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/inquiry_entity.dart';
 import '../../domain/entities/school_class_entity.dart';
 import 'application_row.dart';
@@ -11,10 +11,7 @@ import 'bulk_action_bar.dart';
 import 'template_picker.dart';
 
 /// Matches `ClassWorkspace.tsx`'s own `exportCSV()` exactly — same headers,
-/// same column order, same quoting. Mobile has no `Blob` + `<a download>`,
-/// so this hands the built CSV to the native share/save sheet instead
-/// (`Share.shareXFiles`) — the practical mobile equivalent of a browser
-/// download.
+/// same column order, same quoting.
 String _buildInquiriesCsv(List<InquiryEntity> rows) {
   String quote(String v) => '"${v.replaceAll('"', '""')}"';
   final headers = ['Name', 'Phone', 'Email', 'Class', 'Stage', 'Source', 'Assigned', 'Query Date', 'Follow-up'];
@@ -35,7 +32,7 @@ String _buildInquiriesCsv(List<InquiryEntity> rows) {
 Future<void> _exportInquiriesCsv(List<InquiryEntity> rows, String filename) async {
   final csv = _buildInquiriesCsv(rows);
   final bytes = Uint8List.fromList(utf8.encode(csv));
-  await Share.shareXFiles([XFile.fromData(bytes, name: filename, mimeType: 'text/csv')]);
+  await saveBytesForDownload(bytes: bytes, filename: filename);
 }
 
 const int kWorkspacePageSize = 25;

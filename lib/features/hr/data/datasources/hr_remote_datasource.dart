@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import '../../../../data/network/dio_client.dart';
 import '../../../../core/utils/logger.dart';
@@ -261,7 +263,20 @@ class HrRemoteDataSource {
   /// the picked files overwriting their corresponding string fields.
   dynamic _staffPayload(StaffEntity draft, StaffFilesDraft files, List<PickedOtherDocument> otherDocuments) {
     final json = draft.toJson();
-    json['other_document'] = otherDocuments.map((d) => d.name).toList();
+    // Two different callers feed `other_document` two different ways:
+    // `staff_form_page.dart` never sets it on `draft` itself and instead
+    // always passes it via this `otherDocuments` parameter, while
+    // `staff_onboard_page.dart` sets `draft.otherDocument` directly (e.g.
+    // the uploaded signature's filename) and never passes this parameter at
+    // all. Unconditionally overwriting here — the previous behavior — threw
+    // away the onboarding wizard's own signature filename with `[]` on
+    // every submission (this parameter defaults to `const []`), producing a
+    // "Signature upload is required." 400 even when a signature genuinely
+    // was uploaded. Only overwrite when the parameter actually carries
+    // something, so `draft.toJson()`'s own value survives otherwise.
+    if (otherDocuments.isNotEmpty) {
+      json['other_document'] = otherDocuments.map((d) => d.name).toList();
+    }
     if (!files.hasAnyFile) return json;
 
     final map = <String, dynamic>{};
@@ -287,17 +302,21 @@ class HrRemoteDataSource {
     return FormData.fromMap(map);
   }
 
-  String _jsonEncodeMap(Map value) {
-    final buffer = StringBuffer('{');
-    var first = true;
-    value.forEach((k, v) {
-      if (!first) buffer.write(',');
-      first = false;
-      buffer.write('"$k":${v is String ? '"$v"' : v}');
-    });
-    buffer.write('}');
-    return buffer.toString();
-  }
+  /// `custom_field` (nationality/religion/emergency contacts/nominees/
+  /// qualifications/previous employment/medical/disability info) has to be
+  /// sent as one JSON-encoded string field on the `multipart/form-data`
+  /// path (files can't sit inside a nested JSON object in form data), which
+  /// this hand-rolled version used to get wrong for anything beyond a plain
+  /// string value: a `List<Map>` like `emergency_contacts` fell through to
+  /// Dart's own `Object.toString()` (`[{name: John, mobile: ...}]` — not
+  /// valid JSON, `key: value` instead of `"key":"value"`), which the
+  /// backend's `json.loads()` rejects and silently swallows into `{}` on
+  /// failure — every nested field in `custom_field` (which is most of them:
+  /// nationality, mother tongue, religion, all repeatable rows, medical/
+  /// disability info) vanished without any visible error whenever a file
+  /// was attached. `jsonEncode` (`dart:convert`) handles arbitrary nesting
+  /// correctly and is exactly what this needed to be from the start.
+  String _jsonEncodeMap(Map value) => jsonEncode(value);
 
   Future<StaffEntity> createStaff(StaffEntity draft, {StaffFilesDraft files = const StaffFilesDraft(), List<PickedOtherDocument> otherDocuments = const []}) async {
     try {

@@ -2,15 +2,14 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/file_download_helper.dart';
 import '../../domain/entities/analytics_data_entity.dart';
 import '../providers/admissions_provider.dart';
 import '../widgets/admissions_layout.dart';
 import '../widgets/analytics_widgets.dart';
 
 /// Matches `AdmissionsAnalytics.tsx`'s own `exportCSV()` exactly — same
-/// section order/headers. Mobile has no `Blob` + `<a download>`, so this
-/// hands the built CSV to the native share/save sheet instead.
+/// section order/headers.
 String _buildAnalyticsCsv(AnalyticsDataEntity data) {
   final rows = <List<String>>[
     ['Metric', 'Value'],
@@ -39,7 +38,7 @@ Future<void> _exportAnalyticsCsv(AnalyticsDataEntity data) async {
   final csv = _buildAnalyticsCsv(data);
   final bytes = Uint8List.fromList(utf8.encode(csv));
   final today = DateTime.now().toIso8601String().substring(0, 10);
-  await Share.shareXFiles([XFile.fromData(bytes, name: 'admissions-analytics-$today.csv', mimeType: 'text/csv')]);
+  await saveBytesForDownload(bytes: bytes, filename: 'admissions-analytics-$today.csv');
 }
 
 const Map<String, String> kPeriodLabels = {
