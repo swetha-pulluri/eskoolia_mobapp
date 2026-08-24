@@ -26,4 +26,13 @@ class StorageKeys {
   // Mirrors web's own `parent_selected_child_id` localStorage key (see
   // `ParentChildContext.tsx`) so the choice survives app restarts.
   static const String parentSelectedChildId = 'parent_selected_child_id';
+
+  // School-level branding (Settings → School Info → Branding), cached so a
+  // temporary network failure never blocks the splash screen or theme from
+  // showing the last known-good school logo/color — see
+  // `branding_cache_service.dart`.
+  static const String schoolBrandingSchoolId = 'school_branding_school_id';
+  static const String schoolBrandingColor = 'school_branding_color';
+  static const String schoolBrandingLogoUrl = 'school_branding_logo_url';
+  static const String schoolBrandingLogoLocalPath = 'school_branding_logo_local_path';
 }

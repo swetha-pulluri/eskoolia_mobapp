@@ -230,7 +230,7 @@ class _LateFeeRulesTabState extends ConsumerState<LateFeeRulesTab> {
               else if (_rows.isEmpty)
                 const Padding(padding: EdgeInsets.all(24), child: Text('No late fee rules yet.', style: TextStyle(color: feeConfigInk2)))
               else
-                for (final rule in _rows) _buildRow(rule),
+                for (var i = 0; i < _rows.length; i++) _buildRow(_rows[i], isLast: i == _rows.length - 1),
             ],
           ),
         ),
@@ -257,11 +257,11 @@ class _LateFeeRulesTabState extends ConsumerState<LateFeeRulesTab> {
   /// Each rule shown as one table row, fields lined up under their own
   /// column headings above — matches web's real table structure
   /// (`renderLateFeeRules`) exactly rather than combining fields.
-  Widget _buildRow(LateFeeRule rule) {
+  Widget _buildRow(LateFeeRule rule, {required bool isLast}) {
     final deleting = _deletingId == rule.id;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: feeConfigBorder))),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: feeConfigBorder))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -11,7 +11,17 @@ class FeesTaskQueueCard extends StatelessWidget {
 
   const FeesTaskQueueCard({super.key, required this.tasks, required this.onButtonTap});
 
-  static Color _hex(String hex) => Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
+  // Falls back to the brand purple on anything that isn't a clean "#RRGGBB"
+  // string (e.g. an empty string) instead of throwing a FormatException —
+  // the backend endpoint this data comes from doesn't exist yet, so a
+  // malformed/blank colour is entirely plausible once it does.
+  static Color _hex(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
+    } catch (_) {
+      return const Color(0xFF6D4AFF);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +59,19 @@ class FeesTaskQueueCard extends StatelessWidget {
     // `borderRadius` (Flutter requires uniform border colours whenever a
     // radius is set), so it's a clipped strip instead.
     final radius = BorderRadius.circular(10);
-    return Container(
+    // `IntrinsicHeight` around the stretched Row — same reason
+    // fees_kpi_cards.dart's `_card` needs its outer `IntrinsicHeight` (via
+    // `_autoHeightGrid`): a `Row` with `crossAxisAlignment.stretch` needs a
+    // real height to stretch its coloured accent strip to, and this Column
+    // (inside the page's outer scroll view) only gives it an unbounded one.
+    // Without it, Flutter has to self-compute an intrinsic height through
+    // this row's own nested Row+Expanded (title/desc column + button Wrap)
+    // — which corrupts the render tree instead of failing loudly: every
+    // frame re-marks itself dirty and never settles, so the whole page
+    // hangs on a perpetually blank/white screen once this card is on
+    // screen with any real task in it.
+    return IntrinsicHeight(
+      child: Container(
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(color: const Color(0xFFECECF2)),
@@ -89,6 +111,7 @@ class FeesTaskQueueCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

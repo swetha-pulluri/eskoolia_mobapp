@@ -28,6 +28,32 @@ const _kQuickPresets = <(String label, String icon, String compType, String leve
   ('Annual Cultural', '🎭', 'cultural', 'intra_school', 'Auditorium'),
   ('Inter-School Debate', '🎤', 'debate', 'inter_school', ''),
   ('Science Fair', '🔬', 'stem', 'intra_school', 'Science Lab'),
+  ('Art Showcase', '🎨', 'arts', 'intra_school', 'Art Room'),
+];
+
+/// Sports catalogue — drives the "Which sport?" picker shown once Sports is
+/// selected as the type. Mirrors web's SPORTS array (ordered roughly by
+/// popularity in an Indian school setting).
+const _kSports = <(String value, String label, String icon)>[
+  ('cricket', 'Cricket', '🏏'),
+  ('football', 'Football', '⚽'),
+  ('basketball', 'Basketball', '🏀'),
+  ('hockey', 'Hockey', '🏑'),
+  ('volleyball', 'Volleyball', '🏐'),
+  ('badminton', 'Badminton', '🏸'),
+  ('tennis', 'Tennis', '🎾'),
+  ('tabletennis', 'Table Tennis', '🏓'),
+  ('kabaddi', 'Kabaddi', '🤼'),
+  ('kho-kho', 'Kho-Kho', '🏃'),
+  ('athletics', 'Athletics', '🏃'),
+  ('relay', 'Relay', '🥎'),
+  ('swimming', 'Swimming', '🏊'),
+  ('chess', 'Chess', '♟️'),
+  ('carrom', 'Carrom', '🎯'),
+  ('yoga', 'Yoga', '🧘'),
+  ('gymnastics', 'Gymnastics', '🤸'),
+  ('taekwondo', 'Taekwondo', '🥋'),
+  ('other', 'Other', '🏅'),
 ];
 
 String _suggestName(String compType, String level, String date, StudentGroup? houseA, StudentGroup? houseB) {
@@ -79,6 +105,7 @@ class _CompetitionFormCardState extends State<CompetitionFormCard> {
   late String _date = widget.editing?.date ?? DateTime.now().toIso8601String().substring(0, 10);
   late String _level = widget.editing?.level.value ?? 'intra_school';
   late String _compType = widget.editing?.compType.value ?? 'academic';
+  late String _sportType = widget.editing?.sportType ?? '';
   late int? _houseAId = widget.editing?.houseAId;
   late int? _houseBId = widget.editing?.houseBId;
   late final List<String> _classes = List.of(widget.editing?.classes ?? const []);
@@ -174,6 +201,7 @@ class _CompetitionFormCardState extends State<CompetitionFormCard> {
       'date': _date,
       'level': _level,
       'comp_type': _compType,
+      'sport_type': _sportType,
       'location': _location.text.trim(),
       'opponent': _opponent.text.trim(),
       'notes': _notes.text.trim(),
@@ -251,10 +279,55 @@ class _CompetitionFormCardState extends State<CompetitionFormCard> {
                 ChoiceChip(
                   label: Text('${t.icon} ${t.label}', style: const TextStyle(fontSize: 11.5)),
                   selected: _compType == t.value,
-                  onSelected: (_) => setState(() => _compType = t.value),
+                  onSelected: (_) => setState(() {
+                    _compType = t.value;
+                    if (t.value != 'sports') _sportType = '';
+                  }),
                 ),
             ],
           ),
+          if (_compType == 'sports') ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFFFFBEB), border: Border.all(color: const Color(0xFFFDE68A)), borderRadius: BorderRadius.circular(14)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('🏟️', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 6),
+                      const Expanded(
+                        child: Text('Which sport?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF92400E))),
+                      ),
+                      if (_sportType.isNotEmpty)
+                        TextButton(
+                          onPressed: () => setState(() => _sportType = ''),
+                          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                          child: const Text('Clear', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFFB45309))),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final s in _kSports)
+                        ChoiceChip(
+                          label: Text('${s.$3} ${s.$2}', style: const TextStyle(fontSize: 11)),
+                          selected: _sportType == s.$1,
+                          selectedColor: const Color(0xFFF59E0B),
+                          labelStyle: TextStyle(color: _sportType == s.$1 ? Colors.white : null),
+                          onSelected: (_) => setState(() => _sportType = s.$1),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           _label('Level'),
           DropdownButtonFormField<String>(

@@ -10,7 +10,17 @@ class FeesAuditTrailCard extends StatelessWidget {
 
   const FeesAuditTrailCard({super.key, required this.auditTrail});
 
-  static Color _hex(String hex) => Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
+  // Falls back to the brand purple on anything that isn't a clean "#RRGGBB"
+  // string (e.g. an empty string) instead of throwing a FormatException —
+  // the backend endpoint this data comes from doesn't exist yet, so a
+  // malformed/blank colour is entirely plausible once it does.
+  static Color _hex(String hex) {
+    try {
+      return Color(int.parse(hex.replaceFirst('#', 'FF'), radix: 16));
+    } catch (_) {
+      return const Color(0xFF6D4AFF);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

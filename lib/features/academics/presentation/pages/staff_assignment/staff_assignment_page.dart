@@ -134,7 +134,14 @@ class _StaffAssignmentPageState extends ConsumerState<StaffAssignmentPage> {
 
   Future<void> _refreshAll() async {
     final yearId = _selectedYearId;
-    if (yearId == null) return;
+    if (yearId == null) {
+      // No year ever got selected — either nothing has loaded yet, or the
+      // initial load failed outright (years/classes/teachers all empty).
+      // Re-run the full initial load instead of silently doing nothing,
+      // which is what made "Refresh" appear broken after a load failure.
+      await _loadInitial();
+      return;
+    }
     await Future.wait([_fetchCT(yearId), _fetchSubjectRows(yearId), _fetchKpi(yearId)]);
   }
 
@@ -299,7 +306,12 @@ class _StaffAssignmentPageState extends ConsumerState<StaffAssignmentPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _buildHeader(),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: staffLine), borderRadius: BorderRadius.circular(16)),
+          child: _buildHeader(),
+        ),
         const SizedBox(height: 20),
         StaffKpiCards(kpi: _kpi),
         const SizedBox(height: 20),

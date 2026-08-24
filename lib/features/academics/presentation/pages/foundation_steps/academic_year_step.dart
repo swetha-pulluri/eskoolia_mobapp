@@ -73,12 +73,22 @@ class _AcademicYearStepState extends ConsumerState<AcademicYearStep> {
   int? _makingId;
   AcademicYear? _pendingDelete;
   final GlobalKey _deleteConfirmKey = GlobalKey();
+  final GlobalKey _formKey = GlobalKey();
 
   void _scrollToDeleteConfirm() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _deleteConfirmKey.currentContext;
       if (ctx != null) {
         Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.1);
+      }
+    });
+  }
+
+  void _scrollToForm() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _formKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut, alignment: 0.05);
       }
     });
   }
@@ -161,6 +171,7 @@ class _AcademicYearStepState extends ConsumerState<AcademicYearStep> {
       _error = '';
       _dateWarning = '';
     });
+    _scrollToForm();
   }
 
   Future<void> _pickDate({required bool isStart}) async {
@@ -299,6 +310,7 @@ class _AcademicYearStepState extends ConsumerState<AcademicYearStep> {
     final today = DateTime.now();
 
     return FoundationCard(
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

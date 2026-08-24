@@ -380,6 +380,38 @@ Completed Work:
 
 ---
 
+## Date: 2026-08-20 (Thursday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Roles & Permissions page: split the "Role Permission" heading and its search/filter/New Role controls into their own bordered card (separate from the "All Roles" card below), narrowed the New Role button, tightened the card's spacing/top margin, and switched the role-card grid to a fixed row height so cards no longer stretch with empty space on wider screens
+- Login Permission page: removed the redundant top app-bar "Login Credentials" title, turned the hero section (breadcrumb/title/badge/subtitle) into its own bordered card, and tightened the vertical spacing between a user's name and staff ID in the users table
+- Student Groups: fixed two real `RenderFlex` overflow bugs in the House/Club "Student List" accordion header — an unguarded club member-count `Row` and a fixed-width house progress bar — both now use a single ellipsizing `Text.rich` so they clip instead of overflowing on narrow phones
+- School Clubs: club cards now wrap the full club name onto a second line instead of truncating it with an ellipsis
+- Built the InspireHub feature (Competitions & AI-generated student reviews) from scratch under `lib/features/inspire_hub/`: domain models, an on-device draft/history store, a backend repository (create competition, bulk-save results, AI review generation with a local fallback), and Dashboard/Compose/History tabs
+- Restructured InspireHub so saving a competition now pushes a dedicated Results page (participant picker, result cards with AI review, other-outcomes bulk marking, snapshot, CSV export) instead of continuing to scroll the same Compose tab
+- Added the full "More filters" panel to InspireHub's History tab (Type / Level / Month / Sort by dropdowns, active-filter count badge, Clear all), matching the web reference
+- Added an "InspireHub" stat-card tile to the Student Groups header stats row as its entry point, replacing the old standalone gradient pill button
+- Investigated a report that the InspireHub tile "wasn't showing" — added and ran a headless widget test that renders the real page with mocked data; confirmed the tile renders correctly (its label is just uppercased by the shared stat-card style), so the report was an environment/build issue, not a code defect; removed the temporary test file afterwards
+
+---
+
+## Date: 2026-08-21 (Friday)
+
+Developer: Swetha
+Git Branch: Main
+
+Completed Work:
+- Fee Configuration (Fee Groups / Fee Types / Fee Schedules / Concession Rules / Late Fee Rules tabs): fixed each table's last row rendering with a "full border" boxed-in look by making only the last row skip its bottom divider (`isLast` flag), instead of doubling up with the table's own outer border; tightened row vertical padding across all five tabs
+- Reduced the STATUS column's fixed width in Fee Groups/Fee Types/Concession Rules so the Active/Inactive pill (and toggle) no longer floats in an oversized empty cell, then added an explicit uniform gap between every column in Fee Types, Fee Schedules, and Concession Rules (replacing leftover column-width slack as the de-facto spacing) so short columns like Taxable/Grace/Discount/Status stay tight without losing separation from their neighbors
+- Fixed the Admin login flow showing a brief "Login" screen before "Home" for an already-authenticated user on hot restart/relaunch: the splash screen's wait for `checkAuthStatus()` had a 5-second timeout that could fire before the real network call (bounded by the app's own 30s connect/receive timeouts) finished, silently defaulting to `/login` and then bouncing to `/home` once auth actually resolved a moment later; removed that timeout so splash always waits for the real result
+- Fee Assignment page: merged the separate Stats-bar and Filters boxes (previously two independently-bordered containers glued together by a divider strip, with no border at all along their shared seam) into one single bordered card matching the same radius/padding convention as the header card and class roster cards
+- Fee Year-End reports: fixed "Export CSV" showing a success toast but the file never appearing in the Files app — it was being written to Android's app-private external-storage folder (`Android/data/<package>/files/Download`), which most file managers don't surface; switched to handing the CSV to the native share/save sheet instead (same working pattern already used for Admissions Analytics' CSV export), so the user can save it to Downloads/Drive/Files themselves
+
+---
+
 ## Project Structure
 
 ```

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -7,7 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image/image.dart' as img;
 import '../../../../config/router/app_router.dart';
+import '../../../../config/router/portal_routes.dart';
 import '../../../../core/constants/app_assets.dart';
+import '../providers/auth_providers.dart';
+import '../providers/auth_state.dart';
 
 // Precisely measured from the source asset itself (not eyeballed) — the PNG
 // is a square 1254×1254 canvas, RGB with no alpha channel (fully opaque),
@@ -42,6 +46,13 @@ const double _wordmarkTopFrac = 0.47;
 // letter's own measured slice of the real logo pixels, not a guess.
 const List<double> _letterBoundaries = [0.0, 0.134, 0.3315, 0.3843, 0.4424, 0.5317, 0.6363, 0.8007, 1.0];
 
+// The asset's own flat background colour, sampled directly from its corner
+// pixel (measured, not guessed) — chroma-keyed out at runtime below so only
+// the logo itself ever paints, never the rectangular canvas around it.
+const double _bgR = 250, _bgG = 250, _bgB = 250;
+const double _chromaThreshold = 40; // distance below which a pixel counts as background
+const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
+
 // The logo itself is a cool, saturated blue. A warm, light backdrop (not
 // another blue/purple) is what actually makes it pop via contrast, rather
 // than blending into a same-family gradient — a soft ivory-to-champagne
@@ -51,13 +62,6 @@ const Color _bgWarmMid = Color(0xFFFDF6EA);
 const Color _bgWarmBottom = Color(0xFFF7EAD2);
 const Color _glassGold = Color(0xFFE8C777);
 
-// The asset's own flat background colour, sampled directly from its corner
-// pixel (measured, not guessed) — chroma-keyed out at runtime below so only
-// the logo itself ever paints, never the rectangular canvas around it.
-const double _bgR = 250, _bgG = 250, _bgB = 250;
-const double _chromaThreshold = 40; // distance below which a pixel counts as background
-const double _chromaFeather = 30; // extra distance over which alpha ramps in, for a soft/anti-aliased cutout edge instead of a jagged one
-
 /// Decodes the logo PNG's own bytes and makes every background-coloured
 /// pixel transparent (with a soft feathered edge near the logo's own
 /// strokes), returning a *re-encoded* PNG's bytes. This never touches the
@@ -65,14 +69,22 @@ const double _chromaFeather = 30; // extra distance over which alpha ramps in, f
 /// only ever changes the *alpha* of pixels that already match the known
 /// flat background colour.
 ///
-/// Runs synchronously on the calling isolate (not via `compute()`) — a
-/// prior attempt to run this off-thread via `compute()` caused the splash
-/// to get stuck and never navigate, because whatever `compute()` does on
-/// this platform/SDK combination interfered with the animation ticker
-/// instead of staying safely off it. Run inline, the worst case if this
-/// loop is ever slow on a given device is a proportionally delayed splash
-/// (still bounded, still eventually completes) — never a permanent hang,
-/// since there's no concurrent Future/isolate race involved at all.
+/// `encodePng(..., level: 0, filter: PngFilter.none)` — the package's own
+/// default (`level: 6`, Paeth filtering) runs real zlib DEFLATE compression
+/// plus per-scanline filtering over the full ~6.3MB buffer, both for
+/// nothing: this PNG is never written to disk or sent anywhere, it's handed
+/// straight back to the caller and immediately decoded again by
+/// `Image.memory`. Skipping that saves real time on every call.
+///
+/// Runs synchronously on the calling isolate (not via `compute()`) — an
+/// earlier attempt to run this off-thread via `compute()` as a background
+/// upgrade caused the splash to get stuck and never navigate at all, because
+/// whatever `compute()` does on this platform/SDK combination interfered
+/// with the animation ticker instead of staying safely off it. Run inline,
+/// the worst case if this loop is ever slow on a given device is a
+/// proportionally delayed splash (still bounded, still eventually
+/// completes) — never a permanent hang, since there's no concurrent
+/// Future/isolate race involved at all.
 Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
   final decoded = img.decodeImage(sourceBytes);
   if (decoded == null) return sourceBytes;
@@ -99,16 +111,25 @@ Uint8List _chromaKeyLogoBytes(Uint8List sourceBytes) {
 }
 
 /// App entry splash screen — the very first thing shown on cold start,
-/// before `/login`. Purely a fixed-duration logo reveal; it does not
-/// perform or duplicate any auth check itself. `checkAuthStatus()`
-/// (triggered once in `main.dart`'s `MyApp.initState`) already runs
-/// independently in the background regardless of which route is showing,
-/// so nothing here re-implements that. This page only ever hands off to
-/// `/login` once its minimum on-screen duration has elapsed — the
-/// *existing*, unmodified redirect logic in `app_router.dart` and
-/// `LoginPage`'s own `authNotifierProvider` listener take it from there
-/// exactly as they already do today, bouncing an already-authenticated
-/// user onward.
+/// before `/login` or the user's own home route. A fixed-duration logo
+/// reveal that also waits for `checkAuthStatus()` (triggered once in
+/// `main.dart`'s `MyApp.initState`, and shared here via the same
+/// `authNotifierProvider` singleton) to actually resolve, then navigates
+/// straight to the correct destination itself — an already-authenticated
+/// user goes directly to their portal's home route, everyone else goes to
+/// `/login`. Deliberately not "always go to `/login` and let the router
+/// bounce an authenticated user onward afterwards": that used to race the
+/// splash's own fixed timer against the async auth check, so whichever
+/// finished first decided what the *first frame after splash* looked
+/// like — often a visible flash of the login screen immediately before
+/// bouncing to home. Waiting for both here removes that race entirely.
+///
+/// A `next` query param (set by `app_router.dart`'s `redirect` whenever it
+/// forced a mid-session location through `/splash` — e.g. a Flutter Web hot
+/// restart/refresh while already deep-linked past login) takes priority
+/// over the auth-based destination above when present, so the user lands
+/// back where they actually were instead of being redirected to their
+/// portal home.
 ///
 /// Reveal choreography (all driven off the *same* unaltered logo pixels,
 /// sliced into rectangles and never redrawn): the mascot fades in first,
@@ -143,6 +164,12 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
   // background would instead pop in as a visible rectangle in the wrong-
   // looking order, so that fallback shows one simple whole-logo fade instead.
   bool _isTransparent = false;
+  // True when a school has its own logo cached locally (Settings → School
+  // Info → Branding) — shown via a plain fade+scale instead of the
+  // eSkoolia-specific chroma-key/letter-cascade below, since the crop
+  // fractions that cascade relies on are measured against the eSkoolia
+  // asset's own canvas and don't apply to an arbitrary uploaded logo.
+  bool _useSchoolLogo = false;
   bool _navigated = false;
 
   @override
@@ -189,19 +216,32 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
     _sweepController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _sweep = CurvedAnimation(parent: _sweepController, curve: Curves.easeInOut);
 
-    // Navigation waits on BOTH the hard floor timer AND the full splash
-    // sequence actually finishing — not the timer alone. Crucially, the
-    // reveal animation itself doesn't start until the logo has finished
-    // loading (see `_runSplashSequence`): starting it immediately at launch
-    // would let its clock run *while the image is still loading* — on
-    // Flutter Web especially, where chroma-keying can take real time, the
-    // controller could already be well past several letters' reveal windows
-    // by the time there's anything to paint, so the first visible frame
-    // would already show most letters "done" instead of a clean cascade.
-    // 3s total, per explicit request (down from ~6.2s).
+    // Navigation waits on the hard floor timer, the full splash sequence
+    // actually finishing, AND `checkAuthStatus()` resolving — not the timer
+    // alone. Crucially, the reveal animation itself doesn't start until the
+    // logo has finished loading (see `_runSplashSequence`): starting it
+    // immediately at launch would let its clock run *while the image is
+    // still loading* — the controller could already be well past several
+    // letters' reveal windows by the time there's anything to paint, so the
+    // first visible frame would already show most letters "done" instead of
+    // a clean cascade. 3s total, per explicit request (down from ~6.2s).
     final floor = Future<void>.delayed(const Duration(milliseconds: 3000));
     final sequenceDone = _runSplashSequence();
-    Future.wait([floor, sequenceDone]).then((_) {
+    // Also wait for `checkAuthStatus()` (triggered in `main.dart`) to
+    // actually resolve, so the destination below reflects its real outcome
+    // instead of racing it — see the class doc for why. Deliberately no
+    // extra timeout wrapper here: `checkAuthStatus()`'s own network call
+    // (`GET /auth/me/`) can legitimately take close to `ApiConstants`'s own
+    // 30s connect/receive timeouts on a slow/cold connection (e.g. right
+    // after a hot restart, before the OS network stack has "warmed up") —
+    // a splash-side timeout shorter than that raced ahead of a still-
+    // loading, but perfectly healthy, auth check and fell back to `/login`
+    // while it was still resolving, which is exactly the bug this whole
+    // wait exists to prevent. `checkAuthStatus()` is guaranteed to settle
+    // to a terminal state on its own regardless (see `AuthNotifier`), so
+    // there is nothing to bound here beyond that.
+    final authResolved = _waitForAuthResolved();
+    Future.wait([floor, sequenceDone, authResolved]).then((_) {
       if (!mounted || _navigated) return;
       _navigated = true;
       // Marks the forced-splash handoff as genuinely complete — until this
@@ -210,33 +250,76 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
       // resolving mid-splash), so this must be set *before* navigating away
       // or that same redirect would just force this page right back open.
       ref.read(splashHandoffDoneProvider.notifier).state = true;
-      // `next` — set by `app_router.dart`'s `redirect` whenever it forced a
-      // mid-session location through `/splash` (e.g. a Flutter Web hot
-      // restart/refresh while already deep-linked past login) — carries the
-      // original destination so the user lands back where they actually
-      // were instead of always being sent to `/login`. Absent on a genuine
-      // first cold launch, where `/login` is the correct explicit default.
+
+      // `next` takes priority when present — it means the router forced a
+      // mid-session location through `/splash` (see class doc), so the user
+      // should land back where they actually were rather than at their
+      // portal home.
       final next = GoRouterState.of(context).uri.queryParameters['next'];
-      context.go((next != null && next.isNotEmpty) ? next : '/login');
+      if (next != null && next.isNotEmpty) {
+        context.go(next);
+        return;
+      }
+      final destination = ref.read(authNotifierProvider).maybeWhen(
+        authenticated: (user) => resolveHomeRouteForPortal(user.portalType),
+        orElse: () => '/login',
+      );
+      context.go(destination);
     });
   }
 
-  // An earlier version ran chroma-keying via `compute()` as a fire-and-
-  // forget background upgrade alongside the reveal animation — that caused
-  // the splash to get stuck showing the logo and never navigate at all,
-  // because whatever `compute()` does on this platform/SDK combination
-  // interfered with the animation ticker instead of staying safely off it.
-  // Running it synchronously here instead (see `_loadTransparentLogo`) has
-  // a fundamentally different, safer failure mode: with no concurrent
-  // Future/isolate involved, the call is guaranteed to eventually return —
-  // worst case it's slow (delaying the reveal start by however long the
-  // loop takes), never a permanent hang.
+  /// Completes as soon as `authNotifierProvider`'s state leaves
+  /// `AuthState.initial()` — i.e. `checkAuthStatus()` has produced a real
+  /// answer. Resolves immediately if that has already happened by the time
+  /// this runs.
+  Future<void> _waitForAuthResolved() {
+    final isInitial = ref.read(authNotifierProvider).maybeWhen(initial: () => true, orElse: () => false);
+    if (!isInitial) return Future.value();
+
+    final completer = Completer<void>();
+    late final ProviderSubscription<AuthState> subscription;
+    subscription = ref.listenManual(authNotifierProvider, (previous, next) {
+      final stillInitial = next.maybeWhen(initial: () => true, orElse: () => false);
+      if (!stillInitial && !completer.isCompleted) {
+        completer.complete();
+        subscription.close();
+      }
+    });
+    return completer.future;
+  }
+
   Future<void> _runSplashSequence() async {
-    await _loadTransparentLogo();
+    await _loadLogo();
     if (!mounted) return;
     await _revealController.forward();
     if (!mounted) return;
     await _sweepController.forward();
+  }
+
+  /// Prefers the currently logged-in school's own cached logo (downloaded
+  /// by `BrandingNotifier.syncFromUser` on a previous auth resolution) over
+  /// the static eSkoolia asset — so a school that has configured a logo
+  /// sees its own branding on this very first frame, cache-first with no
+  /// network round trip. Falls back to the eSkoolia asset + chroma-key
+  /// reveal (unchanged) when no school logo is cached yet.
+  Future<void> _loadLogo() async {
+    final schoolLogoFile = ref.read(brandingNotifierProvider).logoFile;
+    if (schoolLogoFile != null) {
+      try {
+        final bytes = await schoolLogoFile.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _transparentLogoBytes = bytes;
+            _isTransparent = false;
+            _useSchoolLogo = true;
+          });
+        }
+        return;
+      } catch (e) {
+        debugPrint('[SplashPage] failed to read cached school logo, falling back to eSkoolia asset: $e');
+      }
+    }
+    await _loadTransparentLogo();
   }
 
   Future<void> _loadTransparentLogo() async {
@@ -363,6 +446,28 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
                       child: AnimatedBuilder(
                         animation: _revealController,
                         builder: (context, child) {
+                          if (_useSchoolLogo) {
+                            // A school's own uploaded logo has no known
+                            // crop margin/background color, so it's shown
+                            // as-is (no `_LogoRegion` slicing, no chroma
+                            // key) — just the same fade+scale reveal the
+                            // raw-fallback path below already uses.
+                            return FadeTransition(
+                              opacity: _wholeLogoFade,
+                              child: ScaleTransition(
+                                scale: _wholeLogoScale,
+                                child: SizedBox(
+                                  width: logoWidth,
+                                  height: logoWidth,
+                                  child: Image.memory(
+                                    logoBytes,
+                                    fit: BoxFit.contain,
+                                    gaplessPlayback: true,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
                           if (!_isTransparent) {
                             // Chroma-key didn't complete in time (or at
                             // all): the letter-cascade below relies on each

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/entities/user_entity.dart';
 import '../../domain/usecases/check_auth_status_usecase.dart';
 import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -25,12 +26,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> checkAuthStatus() async {
     try {
       final isLoggedIn = await _checkAuthStatusUseCase();
-      if (isLoggedIn) {
-        final user = await _getCurrentUserUseCase();
-        state = AuthState.authenticated(user);
-      } else {
+      if (!isLoggedIn) {
         state = const AuthState.unauthenticated();
+        return;
       }
+
+      // A valid token exists locally — a failure fetching the profile right
+      // here is often transient (network/backend not fully up yet at cold
+      // start), not proof the session is actually invalid. Previously any
+      // such hiccup was treated identically to "no token" and silently
+      // logged the user out, forcing them to re-enter credentials even
+      // though their session was still good. One short-delayed retry
+      // before giving up on it.
+      UserEntity? user;
+      for (var attempt = 0; attempt < 2 && user == null; attempt++) {
+        try {
+          user = await _getCurrentUserUseCase();
+        } catch (_) {
+          if (attempt == 0) await Future.delayed(const Duration(milliseconds: 700));
+        }
+      }
+      state = user != null ? AuthState.authenticated(user) : const AuthState.unauthenticated();
     } catch (e) {
       state = const AuthState.unauthenticated();
     }

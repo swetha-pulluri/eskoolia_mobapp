@@ -122,6 +122,7 @@ class _InspireHubResultsPageState extends ConsumerState<InspireHubResultsPage> {
       date: values['date'] as String,
       level: CompetitionLevel.fromValue(values['level'] as String),
       compType: CompetitionType.fromValue(values['comp_type'] as String),
+      sportType: values['sport_type'] as String? ?? '',
       location: values['location'] as String,
       opponent: values['opponent'] as String,
       notes: values['notes'] as String,

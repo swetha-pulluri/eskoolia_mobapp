@@ -38,10 +38,25 @@ class _MyAppState extends ConsumerState<MyApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
 
+    // Downloads/refreshes the logged-in school's logo + brand color right
+    // after `checkAuthStatus()` (cold start) or `login()` resolves, without
+    // threading a Dio/branding dependency through `AuthNotifier` itself.
+    // Never blocks or affects auth state — see `BrandingNotifier.syncFromUser`.
+    ref.listen(authNotifierProvider, (previous, next) {
+      next.whenOrNull(
+        authenticated: (user) => ref.read(brandingNotifierProvider.notifier).syncFromUser(
+          user.schoolBranding,
+          ref.read(dioProvider),
+          schoolId: user.schoolId,
+        ),
+      );
+    });
+    final brandColor = ref.watch(brandingNotifierProvider).brandColor;
+
     return MaterialApp.router(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.lightTheme(brandColor),
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
       routerConfig: router,

@@ -53,13 +53,16 @@ class FeesLivePaymentFeedCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 380),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [for (var i = 0; i < feed.length; i++) ...[if (i > 0) const SizedBox(height: 10), _feedRow(feed[i])]],
-              ),
-            ),
+          // Plain Column, not its own scrollable — the feed list is already
+          // capped at ~20 items (see FeesHomeNotifier.simulatePayment's
+          // `.take(19)`), and nesting a second SingleChildScrollView inside
+          // the page's outer one triggers a real Flutter framework bug: two
+          // scroll semantics nodes in the same ancestry corrupt each
+          // other's parent-data bookkeeping on a fling, throwing
+          // `!semantics.parentDataDirty` every frame forever (never
+          // settles) — exactly the "on fling" crash this was reported as.
+          Column(
+            children: [for (var i = 0; i < feed.length; i++) ...[if (i > 0) const SizedBox(height: 10), _feedRow(feed[i])]],
           ),
         ],
       ),

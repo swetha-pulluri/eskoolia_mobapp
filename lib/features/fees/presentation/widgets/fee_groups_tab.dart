@@ -256,7 +256,7 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
   static const _colGroupName = 150.0;
   static const _colDescription = 170.0;
   static const _colClasses = 170.0;
-  static const _colStatus = 120.0;
+  static const _colStatus = 104.0;
   static const _colActions = 110.0;
   // +32 accounts for the 16px horizontal padding on each side of the header/row Containers below.
   static const _tableWidth = _colGroupName + _colDescription + _colClasses + _colStatus + _colActions + 32;
@@ -278,7 +278,7 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
               else if (_groups.isEmpty)
                 const Padding(padding: EdgeInsets.all(24), child: Text('No fee groups yet.', style: TextStyle(color: feeConfigInk3)))
               else
-                for (final group in visible) _buildRow(group),
+                for (var i = 0; i < visible.length; i++) _buildRow(visible[i], isLast: i == visible.length - 1),
             ],
           ),
         ),
@@ -305,7 +305,7 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
   /// Each fee group shown as one table row, with the fields lined up under
   /// their own column headings above — matches web's real table structure
   /// (`renderFeeGroups`) exactly rather than combining fields together.
-  Widget _buildRow(FeesGroup group) {
+  Widget _buildRow(FeesGroup group, {required bool isLast}) {
     final classNames = group.applicableClasses.isEmpty
         ? 'All Classes'
         : group.applicableClasses
@@ -313,8 +313,8 @@ class _FeeGroupsTabState extends ConsumerState<FeeGroupsTab> {
             .whereType<String>()
             .join(', ');
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF1F1F4)))),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(border: Border(bottom: isLast ? BorderSide.none : const BorderSide(color: Color(0xFFF1F1F4)))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

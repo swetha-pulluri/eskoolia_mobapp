@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../domain/models/due_student.dart';
 import '../../domain/models/dues_class_group.dart';
 import '../../domain/models/fee_group.dart';
@@ -8,7 +10,6 @@ import '../providers/fees_config_providers.dart';
 import '../providers/fees_dues_providers.dart';
 import '../providers/fees_providers.dart';
 import '../providers/fees_year_end_providers.dart';
-import '../../../../core/utils/file_download_helper.dart';
 import '../utils/fee_assignment_format.dart' show groupIndian;
 import '../utils/fy_report_pdf.dart';
 import '../widgets/fees_layout.dart';
@@ -201,8 +202,15 @@ class _FeesYearEndPageState extends ConsumerState<FeesYearEndPage> {
     setState(() => _csvLoading = reportType);
     try {
       final bytes = await ref.read(feesYearEndRepositoryProvider).fetchReportCsv(reportType);
-      await saveBytesForDownload(bytes: bytes, filename: '$reportType.csv');
-      _showToast('$reportName CSV downloaded.');
+      // Hands the CSV to the native share/save sheet (same working pattern
+      // as Admissions Analytics' CSV export) instead of `saveBytesForDownload`
+      // — that helper writes to Android's app-private external-storage
+      // folder (`Android/data/<package>/files/Download`), which is not the
+      // shared public Downloads folder most file managers show, so a
+      // "downloaded" toast fired here even though the user could never find
+      // the file afterwards. Sharing lets the user pick "Save to Downloads"/
+      // Drive/Files themselves, so it actually lands somewhere they can see.
+      await Share.shareXFiles([XFile.fromData(Uint8List.fromList(bytes), name: '$reportType.csv', mimeType: 'text/csv')]);
     } catch (e, st) {
       debugPrint('exportCSV failed: $e\n$st');
       _showToast('Failed to export CSV. Please try again.');
